@@ -1,5 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -29,6 +30,9 @@ class AuthService {
     }
   }
 
+  // Store ConfirmationResult for Web
+  ConfirmationResult? _webConfirmationResult;
+
   // Mobile (Phone) Authentication is usually handled via an OTP flow in the UI.
   // We expose a method to send the OTP.
   Future<void> verifyPhoneNumber({
@@ -38,23 +42,42 @@ class AuthService {
     required Function(String, int?) codeSent,
     required Function(String) codeAutoRetrievalTimeout,
   }) async {
-    await _auth.verifyPhoneNumber(
-      phoneNumber: phoneNumber,
-      verificationCompleted: verificationCompleted,
-      verificationFailed: verificationFailed,
-      codeSent: codeSent,
-      codeAutoRetrievalTimeout: codeAutoRetrievalTimeout,
-    );
+    if (kIsWeb) {
+      try {
+        // On Web, we must use signInWithPhoneNumber which uses reCAPTCHA
+        _webConfirmationResult = await _auth.signInWithPhoneNumber(phoneNumber);
+        // Trigger codeSent callback manually with a dummy verificationId for web
+        codeSent(_webConfirmationResult!.verificationId, null);
+      } catch (e) {
+        if (e is FirebaseAuthException) {
+          verificationFailed(e);
+        } else {
+          verificationFailed(FirebaseAuthException(code: 'web-error', message: e.toString()));
+        }
+      }
+    } else {
+      await _auth.verifyPhoneNumber(
+        phoneNumber: phoneNumber,
+        verificationCompleted: verificationCompleted,
+        verificationFailed: verificationFailed,
+        codeSent: codeSent,
+        codeAutoRetrievalTimeout: codeAutoRetrievalTimeout,
+      );
+    }
   }
 
   // Verify OTP code
   Future<UserCredential?> signInWithOTP(String verificationId, String smsCode) async {
     try {
-      PhoneAuthCredential credential = PhoneAuthProvider.credential(
-        verificationId: verificationId,
-        smsCode: smsCode,
-      );
-      return await _auth.signInWithCredential(credential);
+      if (kIsWeb && _webConfirmationResult != null) {
+        return await _webConfirmationResult!.confirm(smsCode);
+      } else {
+        PhoneAuthCredential credential = PhoneAuthProvider.credential(
+          verificationId: verificationId,
+          smsCode: smsCode,
+        );
+        return await _auth.signInWithCredential(credential);
+      }
     } catch (e) {
       print("Error verifying OTP: $e");
       return null;
