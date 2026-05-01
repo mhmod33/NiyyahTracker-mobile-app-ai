@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "567760606155",
+    "project_id": "niyyahtracker",
+    "storage_bucket": "niyyahtracker.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:567760606155:android:30fcef1da6725a85d29c4e",
+        "android_client_info": {
+          "package_name": "com.example.niyyah_tracker_flutter"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDYlIG3FQwPhua7CTY3J6PWB_8sbBBMqic"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
