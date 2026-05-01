@@ -29,19 +29,38 @@ class _PhoneAuthPageState extends State<PhoneAuthPage> {
   }
 
   void _sendCode() async {
+    final phone = _phoneController.text.trim();
+    if (phone.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('الرجاء إدخال رقم الهاتف')));
+      return;
+    }
+    if (!phone.startsWith('+')) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('الرجاء إدخال رمز الدولة (مثال: +20)')));
+      return;
+    }
+
     setState(() => _isLoading = true);
     await _authService.verifyPhoneNumber(
-      phoneNumber: _phoneController.text.trim(),
+      phoneNumber: phone,
       verificationCompleted: (PhoneAuthCredential credential) async {
-        // Auto-resolution (e.g. Android only)
-        final user = await FirebaseAuth.instance.signInWithCredential(credential);
-        if (user.user != null && mounted) {
-          Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const DashboardPage()));
+        try {
+          final user = await FirebaseAuth.instance.signInWithCredential(credential);
+          if (user.user != null && mounted) {
+            Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const DashboardPage()));
+          }
+        } catch (e) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('خطأ في التحقق التلقائي: $e')));
+          }
         }
       },
       verificationFailed: (FirebaseAuthException e) {
         setState(() => _isLoading = false);
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('فشل التحقق: ${e.message}')));
+        String errorMsg = e.message ?? e.toString();
+        if (e.code == 'invalid-phone-number') {
+          errorMsg = 'رقم الهاتف غير صالح. تأكد من إدخال الرمز الدولي صحيحاً.';
+        }
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('فشل التحقق: $errorMsg')));
       },
       codeSent: (String verificationId, int? resendToken) {
         setState(() {
@@ -99,7 +118,7 @@ class _PhoneAuthPageState extends State<PhoneAuthPage> {
               Text(
                 _codeSent 
                   ? 'تم إرسال رسالة قصيرة تحتوي على الرمز إلى ${_phoneController.text}'
-                  : 'أدخل رقم هاتفك مسبوقاً برمز الدولة (مثال: +966...)',
+                  : 'أدخل رقم هاتفك مسبوقاً برمز الدولة (مثال: +20...)',
                 style: GoogleFonts.cairo(fontSize: 16, color: Colors.grey[600]),
               ),
               const SizedBox(height: 40),
@@ -108,7 +127,7 @@ class _PhoneAuthPageState extends State<PhoneAuthPage> {
                   controller: _phoneController,
                   keyboardType: TextInputType.phone,
                   decoration: InputDecoration(
-                    hintText: '+966 5X XXX XXXX',
+                    hintText: '+20 1X XXXX XXXX',
                     hintStyle: GoogleFonts.cairo(color: Colors.grey[400]),
                     prefixIcon: const Icon(Icons.phone, color: AppColors.midGreen),
                     filled: true,

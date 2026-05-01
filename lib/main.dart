@@ -1,10 +1,33 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'core/app_colors.dart';
 import 'features/splash/splash_page.dart';
+import 'services/local_storage_service.dart';
+import 'firebase_options.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  try {
+    // Initialize Firebase
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+    print('✅ Firebase initialized successfully');
+  } catch (e) {
+    print('❌ Firebase initialization error: $e');
+  }
+
+  try {
+    // Initialize local storage
+    await LocalStorageService().initializeHive();
+    print('✅ Local storage initialized');
+  } catch (e) {
+    print('❌ Local storage initialization error: $e');
+  }
+
   runApp(const NiyyahTrackerApp());
 }
 
