@@ -9,16 +9,14 @@ Built with **Flutter**, it offers a stunning, professional UI focused on the use
 ## 🌟 Features
 
 ### 🕌 Core Experience
-- **Daily Worship Tracking:** Log your 5 daily prayers, Dhikr, Quran reading, and more with a single tap.
-- **Monthly Spiritual Goals:** Set long-term goals (like Khatm Al-Quran) and track progress with interactive bars.
-- **Smart Analytics:** View your "Streak" and consistency metrics on a beautiful dashboard.
-- **RTL & Arabic Support:** Fully localized for Arabic users with the professional **Cairo** font.
-
-### 🆕 New Flows
-- **Splash Screen:** A respectful, timed introduction with brand logo.
-- **Onboarding:** Interactive walkthrough for new users.
-- **Authentication:** Professional Login and Registration systems.
-- **Dynamic Modes:** Preparation for Normal, Ramadan, and Hajj modes.
+- **📿 Daily Worship:** Manual recording with a tap — the five daily prayers, remembrances, Quran recitation, charity, voluntary fasting, night prayers — each day has a saved "worship card".
+- **🎯 Monthly Spiritual Goal:** Choose your goal at the beginning of the month (e.g., "Completing the Quran") and track progress with an ECharts progress bar.
+- **📅 Smart Weekly Plan:** Goal-based task generation. If your goal is to complete the Quran in Ramadan, it tells you "You must read 20 pages today".
+- **📊 ECharts Dashboard:** Weekly and monthly chart of your worship to see your strong days and the days you fell short.
+- **📄 Spiritual Report (Monthly PDF):** Generates a professional PDF containing a summary of your worship, best days, goal achievements, and a motivational message.
+- **🌙 Ramadan Special Mode:** Adds Suhoor and Iftar times, Taraweeh prayers tracker, Laylat al-Qadr countdown, and a complete 30-day plan.
+- **🕋 Hajj Mode:** A leaflet map of the holy sites, daily steps of the rituals, countdowns, and supplication recordings.
+- **🔔 Smart Notifications:** Reminders for morning/evening remembrances, prayer times, and inactivity alerts.
 
 ---
 
