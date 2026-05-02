@@ -32,6 +32,8 @@ class DashboardPage extends StatefulWidget {
 
 class _DashboardPageState extends State<DashboardPage> {
   int _currentIndex = 0;
+  bool _fajrChecked = false;
+  bool _charityChecked = false;
 
   String _getArabicDate() {
     final now = DateTime.now();
@@ -134,6 +136,11 @@ class _DashboardPageState extends State<DashboardPage> {
             ), // Stack
           ), // Container
         ), // SliverToBoxAdapter
+
+            // ── Daily Accountability (المحاسبة اليومية) ──
+            SliverToBoxAdapter(
+              child: _buildDailyAccountability(isDark, textColor),
+            ),
 
             // ── Quick Access ──
             SliverToBoxAdapter(
@@ -260,6 +267,95 @@ class _DashboardPageState extends State<DashboardPage> {
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildDailyAccountability(bool isDark, Color textColor) {
+    if (_fajrChecked && _charityChecked) {
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: AppColors.paleGreen.withOpacity(isDark ? 0.1 : 0.5),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: AppColors.midGreen.withOpacity(0.3)),
+          ),
+          child: Row(
+            children: [
+              const Icon(Icons.check_circle_rounded, color: AppColors.darkGreen, size: 28),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text('تقبل الله! أتممت محاسبة اليوم بنجاح 🤍', style: _f(sz: 14, fw: FontWeight.w700, c: AppColors.darkGreen)),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.fact_check_rounded, color: AppColors.gold, size: 22),
+              const SizedBox(width: 8),
+              Text('المحاسبة اليومية', style: _f(sz: 18, fw: FontWeight.w800, c: textColor)),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Container(
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: isDark ? Colors.white10 : Colors.black.withOpacity(0.05)),
+              boxShadow: [
+                if (!isDark) BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10, offset: const Offset(0, 4)),
+              ],
+            ),
+            child: Column(
+              children: [
+                _buildChecklistItem('هل صليت الفجر اليوم؟', 'الصلاة خير من النوم', Icons.wb_twilight_rounded, _fajrChecked, (val) {
+                  setState(() => _fajrChecked = val ?? false);
+                }, isDark),
+                Divider(height: 1, indent: 56, endIndent: 16, color: isDark ? Colors.white10 : Colors.black.withOpacity(0.05)),
+                _buildChecklistItem('هل تصدقت اليوم؟', 'ولو بشق تمرة', Icons.volunteer_activism_rounded, _charityChecked, (val) {
+                  setState(() => _charityChecked = val ?? false);
+                }, isDark),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildChecklistItem(String title, String subtitle, IconData icon, bool value, ValueChanged<bool?> onChanged, bool isDark) {
+    return Theme(
+      data: ThemeData(
+        unselectedWidgetColor: isDark ? Colors.white54 : Colors.grey[400],
+      ),
+      child: CheckboxListTile(
+        value: value,
+        onChanged: onChanged,
+        activeColor: AppColors.darkGreen,
+        checkColor: Colors.white,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+        title: Text(title, style: _f(sz: 15, fw: FontWeight.w700, c: isDark ? Colors.white : AppColors.textPrimary)),
+        subtitle: Text(subtitle, style: _f(sz: 12, c: AppColors.gray)),
+        secondary: Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: value ? AppColors.darkGreen.withOpacity(0.1) : (isDark ? Colors.white10 : AppColors.paleGreen),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Icon(icon, color: value ? AppColors.darkGreen : (isDark ? Colors.white70 : AppColors.midGreen), size: 20),
+        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       ),
     );
   }
