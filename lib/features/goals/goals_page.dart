@@ -28,7 +28,7 @@ class _GoalsPageState extends State<GoalsPage> {
         backgroundColor: bg,
         appBar: AppBar(
           backgroundColor: isDark ? const Color(0xFF0D2818) : AppColors.darkGreen,
-          title: Text('الأهداف الروحية الشهرية', style: GoogleFonts.cairo(color: Colors.white, fontWeight: FontWeight.bold)),
+          title: Text('الأهداف الروحية الشهرية', style: GoogleFonts.ibmPlexSansArabic(color: Colors.white, fontWeight: FontWeight.bold)),
           centerTitle: true,
         ),
         body: ListView(padding: const EdgeInsets.all(16), children: [
@@ -44,7 +44,7 @@ class _GoalsPageState extends State<GoalsPage> {
     return OutlinedButton.icon(
       onPressed: () => _showAddGoalSheet(context, isDark),
       icon: Icon(Icons.add, color: isDark ? AppColors.lightGreen : AppColors.darkGreen),
-      label: Text('إضافة هدف جديد', style: GoogleFonts.cairo(color: isDark ? AppColors.lightGreen : AppColors.darkGreen, fontWeight: FontWeight.bold)),
+      label: Text('إضافة هدف جديد', style: GoogleFonts.ibmPlexSansArabic(color: isDark ? AppColors.lightGreen : AppColors.darkGreen, fontWeight: FontWeight.bold)),
       style: OutlinedButton.styleFrom(
         minimumSize: const Size(double.infinity, 56),
         side: BorderSide(color: isDark ? AppColors.lightGreen : AppColors.darkGreen),
@@ -88,13 +88,13 @@ class _GoalCard extends StatelessWidget {
         Row(children: [
           Text(goal.type.emoji, style: const TextStyle(fontSize: 28)),
           const SizedBox(width: 12),
-          Expanded(child: Text(goal.title, style: GoogleFonts.cairo(fontWeight: FontWeight.bold, fontSize: 16, color: greenColor))),
+          Expanded(child: Text(goal.title, style: GoogleFonts.ibmPlexSansArabic(fontWeight: FontWeight.bold, fontSize: 16, color: greenColor))),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
             decoration: BoxDecoration(
               color: pct >= 100 ? (isDark ? AppColors.darkGreen.withOpacity(0.3) : AppColors.paleGreen) : (isDark ? AppColors.gold.withOpacity(0.15) : AppColors.goldBg),
               borderRadius: BorderRadius.circular(20)),
-            child: Text('$pct٪', style: GoogleFonts.cairo(fontWeight: FontWeight.bold, color: pct >= 100 ? greenColor : AppColors.gold)),
+            child: Text('$pct٪', style: GoogleFonts.ibmPlexSansArabic(fontWeight: FontWeight.bold, color: pct >= 100 ? greenColor : AppColors.gold)),
           ),
         ]),
         const SizedBox(height: 14),
@@ -102,8 +102,8 @@ class _GoalCard extends StatelessWidget {
           child: LinearProgressIndicator(value: goal.progress, backgroundColor: isDark ? Colors.white12 : Colors.grey[200], color: pct >= 80 ? AppColors.lightGreen : AppColors.gold, minHeight: 10)),
         const SizedBox(height: 10),
         Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-          Text('${goal.currentValue} / ${goal.targetValue}', style: GoogleFonts.cairo(color: subColor, fontSize: 13)),
-          Text('تبقى $daysLeft يوم', style: GoogleFonts.cairo(color: subColor, fontSize: 13)),
+          Text('${goal.currentValue} / ${goal.targetValue}', style: GoogleFonts.ibmPlexSansArabic(color: subColor, fontSize: 13)),
+          Text('تبقى $daysLeft يوم', style: GoogleFonts.ibmPlexSansArabic(color: subColor, fontSize: 13)),
         ]),
       ]),
     );

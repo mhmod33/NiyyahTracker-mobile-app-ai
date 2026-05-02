@@ -266,54 +266,61 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
                 itemBuilder: (ctx, pageIndex) {
                   final verses = _pages[pageIndex];
                   return SingleChildScrollView(
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                    child: Column(
-                      children: [
-                        // Basmala on first page
-                        if (pageIndex == 0 && widget.surahNumber != 1 && widget.surahNumber != 9)
-                          Padding(
-                            padding: const EdgeInsets.only(bottom: 20),
-                            child: Text(quran.basmala, textAlign: TextAlign.center,
-                              style: GoogleFonts.amiri(fontSize: 24, fontWeight: FontWeight.bold, color: textColor)),
-                          ),
-                        // Verses (Inline like a Mushaf)
-                        SelectableText.rich(
-                          textAlign: TextAlign.justify,
-                          textDirection: TextDirection.rtl,
-                          TextSpan(
-                            children: verses.map((v) {
-                              final text = quran.getVerse(widget.surahNumber, v);
-                              final isSelected = _selectedVerse == v;
-                              final isBookmarked = _bookmarks.contains(v);
-                              return TextSpan(
-                                children: [
-                                  TextSpan(
-                                    text: '$text ',
-                                    style: GoogleFonts.amiri(
-                                      fontSize: 26,
-                                      height: 2.2,
-                                      color: isSelected ? AppColors.gold : textColor,
-                                      backgroundColor: isSelected ? (isDark ? Colors.white10 : AppColors.darkGreen.withOpacity(0.05)) : Colors.transparent,
-                                    ),
-                                    recognizer: TapGestureRecognizer()..onTap = () {
-                                      setState(() => _selectedVerse = isSelected ? null : v);
-                                      if (!isSelected) _showVerseOptions(context, v, text);
-                                    },
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+                    child: Container(
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: isDark ? const Color(0xFF141414) : const Color(0xFFFCFBF4),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: AppColors.gold.withOpacity(isDark ? 0.2 : 0.5), width: 2),
+                        boxShadow: [
+                          BoxShadow(color: Colors.black.withOpacity(isDark ? 0.4 : 0.05), blurRadius: 20, spreadRadius: 2)
+                        ]
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          // Basmala on first page
+                          if (pageIndex == 0 && widget.surahNumber != 1 && widget.surahNumber != 9)
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 24),
+                              child: Text(quran.basmala, textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontFamily: 'KFGQPC Uthmanic Script Hafs',
+                                  fontSize: 26,
+                                  fontWeight: FontWeight.normal,
+                                  color: textColor,
+                                )),
+                            ),
+                          // Verses (Inline like a Mushaf, justified)
+                          SelectableText.rich(
+                            textAlign: TextAlign.justify,
+                            textDirection: TextDirection.rtl,
+                            TextSpan(
+                              children: verses.map((v) {
+                                final text = quran.getVerse(widget.surahNumber, v, verseEndSymbol: true);
+                                final isSelected = _selectedVerse == v;
+                                final isBookmarked = _bookmarks.contains(v);
+                                
+                                return TextSpan(
+                                  text: '$text ',
+                                  style: TextStyle(
+                                    fontFamily: 'KFGQPC Uthmanic Script Hafs',
+                                    fontSize: 26,
+                                    height: 1.8,
+                                    color: isBookmarked ? Colors.red : (isSelected ? AppColors.gold : textColor),
+                                    backgroundColor: isSelected ? (isDark ? Colors.white10 : AppColors.darkGreen.withOpacity(0.05)) : Colors.transparent,
                                   ),
-                                  TextSpan(
-                                    text: ' ﴿$v﴾ ',
-                                    style: GoogleFonts.amiri(
-                                      fontSize: 18,
-                                      color: isSelected ? AppColors.gold : (isBookmarked ? Colors.red : AppColors.darkGreen),
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ],
-                              );
-                            }).toList(),
+                                  recognizer: TapGestureRecognizer()..onTap = () {
+                                    setState(() => _selectedVerse = isSelected ? null : v);
+                                    if (!isSelected) _showVerseOptions(context, v, text);
+                                  },
+                                );
+                              }).toList(),
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   );
                 },

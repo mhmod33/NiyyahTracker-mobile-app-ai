@@ -16,7 +16,7 @@ class ReportsPage extends StatelessWidget {
         backgroundColor: bg,
         appBar: AppBar(
           backgroundColor: isDark ? const Color(0xFF0D2818) : AppColors.darkGreen,
-          title: Text('تقرير الروح الشهري', style: GoogleFonts.cairo(color: Colors.white, fontWeight: FontWeight.bold)),
+          title: Text('تقرير الروح الشهري', style: GoogleFonts.ibmPlexSansArabic(color: Colors.white, fontWeight: FontWeight.bold)),
           centerTitle: true,
         ),
         body: ListView(padding: const EdgeInsets.all(16), children: [
@@ -45,7 +45,7 @@ class ReportsPage extends StatelessWidget {
         Row(children: [
           const Icon(Icons.picture_as_pdf, color: AppColors.goldLight, size: 32),
           const SizedBox(width: 12),
-          Text('تقرير أبريل ٢٠٢٦', style: GoogleFonts.cairo(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+          Text('تقرير أبريل ٢٠٢٦', style: GoogleFonts.ibmPlexSansArabic(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
         ]),
         const SizedBox(height: 20),
         _statRow('📖', 'صفحات القرآن', '٤٨٠ صفحة'),
@@ -58,7 +58,7 @@ class ReportsPage extends StatelessWidget {
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(color: Colors.white.withOpacity(0.1), borderRadius: BorderRadius.circular(10)),
           child: Text('"رحلتك الروحية هذا الشهر كانت مميزة — استمر، فالثبات أفضل من الاندفاع المؤقت 🤍"',
-            style: GoogleFonts.cairo(color: AppColors.goldLight, fontSize: 13, fontStyle: FontStyle.italic), textAlign: TextAlign.center),
+            style: GoogleFonts.ibmPlexSansArabic(color: AppColors.goldLight, fontSize: 13, fontStyle: FontStyle.italic), textAlign: TextAlign.center),
         ),
       ]),
     );
@@ -68,8 +68,8 @@ class ReportsPage extends StatelessWidget {
     return Padding(padding: const EdgeInsets.symmetric(vertical: 5), child: Row(children: [
       Text(icon, style: const TextStyle(fontSize: 18)),
       const SizedBox(width: 8),
-      Expanded(child: Text(label, style: GoogleFonts.cairo(color: Colors.white70, fontSize: 13))),
-      Text(value, style: GoogleFonts.cairo(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+      Expanded(child: Text(label, style: GoogleFonts.ibmPlexSansArabic(color: Colors.white70, fontSize: 13))),
+      Text(value, style: GoogleFonts.ibmPlexSansArabic(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
     ]));
   }
 
@@ -77,12 +77,12 @@ class ReportsPage extends StatelessWidget {
     return ElevatedButton.icon(
       onPressed: () {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('🎉 جارٍ إنشاء التقرير... سيتم التنزيل تلقائياً', style: GoogleFonts.cairo()),
+          content: Text('🎉 جارٍ إنشاء التقرير... سيتم التنزيل تلقائياً', style: GoogleFonts.ibmPlexSansArabic()),
           backgroundColor: AppColors.darkGreen,
         ));
       },
       icon: const Icon(Icons.download, color: Colors.white),
-      label: Text('تنزيل تقرير الروح (PDF)', style: GoogleFonts.cairo(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+      label: Text('تنزيل تقرير الروح (PDF)', style: GoogleFonts.ibmPlexSansArabic(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
       style: ElevatedButton.styleFrom(
         backgroundColor: AppColors.gold, minimumSize: const Size(double.infinity, 56),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),

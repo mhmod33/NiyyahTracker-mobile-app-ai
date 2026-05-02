@@ -32,12 +32,12 @@ class _WorshipPageState extends State<WorshipPage> {
         backgroundColor: bg,
         appBar: AppBar(
           backgroundColor: isDark ? const Color(0xFF0D2818) : AppColors.darkGreen,
-          title: Text('عبادات اليوم', style: GoogleFonts.cairo(color: Colors.white, fontWeight: FontWeight.bold)),
+          title: Text('عبادات اليوم', style: GoogleFonts.ibmPlexSansArabic(color: Colors.white, fontWeight: FontWeight.bold)),
           centerTitle: true,
           actions: [
             Center(child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Text('${today.day}/${today.month}/${today.year}', style: GoogleFonts.cairo(color: Colors.white70, fontSize: 13)),
+              child: Text('${today.day}/${today.month}/${today.year}', style: GoogleFonts.ibmPlexSansArabic(color: Colors.white70, fontSize: 13)),
             )),
           ],
         ),
@@ -70,7 +70,7 @@ class _WorshipPageState extends State<WorshipPage> {
         gradient: LinearGradient(colors: isDark ? [const Color(0xFF0D3B26), const Color(0xFF145A3A)] : [AppColors.midGreen, AppColors.darkGreen]),
         borderRadius: BorderRadius.circular(10),
       ),
-      child: Text(title, style: GoogleFonts.cairo(color: Colors.white, fontWeight: FontWeight.bold)),
+      child: Text(title, style: GoogleFonts.ibmPlexSansArabic(color: Colors.white, fontWeight: FontWeight.bold)),
     );
   }
 
@@ -79,7 +79,7 @@ class _WorshipPageState extends State<WorshipPage> {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(color: cardBg, borderRadius: BorderRadius.circular(16), border: Border.all(color: borderColor)),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text('كم صلاة صليت في وقتها اليوم؟', style: GoogleFonts.cairo(fontWeight: FontWeight.w600, color: isDark ? AppColors.lightGreen : AppColors.darkGreen)),
+        Text('كم صلاة صليت في وقتها اليوم؟', style: GoogleFonts.ibmPlexSansArabic(fontWeight: FontWeight.w600, color: isDark ? AppColors.lightGreen : AppColors.darkGreen)),
         const SizedBox(height: 12),
         Row(mainAxisAlignment: MainAxisAlignment.spaceAround, children: List.generate(6, (i) {
           final selected = i <= _prayerCount;
@@ -94,10 +94,10 @@ class _WorshipPageState extends State<WorshipPage> {
                   shape: BoxShape.circle,
                   border: Border.all(color: selected ? AppColors.darkGreen : (isDark ? Colors.white24 : Colors.grey[300]!)),
                 ),
-                child: Center(child: Text('$i', style: GoogleFonts.cairo(color: selected ? Colors.white : (isDark ? Colors.white60 : Colors.grey[600]), fontWeight: FontWeight.bold))),
+                child: Center(child: Text('$i', style: GoogleFonts.ibmPlexSansArabic(color: selected ? Colors.white : (isDark ? Colors.white60 : Colors.grey[600]), fontWeight: FontWeight.bold))),
               ),
               const SizedBox(height: 4),
-              Text(labels[i], style: GoogleFonts.cairo(fontSize: 9, color: subColor)),
+              Text(labels[i], style: GoogleFonts.ibmPlexSansArabic(fontSize: 9, color: subColor)),
             ]),
           );
         })),
@@ -110,15 +110,15 @@ class _WorshipPageState extends State<WorshipPage> {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(color: cardBg, borderRadius: BorderRadius.circular(16), border: Border.all(color: borderColor)),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text('كم صفحة قرأت اليوم؟', style: GoogleFonts.cairo(fontWeight: FontWeight.w600, color: isDark ? AppColors.lightGreen : AppColors.darkGreen)),
+        Text('كم صفحة قرأت اليوم؟', style: GoogleFonts.ibmPlexSansArabic(fontWeight: FontWeight.w600, color: isDark ? AppColors.lightGreen : AppColors.darkGreen)),
         const SizedBox(height: 12),
         Row(children: [
           IconButton(onPressed: () => setState(() { if (_quranPages > 0) _quranPages--; }), icon: Icon(Icons.remove_circle_outline, color: isDark ? AppColors.lightGreen : AppColors.midGreen)),
-          Expanded(child: Text('$_quranPages صفحة', textAlign: TextAlign.center, style: GoogleFonts.cairo(fontSize: 22, fontWeight: FontWeight.bold, color: isDark ? AppColors.lightGreen : AppColors.darkGreen))),
+          Expanded(child: Text('$_quranPages صفحة', textAlign: TextAlign.center, style: GoogleFonts.ibmPlexSansArabic(fontSize: 22, fontWeight: FontWeight.bold, color: isDark ? AppColors.lightGreen : AppColors.darkGreen))),
           IconButton(onPressed: () => setState(() => _quranPages++), icon: Icon(Icons.add_circle_outline, color: isDark ? AppColors.lightGreen : AppColors.midGreen)),
         ]),
         Wrap(spacing: 8, children: [5, 10, 15, 20].map((p) => ActionChip(
-          label: Text('$p صفحات', style: GoogleFonts.cairo(fontSize: 12, color: isDark ? Colors.white : null)),
+          label: Text('$p صفحات', style: GoogleFonts.ibmPlexSansArabic(fontSize: 12, color: isDark ? Colors.white : null)),
           onPressed: () => setState(() => _quranPages = p),
           backgroundColor: _quranPages == p ? (isDark ? AppColors.darkGreen.withOpacity(0.3) : AppColors.paleGreen) : (isDark ? Colors.white10 : Colors.grey[100]),
           side: BorderSide(color: _quranPages == p ? (isDark ? AppColors.darkGreen : AppColors.lightGreen) : (isDark ? Colors.white24 : Colors.grey[300]!)),
@@ -137,7 +137,7 @@ class _WorshipPageState extends State<WorshipPage> {
       ),
       child: ListTile(
         leading: Text(type.emoji, style: const TextStyle(fontSize: 26)),
-        title: Text(type.label, style: GoogleFonts.cairo(fontWeight: FontWeight.w600, color: isDark ? AppColors.lightGreen : AppColors.darkGreen)),
+        title: Text(type.label, style: GoogleFonts.ibmPlexSansArabic(fontWeight: FontWeight.w600, color: isDark ? AppColors.lightGreen : AppColors.darkGreen)),
         trailing: GestureDetector(
           onTap: () => setState(() => _checked[type] = !done),
           child: AnimatedContainer(

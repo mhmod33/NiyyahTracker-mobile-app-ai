@@ -18,6 +18,7 @@ import '../qibla/qibla_page.dart';
 import '../challenges/challenges_page.dart';
 import '../quran/quran_page.dart';
 import '../azkar/azkar_library_page.dart';
+import '../../providers/auth_provider.dart';
 
 TextStyle _f({double sz = 14, FontWeight fw = FontWeight.w400, Color? c, double? h}) =>
     GoogleFonts.ibmPlexSansArabic(fontSize: sz, fontWeight: fw, color: c, height: h);
@@ -44,6 +45,8 @@ class _DashboardPageState extends State<DashboardPage> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final bgColor = isDark ? const Color(0xFF121212) : AppColors.background;
     final textColor = isDark ? Colors.white : AppColors.textPrimary;
+    final authProvider = context.watch<AppAuthProvider>();
+    final userName = authProvider.displayName;
 
     return Directionality(
       textDirection: TextDirection.rtl,
@@ -97,7 +100,7 @@ class _DashboardPageState extends State<DashboardPage> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text('السلام عليكم', style: _f(sz: 13, c: Colors.white70)),
+                              Text('السلام عليكم، ${userName.split(' ').first}', style: _f(sz: 13, c: Colors.white70)),
                               Text('النية', style: _f(sz: 22, fw: FontWeight.w800, c: Colors.white)),
                             ],
                           ),

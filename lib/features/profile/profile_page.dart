@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:provider/provider.dart';
 import '../../core/app_colors.dart';
 import '../../core/theme_provider.dart';
+import '../../providers/auth_provider.dart';
 import '../ramadan/ramadan_page.dart';
 import '../hajj/hajj_page.dart';
+import '../auth/login_page.dart';
 
 TextStyle _f({double sz = 14, FontWeight fw = FontWeight.w400, Color? c, double? h}) =>
     GoogleFonts.ibmPlexSansArabic(fontSize: sz, fontWeight: fw, color: c, height: h);
@@ -18,10 +19,10 @@ class ProfilePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final user = FirebaseAuth.instance.currentUser;
-    final phone = user?.phoneNumber ?? 'غير محدد';
-    final name = user?.displayName ?? 'مستخدم النية';
-    final email = user?.email ?? '';
+    final authProvider = context.watch<AppAuthProvider>();
+    final name = authProvider.displayName;
+    final email = authProvider.email;
+    final phone = authProvider.phone;
     final themeProvider = context.watch<ThemeProvider>();
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
@@ -59,11 +60,18 @@ class ProfilePage extends StatelessWidget {
                             shape: BoxShape.circle, color: Colors.white,
                             boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.15), blurRadius: 20)],
                           ),
-                          child: const Center(child: Icon(Icons.person_rounded, size: 36, color: AppColors.darkGreen)),
+                          child: Center(
+                            child: Text(
+                              name.isNotEmpty ? name[0].toUpperCase() : '؟',
+                              style: _f(sz: 32, fw: FontWeight.w800, c: AppColors.darkGreen),
+                            ),
+                          ),
                         ),
                         const SizedBox(height: 10),
                         Text(name, style: _f(sz: 20, fw: FontWeight.w800, c: Colors.white)),
-                        if (phone != 'غير محدد')
+                        if (email.isNotEmpty)
+                          Text(email, style: _f(sz: 13, c: Colors.white70)),
+                        if (phone.isNotEmpty && email.isEmpty)
                           Text(phone, style: _f(sz: 13, c: Colors.white70)),
                       ],
                     ),
@@ -78,9 +86,16 @@ class ProfilePage extends StatelessWidget {
                 padding: const EdgeInsets.all(20),
                 child: Column(
                   children: [
-                    _InfoTile(icon: Icons.phone_rounded, label: 'رقم الهاتف', value: phone),
                     if (email.isNotEmpty)
                       _InfoTile(icon: Icons.email_rounded, label: 'البريد الإلكتروني', value: email),
+                    if (phone.isNotEmpty)
+                      _InfoTile(icon: Icons.phone_rounded, label: 'رقم الهاتف', value: phone),
+                    if (authProvider.userProfile != null && authProvider.userProfile!['streakDays'] != null)
+                      _InfoTile(
+                        icon: Icons.local_fire_department_rounded,
+                        label: 'أيام متتالية',
+                        value: '${authProvider.userProfile!['streakDays']} يوم',
+                      ),
                     const SizedBox(height: 20),
 
                     // ── Settings ──
@@ -155,8 +170,42 @@ class ProfilePage extends StatelessWidget {
                       width: double.infinity,
                       child: OutlinedButton.icon(
                         onPressed: () async {
-                          await FirebaseAuth.instance.signOut();
-                          if (context.mounted) Navigator.of(context).popUntil((route) => route.isFirst);
+                          // Show confirmation dialog
+                          final shouldLogout = await showDialog<bool>(
+                            context: context,
+                            builder: (ctx) => Directionality(
+                              textDirection: TextDirection.rtl,
+                              child: AlertDialog(
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                                title: Text('تسجيل الخروج', style: GoogleFonts.cairo(fontWeight: FontWeight.bold)),
+                                content: Text('هل أنت متأكد من تسجيل الخروج؟', style: GoogleFonts.cairo()),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () => Navigator.pop(ctx, false),
+                                    child: Text('إلغاء', style: GoogleFonts.cairo(color: Colors.grey)),
+                                  ),
+                                  ElevatedButton(
+                                    onPressed: () => Navigator.pop(ctx, true),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.red[600],
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                    ),
+                                    child: Text('تسجيل الخروج', style: GoogleFonts.cairo(color: Colors.white, fontWeight: FontWeight.bold)),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+
+                          if (shouldLogout == true && context.mounted) {
+                            await context.read<AppAuthProvider>().signOut();
+                            if (context.mounted) {
+                              Navigator.of(context).pushAndRemoveUntil(
+                                MaterialPageRoute(builder: (_) => const LoginPage()),
+                                (route) => false,
+                              );
+                            }
+                          }
                         },
                         icon: const Icon(Icons.logout_rounded, size: 20),
                         label: Text('تسجيل الخروج', style: _f(fw: FontWeight.w700)),

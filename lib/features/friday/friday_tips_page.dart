@@ -35,7 +35,7 @@ class FridayTipsPage extends StatelessWidget {
             backgroundColor: isDark ? const Color(0xFF0D2818) : AppColors.darkGreen,
             leading: IconButton(icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white), onPressed: () => Navigator.pop(context)),
             flexibleSpace: FlexibleSpaceBar(
-              title: Text('سنن الجمعة', style: GoogleFonts.cairo(fontWeight: FontWeight.w800, color: Colors.white, fontSize: 18)),
+              title: Text('سنن الجمعة', style: GoogleFonts.ibmPlexSansArabic(fontWeight: FontWeight.w800, color: Colors.white, fontSize: 18)),
               background: Container(
                 decoration: BoxDecoration(gradient: LinearGradient(
                   colors: isDark ? [const Color(0xFF0D2818), const Color(0xFF145A3A)] : [AppColors.darkGreen, AppColors.midGreen],
@@ -43,14 +43,14 @@ class FridayTipsPage extends StatelessWidget {
                 child: Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
                   const Text('🌟', style: TextStyle(fontSize: 44)),
                   const SizedBox(height: 8),
-                  Text('خير يوم طلعت عليه الشمس', style: GoogleFonts.cairo(color: AppColors.goldLight, fontSize: 15, fontWeight: FontWeight.w600)),
+                  Text('خير يوم طلعت عليه الشمس', style: GoogleFonts.ibmPlexSansArabic(color: AppColors.goldLight, fontSize: 15, fontWeight: FontWeight.w600)),
                 ])),
               ),
             ),
           ),
           SliverToBoxAdapter(child: Padding(
             padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
-            child: Text('📜 أحاديث عن فضل الجمعة', style: GoogleFonts.cairo(fontSize: 18, fontWeight: FontWeight.w800, color: textColor)),
+            child: Text('📜 أحاديث عن فضل الجمعة', style: GoogleFonts.ibmPlexSansArabic(fontSize: 18, fontWeight: FontWeight.w800, color: textColor)),
           )),
           SliverToBoxAdapter(child: SizedBox(height: 180, child: ListView.builder(
             scrollDirection: Axis.horizontal, padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -58,12 +58,12 @@ class FridayTipsPage extends StatelessWidget {
           ))),
           SliverToBoxAdapter(child: Padding(
             padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
-            child: Text('📋 سنن يوم الجمعة', style: GoogleFonts.cairo(fontSize: 18, fontWeight: FontWeight.w800, color: textColor)),
+            child: Text('📋 سنن يوم الجمعة', style: GoogleFonts.ibmPlexSansArabic(fontSize: 18, fontWeight: FontWeight.w800, color: textColor)),
           )),
           SliverList(delegate: SliverChildBuilderDelegate((_, i) => _SunnahCategoryCard(category: _categories[i], isDark: isDark), childCount: _categories.length)),
           SliverToBoxAdapter(child: Padding(
             padding: const EdgeInsets.all(24),
-            child: Center(child: Text('اللهم صلِّ وسلم على نبينا محمد ﷺ', style: GoogleFonts.cairo(fontSize: 16, fontWeight: FontWeight.w700, color: isDark ? AppColors.lightGreen : AppColors.darkGreen))),
+            child: Center(child: Text('اللهم صلِّ وسلم على نبينا محمد ﷺ', style: GoogleFonts.ibmPlexSansArabic(fontSize: 16, fontWeight: FontWeight.w700, color: isDark ? AppColors.lightGreen : AppColors.darkGreen))),
           )),
         ]),
       ),
@@ -101,9 +101,9 @@ class _HadithCard extends StatelessWidget {
         boxShadow: [BoxShadow(color: (isDark ? Colors.black : AppColors.darkGreen).withOpacity(isDark ? 0.3 : 0.08), blurRadius: 12, offset: const Offset(0, 4))],
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Expanded(child: Text(hadith.text, style: GoogleFonts.cairo(fontSize: 13, fontWeight: FontWeight.w600, color: isDark ? Colors.white : AppColors.textPrimary, height: 1.6), maxLines: 5, overflow: TextOverflow.ellipsis)),
+        Expanded(child: Text(hadith.text, style: GoogleFonts.ibmPlexSansArabic(fontSize: 13, fontWeight: FontWeight.w600, color: isDark ? Colors.white : AppColors.textPrimary, height: 1.6), maxLines: 5, overflow: TextOverflow.ellipsis)),
         const SizedBox(height: 8),
-        Text(hadith.source, style: GoogleFonts.cairo(fontSize: 11, color: isDark ? AppColors.lightGreen : AppColors.darkGreen, fontWeight: FontWeight.w700)),
+        Text(hadith.source, style: GoogleFonts.ibmPlexSansArabic(fontSize: 11, color: isDark ? AppColors.lightGreen : AppColors.darkGreen, fontWeight: FontWeight.w700)),
       ]),
     );
   }
@@ -135,8 +135,8 @@ class _SunnahCategoryCard extends StatelessWidget {
           leading: Container(width: 44, height: 44,
             decoration: BoxDecoration(color: catColor, borderRadius: BorderRadius.circular(12)),
             child: Center(child: Text(category.icon, style: const TextStyle(fontSize: 22)))),
-          title: Text(category.title, style: GoogleFonts.cairo(fontWeight: FontWeight.w800, fontSize: 16, color: textColor)),
-          subtitle: Text('${category.items.length} سنن', style: GoogleFonts.cairo(fontSize: 12, color: isDark ? Colors.white54 : AppColors.textSecondary)),
+          title: Text(category.title, style: GoogleFonts.ibmPlexSansArabic(fontWeight: FontWeight.w800, fontSize: 16, color: textColor)),
+          subtitle: Text('${category.items.length} سنن', style: GoogleFonts.ibmPlexSansArabic(fontSize: 12, color: isDark ? Colors.white54 : AppColors.textSecondary)),
           iconColor: isDark ? Colors.white54 : null,
           collapsedIconColor: isDark ? Colors.white38 : null,
           children: category.items.asMap().entries.map((entry) => Padding(

@@ -28,7 +28,7 @@ class SmartPlanPage extends StatelessWidget {
         backgroundColor: bg,
         appBar: AppBar(
           backgroundColor: isDark ? const Color(0xFF0D2818) : AppColors.darkGreen,
-          title: Text('الخطة الأسبوعية الذكية', style: GoogleFonts.cairo(color: Colors.white, fontWeight: FontWeight.bold)),
+          title: Text('الخطة الأسبوعية الذكية', style: GoogleFonts.ibmPlexSansArabic(color: Colors.white, fontWeight: FontWeight.bold)),
           centerTitle: true,
         ),
         body: ListView(padding: const EdgeInsets.all(16), children: [
@@ -42,18 +42,18 @@ class SmartPlanPage extends StatelessWidget {
               const Text('🎯', style: TextStyle(fontSize: 30)),
               const SizedBox(width: 12),
               Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text('هدفك الشهري', style: GoogleFonts.cairo(color: Colors.white70, fontSize: 12)),
-                Text('ختم القرآن الكريم في مايو', style: GoogleFonts.cairo(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15)),
-                Text('المطلوب يومياً: ٢٠ صفحة', style: GoogleFonts.cairo(color: Colors.white70, fontSize: 12)),
+                Text('هدفك الشهري', style: GoogleFonts.ibmPlexSansArabic(color: Colors.white70, fontSize: 12)),
+                Text('ختم القرآن الكريم في مايو', style: GoogleFonts.ibmPlexSansArabic(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15)),
+                Text('المطلوب يومياً: ٢٠ صفحة', style: GoogleFonts.ibmPlexSansArabic(color: Colors.white70, fontSize: 12)),
               ])),
               Column(children: [
-                Text('٧٩٪', style: GoogleFonts.cairo(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold)),
-                Text('مكتمل', style: GoogleFonts.cairo(color: Colors.white70, fontSize: 11)),
+                Text('٧٩٪', style: GoogleFonts.ibmPlexSansArabic(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold)),
+                Text('مكتمل', style: GoogleFonts.ibmPlexSansArabic(color: Colors.white70, fontSize: 11)),
               ]),
             ]),
           ),
           const SizedBox(height: 20),
-          Text('خطة هذا الأسبوع', style: GoogleFonts.cairo(fontSize: 17, fontWeight: FontWeight.bold, color: greenColor)),
+          Text('خطة هذا الأسبوع', style: GoogleFonts.ibmPlexSansArabic(fontSize: 17, fontWeight: FontWeight.bold, color: greenColor)),
           const SizedBox(height: 12),
           ..._plan.map((item) => _DayCard(item: item, isDark: isDark)),
         ]),
