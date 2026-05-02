@@ -2,6 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/app_colors.dart';
+import 'package:provider/provider.dart';
+import '../../core/app_models.dart';
+import '../../providers/auth_provider.dart';
+import '../../services/firebase_service.dart';
+import '../../models/worship_model.dart' as db_model;
+import 'package:uuid/uuid.dart' as uuid;
 
 class AnalyticsPage extends StatefulWidget {
   const AnalyticsPage({super.key});
@@ -13,15 +19,62 @@ class AnalyticsPage extends StatefulWidget {
 class _AnalyticsPageState extends State<AnalyticsPage> with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
-  // Mock weekly data: [Mon, Tue, Wed, Thu, Fri, Sat, Sun]
-  final List<double> _prayerData  = [5, 4, 5, 5, 3, 5, 5];
-  final List<double> _quranData   = [20, 15, 20, 10, 20, 20, 18];
-  final List<double> _dhikrData   = [1, 0, 1, 1, 0, 1, 1];
+  final FirebaseService _firebaseService = FirebaseService();
+  bool _isLoading = true;
+  
+  List<double> _prayerData  = List.filled(7, 0);
+  List<double> _quranData   = List.filled(7, 0);
+  List<double> _dhikrData   = List.filled(7, 0);
+  
+  int _totalQuranPages = 0;
+  int _completedPrayers = 0;
+  int _streak = 0;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    _loadData();
+  }
+
+  Future<void> _loadData() async {
+    final userId = context.read<AppAuthProvider>().userId;
+    if (userId.isEmpty) return;
+
+    try {
+      final now = DateTime.now();
+      final worships = await _firebaseService.getMonthlyWorships(userId, now.year, now.month);
+      
+      final last7Days = List.generate(7, (i) => now.subtract(Duration(days: 6 - i)));
+      
+      final List<double> pData = List.filled(7, 0);
+      final List<double> qData = List.filled(7, 0);
+      final List<double> dData = List.filled(7, 0);
+
+      for (int i = 0; i < 7; i++) {
+        final date = last7Days[i];
+        final dayWorship = worships.where((w) => w.date.day == date.day && w.date.month == date.month).firstOrNull;
+        
+        if (dayWorship != null) {
+          pData[i] = dayWorship.prayerCount.toDouble();
+          qData[i] = dayWorship.quranPages.toDouble();
+          dData[i] = dayWorship.worships[WorshipType.dhikr.name] == true ? 1.0 : 0.0;
+        }
+      }
+
+      setState(() {
+        _prayerData = pData;
+        _quranData = qData;
+        _dhikrData = dData;
+        _totalQuranPages = worships.fold(0, (sum, w) => sum + w.quranPages);
+        _completedPrayers = worships.fold(0, (sum, w) => sum + w.prayerCount);
+        _streak = worships.length; 
+        _isLoading = false;
+      });
+    } catch (e) {
+      debugPrint('Error loading analytics: $e');
+      setState(() => _isLoading = false);
+    }
   }
 
   @override
@@ -50,7 +103,9 @@ class _AnalyticsPageState extends State<AnalyticsPage> with SingleTickerProvider
             tabs: const [Tab(text: 'أسبوعي'), Tab(text: 'شهري')],
           ),
         ),
-        body: TabBarView(
+        body: _isLoading 
+          ? const Center(child: CircularProgressIndicator(color: AppColors.darkGreen))
+          : TabBarView(
           controller: _tabController,
           children: [
             _weeklyView(),
@@ -105,11 +160,11 @@ class _AnalyticsPageState extends State<AnalyticsPage> with SingleTickerProvider
   Widget _summaryCards() {
     return Row(
       children: [
-        Expanded(child: _miniStat(label: 'صلوات مكتملة', value: '٣٣/٣٥', icon: '🕌')),
+        Expanded(child: _miniStat(label: 'إجمالي الصلوات', value: '$_completedPrayers', icon: '🕌')),
         const SizedBox(width: 10),
-        Expanded(child: _miniStat(label: 'صفحات القرآن', value: '١٢٣', icon: '📖')),
+        Expanded(child: _miniStat(label: 'صفحات القرآن', value: '$_totalQuranPages', icon: '📖')),
         const SizedBox(width: 10),
-        Expanded(child: _miniStat(label: 'الستريك', value: '١٢ يوم', icon: '🔥')),
+        Expanded(child: _miniStat(label: 'أيام النشاط', value: '$_streak يوم', icon: '🔥')),
       ],
     );
   }

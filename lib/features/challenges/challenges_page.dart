@@ -73,7 +73,7 @@ class _ChallengesPageState extends State<ChallengesPage> {
     final textColor = isDark ? Colors.white : AppColors.textPrimary;
 
     final completed = _challenges.where((c) => c.current >= c.target).length;
-    final totalProgress = _challenges.fold<double>(0, (s, c) => s + (c.current / c.target).clamp(0, 1)) / _challenges.length;
+    final totalProgress = _challenges.isEmpty ? 0.0 : _challenges.fold<double>(0, (s, c) => s + (c.current / c.target).clamp(0, 1)) / _challenges.length;
 
     return Directionality(
       textDirection: TextDirection.rtl,

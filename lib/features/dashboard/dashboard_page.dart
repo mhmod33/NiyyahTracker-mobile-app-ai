@@ -19,6 +19,10 @@ import '../challenges/challenges_page.dart';
 import '../quran/quran_page.dart';
 import '../azkar/azkar_library_page.dart';
 import '../../providers/auth_provider.dart';
+import '../../services/firebase_service.dart';
+import '../../models/worship_model.dart' as db_model;
+import '../../core/app_models.dart';
+import 'package:uuid/uuid.dart' as uuid;
 
 TextStyle _f({double sz = 14, FontWeight fw = FontWeight.w400, Color? c, double? h}) =>
     GoogleFonts.ibmPlexSansArabic(fontSize: sz, fontWeight: fw, color: c, height: h);
@@ -34,6 +38,70 @@ class _DashboardPageState extends State<DashboardPage> {
   int _currentIndex = 0;
   bool _fajrChecked = false;
   bool _charityChecked = false;
+  bool _isLoadingAccountability = true;
+  bool _isAccountabilityDone = false;
+  final FirebaseService _firebaseService = FirebaseService();
+
+  @override
+  void initState() {
+    super.initState();
+    _checkTodayAccountability();
+  }
+
+  Future<void> _checkTodayAccountability() async {
+    final userId = context.read<AppAuthProvider>().userId;
+    if (userId.isEmpty) return;
+
+    try {
+      final worships = await _firebaseService.getDailyWorshipByDate(userId, DateTime.now());
+      if (worships.isNotEmpty) {
+        final today = worships.first;
+        setState(() {
+          _fajrChecked = today.prayerCount > 0;
+          _charityChecked = today.worships['charity'] == true;
+          _isAccountabilityDone = _fajrChecked && _charityChecked;
+          _isLoadingAccountability = false;
+        });
+      } else {
+        setState(() => _isLoadingAccountability = false);
+      }
+    } catch (e) {
+      debugPrint('Error checking accountability: $e');
+      setState(() => _isLoadingAccountability = false);
+    }
+  }
+
+  Future<void> _saveQuickAccountability() async {
+    final userId = context.read<AppAuthProvider>().userId;
+    if (userId.isEmpty) return;
+
+    setState(() => _isLoadingAccountability = true);
+
+    try {
+      final worships = await _firebaseService.getDailyWorshipByDate(userId, DateTime.now());
+      String docId = worships.isNotEmpty ? worships.first.id : const uuid.Uuid().v4();
+      
+      final data = db_model.DailyWorship(
+        id: docId,
+        date: DateTime.now(),
+        prayerCount: _fajrChecked ? 1 : 0,
+        quranPages: worships.isNotEmpty ? worships.first.quranPages : 0,
+        worships: {
+          ...?worships.firstOrNull?.worships,
+          'charity': _charityChecked,
+        },
+      );
+
+      await _firebaseService.saveDailyWorship(userId, data);
+      setState(() {
+        _isAccountabilityDone = true;
+        _isLoadingAccountability = false;
+      });
+    } catch (e) {
+      debugPrint('Error saving accountability: $e');
+      setState(() => _isLoadingAccountability = false);
+    }
+  }
 
   String _getArabicDate() {
     final now = DateTime.now();
@@ -196,6 +264,8 @@ class _DashboardPageState extends State<DashboardPage> {
                     onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SmartPlanPage()))),
                   _FeatureCard(icon: Icons.description_rounded, label: 'تقرير الروح', color: const Color(0xFF607D8B), isDark: isDark,
                     onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ReportsPage()))),
+                  _FeatureCard(icon: Icons.analytics_rounded, label: 'التحليلات', color: const Color(0xFF9C27B0), isDark: isDark,
+                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AnalyticsPage()))),
                   _FeatureCard(icon: Icons.emoji_events_rounded, label: 'التحديات', color: const Color(0xFFFFC107), isDark: isDark,
                     onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ChallengesPage()))),
                   _FeatureCard(icon: Icons.today_rounded, label: 'سنن الجمعة', color: const Color(0xFF00BCD4), isDark: isDark,
@@ -272,7 +342,14 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 
   Widget _buildDailyAccountability(bool isDark, Color textColor) {
-    if (_fajrChecked && _charityChecked) {
+    if (_isLoadingAccountability) {
+      return const Padding(
+        padding: EdgeInsets.all(20),
+        child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+      );
+    }
+
+    if (_isAccountabilityDone) {
       return Padding(
         padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
         child: Container(
@@ -305,31 +382,53 @@ class _DashboardPageState extends State<DashboardPage> {
               const Icon(Icons.fact_check_rounded, color: AppColors.gold, size: 22),
               const SizedBox(width: 8),
               Text('المحاسبة اليومية', style: _f(sz: 18, fw: FontWeight.w800, c: textColor)),
+              const Spacer(),
+              IconButton(
+                onPressed: () => _showAccountabilityDialog(isDark),
+                icon: const Icon(Icons.add_circle_outline_rounded, color: AppColors.darkGreen, size: 28),
+              ),
             ],
           ),
-          const SizedBox(height: 12),
-          Container(
-            decoration: BoxDecoration(
-              color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: isDark ? Colors.white10 : Colors.black.withOpacity(0.05)),
-              boxShadow: [
-                if (!isDark) BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10, offset: const Offset(0, 4)),
-              ],
-            ),
-            child: Column(
+        ],
+      ),
+    );
+  }
+
+  void _showAccountabilityDialog(bool isDark) {
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setDialogState) => Directionality(
+          textDirection: TextDirection.rtl,
+          child: AlertDialog(
+            title: Text('المحاسبة اليومية', style: _f(sz: 18, fw: FontWeight.w800)),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
               children: [
                 _buildChecklistItem('هل صليت الفجر اليوم؟', 'الصلاة خير من النوم', Icons.wb_twilight_rounded, _fajrChecked, (val) {
-                  setState(() => _fajrChecked = val ?? false);
+                  setDialogState(() => _fajrChecked = val ?? false);
+                  setState(() {});
                 }, isDark),
-                Divider(height: 1, indent: 56, endIndent: 16, color: isDark ? Colors.white10 : Colors.black.withOpacity(0.05)),
+                const Divider(),
                 _buildChecklistItem('هل تصدقت اليوم؟', 'ولو بشق تمرة', Icons.volunteer_activism_rounded, _charityChecked, (val) {
-                  setState(() => _charityChecked = val ?? false);
+                  setDialogState(() => _charityChecked = val ?? false);
+                  setState(() {});
                 }, isDark),
               ],
             ),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(context), child: const Text('إلغاء')),
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  _saveQuickAccountability();
+                },
+                style: ElevatedButton.styleFrom(backgroundColor: AppColors.darkGreen),
+                child: const Text('حفظ', style: TextStyle(color: Colors.white)),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }

@@ -13,6 +13,10 @@ import '../../core/app_colors.dart';
 TextStyle _f({double sz = 14, FontWeight fw = FontWeight.w400, Color? c, double? h}) =>
     GoogleFonts.ibmPlexSansArabic(fontSize: sz, fontWeight: fw, color: c, height: h);
 
+String _removeDiacritics(String text) {
+  return text.replaceAll(RegExp(r'[\u064B-\u065F\u0670\u06D6-\u06ED]'), '');
+}
+
 // ─────────────────────────────────────────
 // Quran Index Page (Surah list + Juz + Hizb)
 // ─────────────────────────────────────────
@@ -160,9 +164,10 @@ class _QuranPageState extends State<QuranPage> with SingleTickerProviderStateMix
         final q = ctrl.text;
         final results = <Map<String, dynamic>>[];
         if (q.length >= 2) {
+          final normalizedQ = _removeDiacritics(q);
           for (int s = 1; s <= 114; s++) {
             for (int v = 1; v <= quran.getVerseCount(s); v++) {
-              if (quran.getVerse(s, v).contains(q)) { results.add({'s': s, 'v': v}); if (results.length >= 30) break; }
+              if (_removeDiacritics(quran.getVerse(s, v)).contains(normalizedQ)) { results.add({'s': s, 'v': v}); if (results.length >= 30) break; }
             }
             if (results.length >= 30) break;
           }
@@ -383,8 +388,21 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
                   
                   // Mushaf Page Content - No scrolling, highly compressed layout
                   Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                    child: Container(
+                      margin: (pageNumber == 1 || pageNumber == 2) ? const EdgeInsets.symmetric(horizontal: 16, vertical: 8) : null,
+                      decoration: (pageNumber == 1 || pageNumber == 2)
+                          ? BoxDecoration(
+                              color: bg,
+                              border: Border.all(color: AppColors.gold, width: 4),
+                              borderRadius: BorderRadius.circular(20),
+                              boxShadow: [
+                                BoxShadow(color: AppColors.gold.withOpacity(0.2), blurRadius: 10, spreadRadius: 2),
+                              ],
+                            )
+                          : null,
+                      padding: (pageNumber == 1 || pageNumber == 2)
+                          ? const EdgeInsets.all(16)
+                          : const EdgeInsets.symmetric(horizontal: 8),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
@@ -497,7 +515,7 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
                                                   text: text,
                                                   style: TextStyle(
                                                     fontFamily: 'KFGQPC Uthmanic Script Hafs',
-                                                    fontSize: 26, // Much larger for better readability
+                                                    fontSize: 24, // Much larger for better readability
                                                     height: 1.5, // More comfortable line height
                                                     color: isBookmarked ? Colors.red : (isSelected ? AppColors.gold : ayahColor),
                                                     backgroundColor: isSelected ? (isDark ? Colors.white10 : AppColors.darkGreen.withOpacity(0.05)) : Colors.transparent,
@@ -785,6 +803,7 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
                     onChanged: (query) {
                       if (query.length >= 2) {
                         searchResults.clear();
+                        final normalizedQ = _removeDiacritics(query);
                         // Search in current page first, then expand if needed
                         final currentPageData = quran.getPageData(_currentPage + 1);
                         
@@ -795,7 +814,7 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
                           
                           for (int v = startVerse; v <= endVerse; v++) {
                             final verseText = quran.getVerse(surah, v);
-                            if (verseText.contains(query)) {
+                            if (_removeDiacritics(verseText).contains(normalizedQ)) {
                               searchResults.add({
                                 'surah': surah,
                                 'verse': v,
@@ -815,7 +834,7 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
                           for (int s = 1; s <= 114; s++) {
                             for (int v = 1; v <= quran.getVerseCount(s); v++) {
                               final verseText = quran.getVerse(s, v);
-                              if (verseText.contains(query)) {
+                              if (_removeDiacritics(verseText).contains(normalizedQ)) {
                                 searchResults.add({
                                   'surah': s,
                                   'verse': v,

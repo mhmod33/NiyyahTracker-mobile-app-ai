@@ -18,6 +18,8 @@ class _WorshipPageState extends State<WorshipPage> {
   final FirebaseService _firebaseService = FirebaseService();
   bool _isLoading = true;
   bool _isSaving = false;
+  bool _hasSavedToday = false;
+  bool _isEditing = false;
   String _worshipDocId = const Uuid().v4();
   
   final Map<WorshipType, bool> _checked = {
@@ -53,6 +55,7 @@ class _WorshipPageState extends State<WorshipPage> {
             _checked[t] = todayWorship.worships[t.name] ?? false;
           }
         }
+        _hasSavedToday = true;
       }
       setState(() => _isLoading = false);
     } catch (e) {
@@ -82,7 +85,7 @@ class _WorshipPageState extends State<WorshipPage> {
 
     try {
       await _firebaseService.saveDailyWorship(userId, worshipData);
-      setState(() => _isSaving = false);
+      setState(() { _isSaving = false; _hasSavedToday = true; _isEditing = false; });
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text('تم حفظ عبادات اليوم بفضل الله 🤍', style: GoogleFonts.cairo(color: Colors.white)),
@@ -122,7 +125,9 @@ class _WorshipPageState extends State<WorshipPage> {
         ),
         body: _isLoading 
           ? const Center(child: CircularProgressIndicator(color: AppColors.gold))
-          : ListView(
+          : (_hasSavedToday && !_isEditing)
+              ? _buildSummaryCard(isDark, cardBg, textColor, subColor, borderColor)
+              : ListView(
               padding: const EdgeInsets.all(16),
               children: [
                 _sectionHeader('🕌 الصلوات الخمس', isDark),
@@ -243,5 +248,77 @@ class _WorshipPageState extends State<WorshipPage> {
           : const Icon(Icons.save, color: Colors.white),
       label: Text('حفظ بطاقة اليوم', style: GoogleFonts.cairo(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
     ));
+  }
+
+  Widget _buildSummaryCard(bool isDark, Color cardBg, Color textColor, Color subColor, Color borderColor) {
+    return Center(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(24),
+        child: Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: cardBg,
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: AppColors.gold.withOpacity(0.5), width: 2),
+            boxShadow: [
+              BoxShadow(color: AppColors.darkGreen.withOpacity(0.1), blurRadius: 20, spreadRadius: 5),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: AppColors.paleGreen.withOpacity(isDark ? 0.1 : 0.5),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.verified_rounded, color: AppColors.darkGreen, size: 64),
+              ),
+              const SizedBox(height: 16),
+              Text('تقبل الله طاعتك!', style: GoogleFonts.cairo(fontSize: 24, fontWeight: FontWeight.bold, color: isDark ? AppColors.lightGreen : AppColors.darkGreen)),
+              const SizedBox(height: 8),
+              Text('لقد أتممت تسجيل عبادات اليوم بنجاح 🤍', textAlign: TextAlign.center, style: GoogleFonts.cairo(fontSize: 14, color: subColor)),
+              const SizedBox(height: 24),
+              const Divider(),
+              const SizedBox(height: 16),
+              _summaryRow('الصلوات', '$_prayerCount', Icons.mosque_rounded, isDark),
+              _summaryRow('صفحات القرآن', '$_quranPages', Icons.menu_book_rounded, isDark),
+              ...WorshipType.values.where((t) => t != WorshipType.prayer && t != WorshipType.quran && _checked[t] == true)
+                  .map((t) => _summaryRow(t.label, 'تم', Icons.check_circle_rounded, isDark)),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                height: 50,
+                child: OutlinedButton.icon(
+                  onPressed: () => setState(() => _isEditing = true),
+                  icon: const Icon(Icons.edit_rounded, size: 20),
+                  label: Text('تعديل', style: GoogleFonts.cairo(fontWeight: FontWeight.bold)),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.darkGreen,
+                    side: const BorderSide(color: AppColors.darkGreen),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _summaryRow(String title, String value, IconData icon, bool isDark) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        children: [
+          Icon(icon, color: AppColors.gold, size: 20),
+          const SizedBox(width: 8),
+          Expanded(child: Text(title, style: GoogleFonts.ibmPlexSansArabic(fontSize: 14, color: isDark ? Colors.white : AppColors.textPrimary))),
+          Text(value, style: GoogleFonts.ibmPlexSansArabic(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.darkGreen)),
+        ],
+      ),
+    );
   }
 }

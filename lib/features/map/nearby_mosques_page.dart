@@ -184,33 +184,34 @@ class _NearbyMosquesPageState extends State<NearbyMosquesPage>
     final lon = _userLocation!.longitude;
     final rad = (_radiusKm * 1000).toInt();
 
-    // Very broad query — no religion filter.
-    // In Egypt & MENA, place_of_worship is almost always a mosque.
+    // Refined query for mosques
     final query =
         '[out:json][timeout:30];'
         '('
-        'nwr["amenity"="place_of_worship"](around:$rad,$lat,$lon);'
+        'nwr["amenity"="place_of_worship"]["religion"="muslim"](around:$rad,$lat,$lon);'
+        'nwr["amenity"="mosque"](around:$rad,$lat,$lon);'
         'nwr["building"="mosque"](around:$rad,$lat,$lon);'
+        'nwr["mosque"="yes"](around:$rad,$lat,$lon);'
         ');out center;';
 
     // Try multiple Overpass endpoints (main + mirrors)
     final endpoints = [
       'https://overpass-api.de/api/interpreter',
-      'https://overpass.kumi.systems/api/interpreter',
-      'https://maps.mail.ru/osm/tools/overpass/api/interpreter',
+      'https://lz4.overpass-api.de/api/interpreter',
+      'https://z.overpass-api.de/api/interpreter',
     ];
 
     for (final endpoint in endpoints) {
       try {
-        final url = Uri.parse('$endpoint?data=${Uri.encodeComponent(query)}');
+        final url = Uri.parse(endpoint);
         debugPrint('🕌 Overpass request: lat=$lat, lon=$lon, radius=${rad}m');
         debugPrint('🕌 Trying: $endpoint');
 
-        final resp = await http.get(
+        final resp = await http.post(
           url,
+          body: {'data': query},
           headers: {
             'User-Agent': 'NiyyahTracker/1.1 (Flutter; Android)',
-            'Accept': '*/*',
           },
         ).timeout(const Duration(seconds: 25));
 
