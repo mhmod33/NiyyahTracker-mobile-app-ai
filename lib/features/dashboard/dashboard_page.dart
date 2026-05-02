@@ -203,7 +203,7 @@ class _DashboardPageState extends State<DashboardPage> {
               ),
             ),
 
-            const SliverToBoxAdapter(child: SizedBox(height: 24)),
+            const SliverToBoxAdapter(child: SizedBox(height: 120)), // Added padding for floating navbar
           ],
         ),
         extendBody: true,

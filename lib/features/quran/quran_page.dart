@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:async';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -201,6 +202,9 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
   static const int _versesPerPage = 5;
   final ScreenshotController _screenshotController = ScreenshotController();
 
+  Timer? _readingTimer;
+  final Set<int> _readPages = {};
+
   @override
   void initState() {
     super.initState();
@@ -212,6 +216,32 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
     }
     _currentPage = startPage;
     _pageController = PageController(initialPage: startPage);
+    _startReadingTimer(startPage);
+  }
+
+  void _startReadingTimer(int pageIndex) {
+    _readingTimer?.cancel();
+    if (_readPages.contains(pageIndex)) return; // Already read
+
+    _readingTimer = Timer(const Duration(seconds: 60), () {
+      if (mounted && !_readPages.contains(pageIndex)) {
+        setState(() => _readPages.add(pageIndex));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.check_circle, color: Colors.white),
+                const SizedBox(width: 10),
+                Expanded(child: Text('تقبل الله.. تم احتساب قراءة هذه الصفحة لك 🤍', style: _f(c: Colors.white))),
+              ],
+            ),
+            backgroundColor: AppColors.darkGreen,
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    });
   }
 
   void _buildPages() {
@@ -224,7 +254,11 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
   }
 
   @override
-  void dispose() { _pageController.dispose(); super.dispose(); }
+  void dispose() { 
+    _pageController.dispose(); 
+    _readingTimer?.cancel();
+    super.dispose(); 
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -262,7 +296,10 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
               child: PageView.builder(
                 controller: _pageController,
                 itemCount: _pages.length,
-                onPageChanged: (i) => setState(() => _currentPage = i),
+                onPageChanged: (i) {
+                  setState(() => _currentPage = i);
+                  _startReadingTimer(i);
+                },
                 itemBuilder: (ctx, pageIndex) {
                   final verses = _pages[pageIndex];
                   return SingleChildScrollView(
