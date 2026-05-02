@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 import '../../core/app_colors.dart';
+import '../../core/app_models.dart';
+import '../../providers/auth_provider.dart';
+import '../../services/firebase_service.dart';
 
 TextStyle _f({double sz = 14, FontWeight fw = FontWeight.w400, Color? c, double? h}) =>
     GoogleFonts.ibmPlexSansArabic(fontSize: sz, fontWeight: fw, color: c, height: h);
@@ -12,15 +16,56 @@ class ChallengesPage extends StatefulWidget {
 }
 
 class _ChallengesPageState extends State<ChallengesPage> {
-  final List<_Challenge> _challenges = [
-    _Challenge(title: 'صيام الاثنين والخميس', desc: 'سنة مؤكدة عن النبي ﷺ', icon: Icons.nights_stay_rounded, gradient: [const Color(0xFF1A237E), const Color(0xFF3949AB)], target: 8, current: 5),
-    _Challenge(title: 'قراءة سورة الكهف', desc: 'نور ما بين الجمعتين', icon: Icons.auto_stories_rounded, gradient: [const Color(0xFF4A148C), const Color(0xFF7B1FA2)], target: 4, current: 3),
-    _Challenge(title: 'قيام الليل', desc: 'شرف المؤمن', icon: Icons.star_rounded, gradient: [const Color(0xFF0D47A1), const Color(0xFF1976D2)], target: 30, current: 18),
-    _Challenge(title: 'صلاة الضحى', desc: 'صلاة الأوابين', icon: Icons.wb_sunny_rounded, gradient: [const Color(0xFFE65100), const Color(0xFFFF8F00)], target: 30, current: 22),
-    _Challenge(title: 'أذكار الصباح والمساء', desc: 'حصن المسلم', icon: Icons.shield_rounded, gradient: [const Color(0xFF1B5E20), const Color(0xFF388E3C)], target: 30, current: 27),
-    _Challenge(title: 'صدقة يومية', desc: 'الصدقة تطفئ الخطيئة', icon: Icons.favorite_rounded, gradient: [const Color(0xFFB71C1C), const Color(0xFFE53935)], target: 30, current: 12),
-  ];
+  final FirebaseService _firebaseService = FirebaseService();
+  bool _isLoading = true;
+  List<_Challenge> _challenges = [];
 
+  @override
+  void initState() {
+    super.initState();
+    _loadChallenges();
+  }
+
+  Future<void> _loadChallenges() async {
+    final userId = context.read<AppAuthProvider>().userId;
+    if (userId.isEmpty) {
+      setState(() => _isLoading = false);
+      return;
+    }
+
+    try {
+      final now = DateTime.now();
+      final worships = await _firebaseService.getMonthlyWorships(userId, now.year, now.month);
+      
+      int fasting = 0;
+      int quranDays = 0;
+      int qiyam = 0;
+      int charity = 0;
+      int dhikr = 0;
+
+      for (var w in worships) {
+        if (w.worships[WorshipType.fasting.name] == true) fasting++;
+        if (w.quranPages >= 10 || w.worships[WorshipType.quran.name] == true) quranDays++;
+        if (w.worships[WorshipType.qiyam.name] == true) qiyam++;
+        if (w.worships[WorshipType.charity.name] == true) charity++;
+        if (w.worships[WorshipType.dhikr.name] == true) dhikr++;
+      }
+
+      setState(() {
+        _challenges = [
+          _Challenge(title: 'صيام الاثنين والخميس', desc: 'سنة مؤكدة عن النبي ﷺ', icon: Icons.nights_stay_rounded, gradient: [const Color(0xFF1A237E), const Color(0xFF3949AB)], target: 8, current: fasting),
+          _Challenge(title: 'الورد القرآني', desc: 'استمرار قراءة القرآن', icon: Icons.auto_stories_rounded, gradient: [const Color(0xFF4A148C), const Color(0xFF7B1FA2)], target: 30, current: quranDays),
+          _Challenge(title: 'قيام الليل', desc: 'شرف المؤمن', icon: Icons.star_rounded, gradient: [const Color(0xFF0D47A1), const Color(0xFF1976D2)], target: 30, current: qiyam),
+          _Challenge(title: 'أذكار الصباح والمساء', desc: 'حصن المسلم', icon: Icons.shield_rounded, gradient: [const Color(0xFF1B5E20), const Color(0xFF388E3C)], target: 30, current: dhikr),
+          _Challenge(title: 'صدقة', desc: 'الصدقة تطفئ الخطيئة', icon: Icons.favorite_rounded, gradient: [const Color(0xFFB71C1C), const Color(0xFFE53935)], target: 30, current: charity),
+        ];
+        _isLoading = false;
+      });
+    } catch (e) {
+      debugPrint('Error loading challenges: $e');
+      setState(() => _isLoading = false);
+    }
+  }
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -34,7 +79,7 @@ class _ChallengesPageState extends State<ChallengesPage> {
       textDirection: TextDirection.rtl,
       child: Scaffold(
         backgroundColor: bg,
-        body: CustomScrollView(slivers: [
+        body: _isLoading ? const Center(child: CircularProgressIndicator(color: AppColors.gold)) : CustomScrollView(slivers: [
           // ── Header ──
           SliverToBoxAdapter(child: Container(
             padding: EdgeInsets.only(top: MediaQuery.of(context).padding.top + 12, bottom: 28, left: 20, right: 20),
@@ -45,7 +90,14 @@ class _ChallengesPageState extends State<ChallengesPage> {
             ),
             child: Column(children: [
               Row(children: [
-                IconButton(icon: const Icon(Icons.arrow_forward_ios, color: Colors.white, size: 20), onPressed: () => Navigator.pop(context)),
+                GestureDetector(
+                  onTap: () => Navigator.pop(context),
+                  child: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(color: Colors.white.withOpacity(0.1), shape: BoxShape.circle),
+                    child: const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white, size: 20),
+                  ),
+                ),
                 Expanded(child: Text('التحديات الروحية', textAlign: TextAlign.center, style: _f(sz: 20, fw: FontWeight.w800, c: Colors.white))),
                 const SizedBox(width: 48),
               ]),

@@ -8,7 +8,10 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import 'package:intl/intl.dart' hide TextDirection;
 import '../../core/app_colors.dart';
+import '../../core/app_models.dart';
+import '../../models/worship_model.dart' hide WorshipType;
 import '../../providers/auth_provider.dart';
+import '../../services/firebase_service.dart';
 
 class ReportsPage extends StatefulWidget {
   const ReportsPage({super.key});
@@ -18,6 +21,76 @@ class ReportsPage extends StatefulWidget {
 }
 
 class _ReportsPageState extends State<ReportsPage> {
+  final FirebaseService _firebaseService = FirebaseService();
+  DateTime _selectedDate = DateTime.now();
+  bool _isLoading = false;
+
+  // Stats for the selected month
+  int _totalQuranPages = 0;
+  int _totalPrayers = 0;
+  int _remembranceDays = 0;
+  int _maxStreak = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadMonthStats();
+  }
+
+  Future<void> _loadMonthStats() async {
+    final userId = context.read<AppAuthProvider>().userId;
+    if (userId.isEmpty) return;
+
+    setState(() => _isLoading = true);
+
+    try {
+      final worships = await _firebaseService.getMonthlyWorships(userId, _selectedDate.year, _selectedDate.month);
+      
+      int quran = 0;
+      int prayers = 0;
+      int remembrance = 0;
+      int currentStreak = 0;
+      int maxStreak = 0;
+      
+      // Sort worships by date
+      worships.sort((a, b) => a.date.compareTo(b.date));
+      
+      DateTime? lastDate;
+
+      for (var w in worships) {
+        quran += w.quranPages;
+        prayers += w.prayerCount;
+        
+        if ((w.worships[WorshipType.morningRemembrance.name] == true) || 
+            (w.worships[WorshipType.eveningRemembrance.name] == true)) {
+          remembrance++;
+        }
+
+        // Streak logic: check if w has at least one prayer or quran page
+        bool activeDay = w.prayerCount > 0 || w.quranPages > 0 || w.worships.values.any((val) => val);
+        if (activeDay) {
+          if (lastDate == null || w.date.difference(lastDate).inDays == 1) {
+            currentStreak++;
+          } else if (w.date.difference(lastDate).inDays > 1) {
+            currentStreak = 1;
+          }
+          if (currentStreak > maxStreak) maxStreak = currentStreak;
+          lastDate = w.date;
+        }
+      }
+
+      setState(() {
+        _totalQuranPages = quran;
+        _totalPrayers = prayers;
+        _remembranceDays = remembrance;
+        _maxStreak = maxStreak;
+        _isLoading = false;
+      });
+    } catch (e) {
+      debugPrint('Error loading stats: $e');
+      setState(() => _isLoading = false);
+    }
+  }
   DateTime _selectedDate = DateTime.now();
 
   Future<void> _selectMonth(BuildContext context) async {
@@ -40,10 +113,11 @@ class _ReportsPageState extends State<ReportsPage> {
         );
       },
     );
-    if (picked != null && picked != _selectedDate) {
+    if (picked != null && picked.month != _selectedDate.month) {
       setState(() {
         _selectedDate = picked;
       });
+      _loadMonthStats();
     }
   }
 
@@ -100,13 +174,13 @@ class _ReportsPageState extends State<ReportsPage> {
                   child: pw.Column(
                     crossAxisAlignment: pw.CrossAxisAlignment.start,
                     children: [
-                      _pdfStatRow('صفحات القرآن:', '١٥٠ صفحة'),
+                      _pdfStatRow('صفحات القرآن:', '$_totalQuranPages صفحة'),
                       pw.SizedBox(height: 10),
-                      _pdfStatRow('الصلوات المكتملة:', '١٣٠ / ١٥٠'),
+                      _pdfStatRow('الصلوات المكتملة:', '$_totalPrayers صلاة'),
                       pw.SizedBox(height: 10),
-                      _pdfStatRow('أيام الأذكار:', '٢٥ / ٣٠ يوم'),
+                      _pdfStatRow('أيام الأذكار:', '$_remembranceDays يوم'),
                       pw.SizedBox(height: 10),
-                      _pdfStatRow('أطول فترة استمرار (ستريك):', '١٢ يوم'),
+                      _pdfStatRow('أطول فترة استمرار (ستريك):', '$_maxStreak يوم'),
                     ],
                   ),
                 ),
@@ -195,7 +269,9 @@ class _ReportsPageState extends State<ReportsPage> {
             ),
             const SizedBox(height: 24),
             
-            _previewCard(context, isDark, monthStr, authProvider.displayName),
+            _isLoading
+                ? const Center(child: Padding(padding: EdgeInsets.all(32), child: CircularProgressIndicator(color: AppColors.gold)))
+                : _previewCard(context, isDark, monthStr, authProvider.displayName),
             const SizedBox(height: 24),
             
             _generateButton(context, authProvider),
@@ -251,13 +327,13 @@ class _ReportsPageState extends State<ReportsPage> {
           ),
           child: Column(
             children: [
-              _statRow('📖', 'صفحات القرآن', '١٥٠ صفحة'),
+              _statRow('📖', 'صفحات القرآن', '$_totalQuranPages صفحة'),
               const Padding(padding: EdgeInsets.symmetric(vertical: 8), child: Divider(color: Colors.white12, height: 1)),
-              _statRow('🕌', 'الصلوات المكتملة', '١٣٠ / ١٥٠'),
+              _statRow('🕌', 'الصلوات المكتملة', '$_totalPrayers صلاة'),
               const Padding(padding: EdgeInsets.symmetric(vertical: 8), child: Divider(color: Colors.white12, height: 1)),
-              _statRow('📿', 'أيام الأذكار', '٢٥ / ٣٠ يوم'),
+              _statRow('📿', 'أيام الأذكار', '$_remembranceDays يوم'),
               const Padding(padding: EdgeInsets.symmetric(vertical: 8), child: Divider(color: Colors.white12, height: 1)),
-              _statRow('🔥', 'أطول ستريك', '١٢ يوم متواصل'),
+              _statRow('🔥', 'أطول ستريك', '$_maxStreak يوم متواصل'),
             ],
           ),
         ),
@@ -333,6 +409,7 @@ class _ReportsPageState extends State<ReportsPage> {
                   setState(() {
                     _selectedDate = date;
                   });
+                  _loadMonthStats();
                 },
                 child: Container(
                   padding: const EdgeInsets.all(12),
@@ -365,7 +442,4 @@ class _ReportsPageState extends State<ReportsPage> {
             ),
           );
         }),
-      ]),
-    );
-  }
-}
+      

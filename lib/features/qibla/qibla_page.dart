@@ -31,7 +31,14 @@ class QiblaPage extends StatelessWidget {
               borderRadius: const BorderRadius.only(bottomLeft: Radius.circular(28), bottomRight: Radius.circular(28)),
             ),
             child: Row(children: [
-              IconButton(icon: const Icon(Icons.arrow_forward_ios, color: Colors.white, size: 20), onPressed: () => Navigator.pop(context)),
+              GestureDetector(
+                onTap: () => Navigator.pop(context),
+                child: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(color: Colors.white.withOpacity(0.15), shape: BoxShape.circle),
+                  child: const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white, size: 18),
+                ),
+              ),
               Expanded(child: Text('اتجاه القبلة', textAlign: TextAlign.center, style: _f(sz: 20, fw: FontWeight.w800, c: Colors.white))),
               const SizedBox(width: 48),
             ]),

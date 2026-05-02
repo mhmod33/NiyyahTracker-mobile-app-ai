@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
+import 'package:uuid/uuid.dart';
 import '../../core/app_colors.dart';
 import '../../core/app_models.dart';
+import '../../models/worship_model.dart' as db_model;
+import '../../providers/auth_provider.dart';
+import '../../services/firebase_service.dart';
 
 class WorshipPage extends StatefulWidget {
   const WorshipPage({super.key});
@@ -10,11 +15,85 @@ class WorshipPage extends StatefulWidget {
 }
 
 class _WorshipPageState extends State<WorshipPage> {
+  final FirebaseService _firebaseService = FirebaseService();
+  bool _isLoading = true;
+  bool _isSaving = false;
+  String _worshipDocId = const Uuid().v4();
+  
   final Map<WorshipType, bool> _checked = {
     for (var t in WorshipType.values) t: false,
   };
   int _prayerCount = 0;
   int _quranPages = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadTodayWorship();
+  }
+
+  Future<void> _loadTodayWorship() async {
+    final userId = context.read<AppAuthProvider>().userId;
+    if (userId.isEmpty) {
+      setState(() => _isLoading = false);
+      return;
+    }
+
+    try {
+      final worships = await _firebaseService.getDailyWorshipByDate(userId, DateTime.now());
+      if (worships.isNotEmpty) {
+        final todayWorship = worships.first;
+        _worshipDocId = todayWorship.id;
+        _prayerCount = todayWorship.prayerCount;
+        _quranPages = todayWorship.quranPages;
+        
+        // Map back the database types to UI types
+        for (var t in WorshipType.values) {
+          if (todayWorship.worships.containsKey(t.name)) {
+            _checked[t] = todayWorship.worships[t.name] ?? false;
+          }
+        }
+      }
+      setState(() => _isLoading = false);
+    } catch (e) {
+      setState(() => _isLoading = false);
+      debugPrint('Error loading worship: $e');
+    }
+  }
+
+  Future<void> _saveWorship() async {
+    final userId = context.read<AppAuthProvider>().userId;
+    if (userId.isEmpty) return;
+
+    setState(() => _isSaving = true);
+
+    final worshipsMap = <String, bool>{};
+    _checked.forEach((key, value) {
+      worshipsMap[key.name] = value;
+    });
+
+    final worshipData = db_model.DailyWorship(
+      id: _worshipDocId,
+      date: DateTime.now(),
+      worships: worshipsMap,
+      prayerCount: _prayerCount,
+      quranPages: _quranPages,
+    );
+
+    try {
+      await _firebaseService.saveDailyWorship(userId, worshipData);
+      setState(() => _isSaving = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('تم حفظ عبادات اليوم بفضل الله 🤍', style: GoogleFonts.cairo(color: Colors.white)),
+          backgroundColor: AppColors.darkGreen,
+        ));
+      }
+    } catch (e) {
+      setState(() => _isSaving = false);
+      debugPrint('Error saving worship: $e');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -41,23 +120,25 @@ class _WorshipPageState extends State<WorshipPage> {
             )),
           ],
         ),
-        body: ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            _sectionHeader('🕌 الصلوات الخمس', isDark),
-            _prayerCard(isDark, cardBg, textColor, subColor, borderColor),
-            const SizedBox(height: 12),
-            _sectionHeader('📖 قراءة القرآن الكريم', isDark),
-            _quranCard(isDark, cardBg, textColor, subColor, borderColor),
-            const SizedBox(height: 12),
-            _sectionHeader('📿 العبادات الأخرى', isDark),
-            ...WorshipType.values
-                .where((t) => t != WorshipType.prayer && t != WorshipType.quran)
-                .map((type) => _worshipTile(type, isDark, cardBg, textColor, borderColor)),
-            const SizedBox(height: 24),
-            _saveButton(),
-          ],
-        ),
+        body: _isLoading 
+          ? const Center(child: CircularProgressIndicator(color: AppColors.gold))
+          : ListView(
+              padding: const EdgeInsets.all(16),
+              children: [
+                _sectionHeader('🕌 الصلوات الخمس', isDark),
+                _prayerCard(isDark, cardBg, textColor, subColor, borderColor),
+                const SizedBox(height: 12),
+                _sectionHeader('📖 قراءة القرآن الكريم', isDark),
+                _quranCard(isDark, cardBg, textColor, subColor, borderColor),
+                const SizedBox(height: 12),
+                _sectionHeader('📿 العبادات الأخرى', isDark),
+                ...WorshipType.values
+                    .where((t) => t != WorshipType.prayer && t != WorshipType.quran)
+                    .map((type) => _worshipTile(type, isDark, cardBg, textColor, borderColor)),
+                const SizedBox(height: 24),
+                _saveButton(),
+              ],
+            ),
       ),
     );
   }
@@ -155,14 +236,11 @@ class _WorshipPageState extends State<WorshipPage> {
 
   Widget _saveButton() {
     return SizedBox(height: 56, child: ElevatedButton.icon(
-      onPressed: () {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('تم حفظ عبادات اليوم بفضل الله 🤍', style: GoogleFonts.cairo()),
-          backgroundColor: AppColors.darkGreen,
-        ));
-      },
+      onPressed: _isSaving ? null : _saveWorship,
       style: ElevatedButton.styleFrom(backgroundColor: AppColors.darkGreen, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))),
-      icon: const Icon(Icons.save, color: Colors.white),
+      icon: _isSaving 
+          ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+          : const Icon(Icons.save, color: Colors.white),
       label: Text('حفظ بطاقة اليوم', style: GoogleFonts.cairo(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
     ));
   }

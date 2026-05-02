@@ -33,7 +33,16 @@ class FridayTipsPage extends StatelessWidget {
           SliverAppBar(
             expandedHeight: 180, pinned: true,
             backgroundColor: isDark ? const Color(0xFF0D2818) : AppColors.darkGreen,
-            leading: IconButton(icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white), onPressed: () => Navigator.pop(context)),
+            leading: Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: GestureDetector(
+                onTap: () => Navigator.pop(context),
+                child: Container(
+                  decoration: BoxDecoration(color: Colors.white.withOpacity(0.15), shape: BoxShape.circle),
+                  child: const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white, size: 18),
+                ),
+              ),
+            ),
             flexibleSpace: FlexibleSpaceBar(
               title: Text('سنن الجمعة', style: GoogleFonts.ibmPlexSansArabic(fontWeight: FontWeight.w800, color: Colors.white, fontSize: 18)),
               background: Container(

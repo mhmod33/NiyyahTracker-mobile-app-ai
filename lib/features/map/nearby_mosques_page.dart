@@ -366,9 +366,13 @@ class _NearbyMosquesPageState extends State<NearbyMosquesPage>
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           child: Row(
             children: [
-              IconButton(
-                icon: const Icon(Icons.arrow_forward_ios, color: Colors.white, size: 20),
-                onPressed: () => Navigator.pop(context),
+              GestureDetector(
+                onTap: () => Navigator.pop(context),
+                child: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(color: Colors.white.withOpacity(0.15), shape: BoxShape.circle),
+                  child: const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white, size: 18),
+                ),
               ),
               Flexible(
                 child: Text(

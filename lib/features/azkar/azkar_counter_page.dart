@@ -135,7 +135,16 @@ class _AzkarCounterPageState extends State<AzkarCounterPage> with SingleTickerPr
         backgroundColor: bg,
         appBar: AppBar(
           backgroundColor: cardBg, elevation: 0, scrolledUnderElevation: 1,
-          leading: IconButton(icon: Icon(Icons.arrow_back_ios_new, size: 20, color: textColor), onPressed: () => Navigator.pop(context)),
+          leading: Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: GestureDetector(
+              onTap: () => Navigator.pop(context),
+              child: Container(
+                decoration: BoxDecoration(color: textColor.withOpacity(0.1), shape: BoxShape.circle),
+                child: Icon(Icons.arrow_forward_ios_rounded, color: textColor, size: 18),
+              ),
+            ),
+          ),
           title: Text('📿 $_title', style: _f(fw: FontWeight.w800, sz: 20, c: textColor)),
           actions: [IconButton(icon: Icon(Icons.restart_alt, color: subColor), tooltip: 'إعادة ضبط الكل', onPressed: _resetAll)],
         ),

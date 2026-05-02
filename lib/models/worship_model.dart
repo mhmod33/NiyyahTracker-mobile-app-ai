@@ -3,12 +3,16 @@ class DailyWorship {
   final DateTime date;
   final Map<String, bool> worships;
   final String notes;
+  final int prayerCount;
+  final int quranPages;
 
   DailyWorship({
     required this.id,
     required this.date,
     required this.worships,
     this.notes = '',
+    this.prayerCount = 0,
+    this.quranPages = 0,
   });
 
   Map<String, dynamic> toMap() {
@@ -17,6 +21,8 @@ class DailyWorship {
       'date': date.toIso8601String(),
       'worships': worships,
       'notes': notes,
+      'prayerCount': prayerCount,
+      'quranPages': quranPages,
     };
   }
 
@@ -26,6 +32,8 @@ class DailyWorship {
       date: DateTime.parse(map['date'] ?? DateTime.now().toIso8601String()),
       worships: Map<String, bool>.from(map['worships'] ?? {}),
       notes: map['notes'] ?? '',
+      prayerCount: map['prayerCount'] ?? 0,
+      quranPages: map['quranPages'] ?? 0,
     );
   }
 }

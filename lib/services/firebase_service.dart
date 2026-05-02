@@ -68,6 +68,27 @@ class FirebaseService {
     }
   }
 
+  Future<List<DailyWorship>> getMonthlyWorships(String userId, int year, int month) async {
+    try {
+      final startOfMonth = DateTime(year, month, 1);
+      final endOfMonth = DateTime(year, month + 1, 0, 23, 59, 59);
+
+      final query = await _db
+          .collection('users')
+          .doc(userId)
+          .collection('daily_worship')
+          .where('date', isGreaterThanOrEqualTo: startOfMonth.toIso8601String())
+          .where('date', isLessThanOrEqualTo: endOfMonth.toIso8601String())
+          .get();
+
+      return query.docs
+          .map((doc) => DailyWorship.fromMap(doc.data()))
+          .toList();
+    } catch (e) {
+      throw Exception('فشل جلب عبادات الشهر: $e');
+    }
+  }
+
   // ===== Monthly Goal Methods =====
   Future<void> saveMonthlyGoal(String userId, MonthlyGoal goal) async {
     try {
@@ -158,6 +179,25 @@ class FirebaseService {
       return null;
     } catch (e) {
       throw Exception('فشل جلب الخطة الأسبوعية: $e');
+    }
+  }
+
+  Future<WeeklyPlan?> getCurrentWeeklyPlan(String userId) async {
+    try {
+      final query = await _db
+          .collection('users')
+          .doc(userId)
+          .collection('weekly_plans')
+          .orderBy('createdAt', descending: true)
+          .limit(1)
+          .get();
+
+      if (query.docs.isNotEmpty) {
+        return WeeklyPlan.fromMap(query.docs.first.data(), query.docs.first.id);
+      }
+      return null;
+    } catch (e) {
+      throw Exception('فشل جلب الخطة الأسبوعية الحالية: $e');
     }
   }
 

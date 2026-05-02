@@ -62,9 +62,18 @@ class _RegisterPageState extends State<RegisterPage> {
         appBar: AppBar(
           backgroundColor: Colors.transparent,
           elevation: 0,
-          leading: IconButton(
-            icon: Icon(Icons.arrow_back_ios, color: isDark ? Colors.white : AppColors.darkGreen),
-            onPressed: () => Navigator.pop(context),
+          leading: Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: GestureDetector(
+              onTap: () => Navigator.pop(context),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: (isDark ? Colors.white : AppColors.darkGreen).withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(Icons.arrow_forward_ios_rounded, color: isDark ? Colors.white : AppColors.darkGreen, size: 18),
+              ),
+            ),
           ),
         ),
         body: Consumer<AppAuthProvider>(

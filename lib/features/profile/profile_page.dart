@@ -36,9 +36,15 @@ class ProfilePage extends StatelessWidget {
               expandedHeight: 220,
               pinned: true,
               backgroundColor: AppColors.darkGreen,
-              leading: IconButton(
-                icon: const Icon(Icons.arrow_forward_ios, color: Colors.white),
-                onPressed: () => Navigator.pop(context),
+              leading: Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: GestureDetector(
+                  onTap: () => Navigator.pop(context),
+                  child: Container(
+                    decoration: BoxDecoration(color: Colors.white.withOpacity(0.15), shape: BoxShape.circle),
+                    child: const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white, size: 18),
+                  ),
+                ),
               ),
               flexibleSpace: FlexibleSpaceBar(
                 background: Container(

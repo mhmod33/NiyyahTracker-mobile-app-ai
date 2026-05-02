@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
+import 'package:uuid/uuid.dart';
 import '../../core/app_colors.dart';
 import '../../core/app_models.dart';
+import '../../models/monthly_goal_model.dart';
+import '../../providers/auth_provider.dart';
+import '../../services/firebase_service.dart';
 
 class GoalsPage extends StatefulWidget {
   const GoalsPage({super.key});
@@ -10,11 +15,34 @@ class GoalsPage extends StatefulWidget {
 }
 
 class _GoalsPageState extends State<GoalsPage> {
-  final List<SpiritualGoal> _goals = [
-    SpiritualGoal(title: 'ختم القرآن الكريم', type: WorshipType.quran, targetValue: 604, currentValue: 480, startDate: DateTime(2026, 5, 1), endDate: DateTime(2026, 5, 31)),
-    SpiritualGoal(title: 'صلاة الفجر يومياً', type: WorshipType.prayer, targetValue: 30, currentValue: 22, startDate: DateTime(2026, 5, 1), endDate: DateTime(2026, 5, 31)),
-    SpiritualGoal(title: '١٠٠ صدقة', type: WorshipType.charity, targetValue: 100, currentValue: 63, startDate: DateTime(2026, 5, 1), endDate: DateTime(2026, 5, 31)),
-  ];
+  final FirebaseService _firebaseService = FirebaseService();
+  List<MonthlyGoal> _goals = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadGoals();
+  }
+
+  Future<void> _loadGoals() async {
+    final userId = context.read<AppAuthProvider>().userId;
+    if (userId.isEmpty) {
+      setState(() => _isLoading = false);
+      return;
+    }
+    
+    try {
+      final goals = await _firebaseService.getAllMonthlyGoals(userId);
+      setState(() {
+        _goals = goals;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() => _isLoading = false);
+      debugPrint('Error loading goals: $e');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -31,11 +59,20 @@ class _GoalsPageState extends State<GoalsPage> {
           title: Text('الأهداف الروحية الشهرية', style: GoogleFonts.ibmPlexSansArabic(color: Colors.white, fontWeight: FontWeight.bold)),
           centerTitle: true,
         ),
-        body: ListView(padding: const EdgeInsets.all(16), children: [
-          ..._goals.map((g) => _GoalCard(goal: g, isDark: isDark)),
-          const SizedBox(height: 16),
-          _addGoalButton(context, isDark),
-        ]),
+        body: _isLoading 
+          ? const Center(child: CircularProgressIndicator(color: AppColors.gold))
+          : ListView(padding: const EdgeInsets.all(16), children: [
+              if (_goals.isEmpty)
+                Padding(
+                  padding: const EdgeInsets.all(32),
+                  child: Center(
+                    child: Text('لا توجد أهداف مضافة حتى الآن.\nأضف هدفاً جديداً للبدء!', textAlign: TextAlign.center, style: GoogleFonts.ibmPlexSansArabic(color: isDark ? Colors.white54 : AppColors.gray, fontSize: 16)),
+                  ),
+                ),
+              ..._goals.map((g) => _GoalCard(goal: g, isDark: isDark)),
+              const SizedBox(height: 16),
+              _addGoalButton(context, isDark),
+            ]),
       ),
     );
   }
@@ -58,24 +95,26 @@ class _GoalsPageState extends State<GoalsPage> {
       context: context, isScrollControlled: true,
       backgroundColor: isDark ? const Color(0xFF1A1F1C) : Colors.white,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
-      builder: (_) => _AddGoalSheet(isDark: isDark),
+      builder: (_) => _AddGoalSheet(isDark: isDark, onGoalAdded: _loadGoals),
     );
   }
 }
 
 class _GoalCard extends StatelessWidget {
-  final SpiritualGoal goal;
+  final MonthlyGoal goal;
   final bool isDark;
   const _GoalCard({required this.goal, required this.isDark});
 
   @override
   Widget build(BuildContext context) {
     final pct = (goal.progress * 100).toInt();
-    final daysLeft = goal.endDate.difference(DateTime.now()).inDays;
+    final daysLeft = goal.endDate.difference(DateTime.now()).inDays.clamp(0, 365);
     final cardBg = isDark ? const Color(0xFF1A1F1C) : Colors.white;
     final textColor = isDark ? Colors.white : AppColors.textPrimary;
     final subColor = isDark ? Colors.white54 : AppColors.gray;
     final greenColor = isDark ? AppColors.lightGreen : AppColors.darkGreen;
+    
+    final icon = GoalCategory.categoryIcons[goal.category] ?? '🎯';
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16), padding: const EdgeInsets.all(18),
@@ -86,9 +125,9 @@ class _GoalCard extends StatelessWidget {
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(children: [
-          Text(goal.type.emoji, style: const TextStyle(fontSize: 28)),
+          Text(icon, style: const TextStyle(fontSize: 28)),
           const SizedBox(width: 12),
-          Expanded(child: Text(goal.title, style: GoogleFonts.ibmPlexSansArabic(fontWeight: FontWeight.bold, fontSize: 16, color: greenColor))),
+          Expanded(child: Text(goal.goalTitle, style: GoogleFonts.ibmPlexSansArabic(fontWeight: FontWeight.bold, fontSize: 16, color: greenColor))),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
             decoration: BoxDecoration(
@@ -110,15 +149,71 @@ class _GoalCard extends StatelessWidget {
   }
 }
 
-class _AddGoalSheet extends StatelessWidget {
+class _AddGoalSheet extends StatefulWidget {
   final bool isDark;
-  const _AddGoalSheet({required this.isDark});
+  final VoidCallback onGoalAdded;
+  const _AddGoalSheet({required this.isDark, required this.onGoalAdded});
+
+  @override
+  State<_AddGoalSheet> createState() => _AddGoalSheetState();
+}
+
+class _AddGoalSheetState extends State<_AddGoalSheet> {
+  final _titleController = TextEditingController();
+  final _targetController = TextEditingController();
+  String _selectedCategory = GoalCategory.quran;
+  bool _isLoading = false;
+
+  Future<void> _saveGoal() async {
+    final title = _titleController.text.trim();
+    final targetStr = _targetController.text.trim();
+    if (title.isEmpty || targetStr.isEmpty) return;
+
+    final target = int.tryParse(targetStr) ?? 0;
+    if (target <= 0) return;
+
+    setState(() => _isLoading = true);
+
+    final userId = context.read<AppAuthProvider>().userId;
+    if (userId.isEmpty) {
+      setState(() => _isLoading = false);
+      return;
+    }
+
+    final newGoal = MonthlyGoal(
+      id: const Uuid().v4(),
+      userId: userId,
+      goalTitle: title,
+      goalDescription: '',
+      targetValue: target,
+      currentValue: 0,
+      startDate: DateTime.now(),
+      endDate: DateTime.now().add(const Duration(days: 30)),
+      category: _selectedCategory,
+    );
+
+    try {
+      await FirebaseService().saveMonthlyGoal(userId, newGoal);
+      widget.onGoalAdded();
+      if (mounted) Navigator.pop(context);
+    } catch (e) {
+      debugPrint('Error saving goal: $e');
+      setState(() => _isLoading = false);
+    }
+  }
+
+  @override
+  void dispose() {
+    _titleController.dispose();
+    _targetController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    final textColor = isDark ? Colors.white : AppColors.textPrimary;
-    final greenColor = isDark ? AppColors.lightGreen : AppColors.darkGreen;
-    final borderColor = isDark ? Colors.white24 : Colors.grey[400]!;
+    final textColor = widget.isDark ? Colors.white : AppColors.textPrimary;
+    final greenColor = widget.isDark ? AppColors.lightGreen : AppColors.darkGreen;
+    final borderColor = widget.isDark ? Colors.white24 : Colors.grey[400]!;
 
     return Directionality(
       textDirection: TextDirection.rtl,
@@ -128,9 +223,10 @@ class _AddGoalSheet extends StatelessWidget {
           Text('هدف جديد', style: GoogleFonts.cairo(fontSize: 20, fontWeight: FontWeight.bold, color: greenColor)),
           const SizedBox(height: 16),
           TextField(
+            controller: _titleController,
             style: TextStyle(color: textColor),
             decoration: InputDecoration(
-              labelText: 'عنوان الهدف', labelStyle: GoogleFonts.cairo(color: isDark ? Colors.white54 : null),
+              labelText: 'عنوان الهدف', labelStyle: GoogleFonts.cairo(color: widget.isDark ? Colors.white54 : null),
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
               enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: borderColor)),
               focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: greenColor)),
@@ -138,20 +234,41 @@ class _AddGoalSheet extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           TextField(
+            controller: _targetController,
             keyboardType: TextInputType.number,
             style: TextStyle(color: textColor),
             decoration: InputDecoration(
-              labelText: 'القيمة المستهدفة', labelStyle: GoogleFonts.cairo(color: isDark ? Colors.white54 : null),
+              labelText: 'القيمة المستهدفة', labelStyle: GoogleFonts.cairo(color: widget.isDark ? Colors.white54 : null),
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
               enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: borderColor)),
               focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: greenColor)),
             ),
           ),
+          const SizedBox(height: 12),
+          DropdownButtonFormField<String>(
+            value: _selectedCategory,
+            dropdownColor: widget.isDark ? const Color(0xFF1E1E1E) : Colors.white,
+            style: TextStyle(color: textColor, fontFamily: 'IBM Plex Sans Arabic'),
+            decoration: InputDecoration(
+              labelText: 'التصنيف', labelStyle: GoogleFonts.cairo(color: widget.isDark ? Colors.white54 : null),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: borderColor)),
+              focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: greenColor)),
+            ),
+            items: GoalCategory.categoryLabels.entries.map((e) {
+              return DropdownMenuItem(value: e.key, child: Text('${GoalCategory.categoryIcons[e.key]} ${e.value}'));
+            }).toList(),
+            onChanged: (val) {
+              if (val != null) setState(() => _selectedCategory = val);
+            },
+          ),
           const SizedBox(height: 20),
           SizedBox(width: double.infinity, height: 50, child: ElevatedButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: _isLoading ? null : _saveGoal,
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.darkGreen, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
-            child: Text('حفظ الهدف', style: GoogleFonts.cairo(color: Colors.white, fontWeight: FontWeight.bold)),
+            child: _isLoading 
+              ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+              : Text('حفظ الهدف', style: GoogleFonts.cairo(color: Colors.white, fontWeight: FontWeight.bold)),
           )),
           const SizedBox(height: 20),
         ]),
@@ -159,3 +276,5 @@ class _AddGoalSheet extends StatelessWidget {
     );
   }
 }
+
+
