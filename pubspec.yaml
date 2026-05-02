@@ -56,6 +56,9 @@ dependencies:
   google_sign_in: ^6.2.1
   geolocator: ^13.0.2
   http: ^1.2.2
+  adhan: ^2.1.0
+  flutter_qiblah: ^2.3.1
+  quran: ^1.1.2
 
 dev_dependencies:
   flutter_test:

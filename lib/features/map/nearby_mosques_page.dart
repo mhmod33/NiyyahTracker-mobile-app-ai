@@ -117,6 +117,16 @@ class _NearbyMosquesPageState extends State<NearbyMosquesPage>
     });
 
     try {
+      // Check if location services are enabled
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        setState(() {
+          _error = 'خدمة الموقع غير مفعّلة. يرجى تفعيل GPS من الإعدادات.';
+          _loading = false;
+        });
+        return;
+      }
+
       LocationPermission perm = await Geolocator.checkPermission();
       if (perm == LocationPermission.denied) {
         perm = await Geolocator.requestPermission();
@@ -147,8 +157,6 @@ class _NearbyMosquesPageState extends State<NearbyMosquesPage>
         _userLocation = LatLng(pos.latitude, pos.longitude);
       });
 
-      // initialCenter in MapOptions handles the first render;
-      // we move only if the map is already ready (e.g. user refreshes)
       if (_mapReady && _userLocation != null) {
         _mapController.move(_userLocation!, 14);
       }
@@ -176,41 +184,46 @@ class _NearbyMosquesPageState extends State<NearbyMosquesPage>
     final lon = _userLocation!.longitude;
     final rad = (_radiusKm * 1000).toInt();
 
-    // Overpass QL — finds nodes, ways and relations tagged as mosque.
-    // Use GET with query in URL — avoids HTTP 406 on mobile networks
-    // that block POST requests or strip Content-Type headers.
+    // Overpass QL — even broader query:
+    // We search for anything tagged as place_of_worship or mosque
     final query =
         '[out:json][timeout:25];'
-        '(node["amenity"="place_of_worship"]["religion"="muslim"]'
-        '(around:$rad,$lat,$lon);'
-        'way["amenity"="place_of_worship"]["religion"="muslim"]'
-        '(around:$rad,$lat,$lon);'
-        'relation["amenity"="place_of_worship"]["religion"="muslim"]'
-        '(around:$rad,$lat,$lon););out center;';
+        '('
+        'node["amenity"~"place_of_worship|mosque"](around:$rad,$lat,$lon);'
+        'way["amenity"~"place_of_worship|mosque"](around:$rad,$lat,$lon);'
+        'relation["amenity"~"place_of_worship|mosque"](around:$rad,$lat,$lon);'
+        'node["building"="mosque"](around:$rad,$lat,$lon);'
+        'way["building"="mosque"](around:$rad,$lat,$lon);'
+        'relation["building"="mosque"](around:$rad,$lat,$lon);'
+        ');out center;';
 
     try {
       final url = Uri.parse(
         'https://overpass-api.de/api/interpreter'
         '?data=${Uri.encodeComponent(query)}',
       );
+      print('Fetching mosques from: $url');
       final resp = await http.get(
         url,
         headers: {
-          'User-Agent': 'NiyyahTracker/1.0 (Flutter; Android; contact@niyyah.app)',
+          'User-Agent': 'NiyyahTracker/1.1 (Flutter; Android; contact@niyyah.app)',
           'Accept': 'application/json',
         },
       ).timeout(const Duration(seconds: 30));
 
       if (resp.statusCode != 200) {
-        throw Exception('HTTP ${resp.statusCode}');
+        throw Exception('HTTP ${resp.statusCode}: ${resp.reasonPhrase}');
       }
 
       final json = jsonDecode(resp.body) as Map<String, dynamic>;
       final elements = json['elements'] as List<dynamic>? ?? [];
+      print('Found ${elements.length} raw elements from Overpass');
 
       final mosques = elements
           .map((e) => MosqueModel.fromOverpass(e as Map<String, dynamic>, _userLocation))
           .where((m) => m.location.latitude != 0.0)
+          // Filtering logic: In predominantly Muslim areas, place_of_worship is usually a mosque.
+          // We can also check tags if needed, but let's be inclusive.
           .toList()
         ..sort((a, b) => (a.distance ?? 0).compareTo(b.distance ?? 0));
 
@@ -220,9 +233,10 @@ class _NearbyMosquesPageState extends State<NearbyMosquesPage>
       });
 
       if (mosques.isEmpty) {
-        setState(() => _error = 'لا توجد مساجد ضمن ${_radiusKm.toStringAsFixed(1)} كم.');
+        setState(() => _error = 'لم يتم العثور على مساجد في نطاق ${_radiusKm.toStringAsFixed(1)} كم. جرب زيادة النطاق.');
       }
     } catch (e) {
+      print('Error fetching mosques: $e');
       setState(() {
         _error = 'تعذّر جلب بيانات المساجد: $e';
         _loading = false;
@@ -259,39 +273,48 @@ class _NearbyMosquesPageState extends State<NearbyMosquesPage>
       textDirection: TextDirection.rtl,
       child: Scaffold(
         backgroundColor: AppColors.background,
-        body: Stack(
+        body: Column(
           children: [
-            // ── Main content ──
-            Column(
-              children: [
-                _buildHeader(),
-                _buildControls(),
-                Expanded(
-                  child: _loading
-                      ? _buildLoader()
-                      : _error != null && _mosques.isEmpty
-                          ? _buildError()
-                          : _showList
-                              ? _buildListView()
-                              : _buildMapView(),
-                ),
-              ],
-            ),
+            _buildHeader(),
+            _buildControls(),
+            Expanded(
+              child: Stack(
+                children: [
+                  // Always render map so MapController initializes
+                  if (!_showList) _buildMapView(),
+                  if (_showList) _buildListView(),
 
-            // ── Mosque detail sheet ──
-            if (_selected != null)
-              Positioned(
-                bottom: 0,
-                left: 0,
-                right: 0,
-                child: SlideTransition(
-                  position: Tween<Offset>(
-                    begin: const Offset(0, 1),
-                    end: Offset.zero,
-                  ).animate(_sheetSlide),
-                  child: _buildDetailSheet(_selected!),
-                ),
+                  // Loading overlay on top of map
+                  if (_loading)
+                    Container(
+                      color: AppColors.background.withOpacity(0.85),
+                      child: _buildLoader(),
+                    ),
+
+                  // Error overlay on top of map
+                  if (!_loading && _error != null && _mosques.isEmpty)
+                    Container(
+                      color: AppColors.background.withOpacity(0.9),
+                      child: _buildError(),
+                    ),
+
+                  // Mosque detail sheet
+                  if (_selected != null)
+                    Positioned(
+                      bottom: 0,
+                      left: 0,
+                      right: 0,
+                      child: SlideTransition(
+                        position: Tween<Offset>(
+                          begin: const Offset(0, 1),
+                          end: Offset.zero,
+                        ).animate(_sheetSlide),
+                        child: _buildDetailSheet(_selected!),
+                      ),
+                    ),
+                ],
               ),
+            ),
           ],
         ),
         floatingActionButton: _userLocation != null && !_loading && !_showList
@@ -328,7 +351,7 @@ class _NearbyMosquesPageState extends State<NearbyMosquesPage>
           child: Row(
             children: [
               IconButton(
-                icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white, size: 20),
+                icon: const Icon(Icons.arrow_forward_ios, color: Colors.white, size: 20),
                 onPressed: () => Navigator.pop(context),
               ),
               const SizedBox(width: 4),
