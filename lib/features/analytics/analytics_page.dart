@@ -261,10 +261,9 @@ class _AnalyticsPageState extends State<AnalyticsPage> with SingleTickerProvider
             height: 200,
             child: PieChart(PieChartData(
               sections: [
-                PieChartSectionData(value: 40, title: 'القرآن', color: AppColors.gold, titleStyle: GoogleFonts.cairo(fontSize: 11, color: Colors.white, fontWeight: FontWeight.bold)),
-                PieChartSectionData(value: 35, title: 'الصلاة', color: AppColors.lightGreen, titleStyle: GoogleFonts.cairo(fontSize: 11, color: Colors.white, fontWeight: FontWeight.bold)),
-                PieChartSectionData(value: 15, title: 'الأذكار', color: AppColors.midGreen, titleStyle: GoogleFonts.cairo(fontSize: 11, color: Colors.white, fontWeight: FontWeight.bold)),
-                PieChartSectionData(value: 10, title: 'أخرى', color: Colors.grey[400]!, titleStyle: GoogleFonts.cairo(fontSize: 11, color: Colors.white, fontWeight: FontWeight.bold)),
+                PieChartSectionData(value: _totalQuranPages.toDouble(), title: 'القرآن', color: AppColors.gold, titleStyle: GoogleFonts.cairo(fontSize: 11, color: Colors.white, fontWeight: FontWeight.bold)),
+                PieChartSectionData(value: _completedPrayers.toDouble() * 10, title: 'الصلاة', color: AppColors.lightGreen, titleStyle: GoogleFonts.cairo(fontSize: 11, color: Colors.white, fontWeight: FontWeight.bold)),
+                PieChartSectionData(value: _streak.toDouble() * 5, title: 'النشاط', color: AppColors.midGreen, titleStyle: GoogleFonts.cairo(fontSize: 11, color: Colors.white, fontWeight: FontWeight.bold)),
               ],
               centerSpaceRadius: 40,
             )),
@@ -288,7 +287,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> with SingleTickerProvider
           Text('🏆 أفضل أيامك هذا الشهر',
               style: GoogleFonts.cairo(fontWeight: FontWeight.bold, color: AppColors.darkGreen)),
           const SizedBox(height: 12),
-          ...['الجمعة ٢ مايو — أكملت كل العبادات 🌟', 'السبت ٣ مايو — قرأت ٣٠ صفحة', 'الاثنين ٥ مايو — أذكار + قيام الليل'].map(
+          ...(_totalQuranPages > 0 ? ['إنجاز متميز في القرآن 📖', 'مواظبة على الصلوات 🕌'] : ['ابدأ تسجيل عباداتك لتظهر هنا 🌟']).map(
             (d) => Padding(
               padding: const EdgeInsets.symmetric(vertical: 6),
               child: Row(

@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'package:uuid/uuid.dart';
 import '../../core/app_colors.dart';
 import '../../core/app_models.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/firebase_service.dart';
+import '../../models/challenge_model.dart';
 
 TextStyle _f({double sz = 14, FontWeight fw = FontWeight.w400, Color? c, double? h}) =>
     GoogleFonts.ibmPlexSansArabic(fontSize: sz, fontWeight: fw, color: c, height: h);
@@ -18,7 +20,7 @@ class ChallengesPage extends StatefulWidget {
 class _ChallengesPageState extends State<ChallengesPage> {
   final FirebaseService _firebaseService = FirebaseService();
   bool _isLoading = true;
-  List<_Challenge> _challenges = [];
+  List<Challenge> _challenges = [];
 
   @override
   void initState() {
@@ -34,38 +36,28 @@ class _ChallengesPageState extends State<ChallengesPage> {
     }
 
     try {
-      final now = DateTime.now();
-      final worships = await _firebaseService.getMonthlyWorships(userId, now.year, now.month);
+      final challenges = await _firebaseService.getChallenges(userId);
       
-      int fasting = 0;
-      int quranDays = 0;
-      int qiyam = 0;
-      int charity = 0;
-      int dhikr = 0;
-
-      for (var w in worships) {
-        if (w.worships[WorshipType.fasting.name] == true) fasting++;
-        if (w.quranPages >= 10 || w.worships[WorshipType.quran.name] == true) quranDays++;
-        if (w.worships[WorshipType.qiyam.name] == true) qiyam++;
-        if (w.worships[WorshipType.charity.name] == true) charity++;
-        if (w.worships[WorshipType.dhikr.name] == true) dhikr++;
-      }
-
-      setState(() {
+      if (challenges.isEmpty) {
+        // Add default challenges if none exist
         _challenges = [
-          _Challenge(title: 'صيام الاثنين والخميس', desc: 'سنة مؤكدة عن النبي ﷺ', icon: Icons.nights_stay_rounded, gradient: [const Color(0xFF1A237E), const Color(0xFF3949AB)], target: 8, current: fasting),
-          _Challenge(title: 'الورد القرآني', desc: 'استمرار قراءة القرآن', icon: Icons.auto_stories_rounded, gradient: [const Color(0xFF4A148C), const Color(0xFF7B1FA2)], target: 30, current: quranDays),
-          _Challenge(title: 'قيام الليل', desc: 'شرف المؤمن', icon: Icons.star_rounded, gradient: [const Color(0xFF0D47A1), const Color(0xFF1976D2)], target: 30, current: qiyam),
-          _Challenge(title: 'أذكار الصباح والمساء', desc: 'حصن المسلم', icon: Icons.shield_rounded, gradient: [const Color(0xFF1B5E20), const Color(0xFF388E3C)], target: 30, current: dhikr),
-          _Challenge(title: 'صدقة', desc: 'الصدقة تطفئ الخطيئة', icon: Icons.favorite_rounded, gradient: [const Color(0xFFB71C1C), const Color(0xFFE53935)], target: 30, current: charity),
+          Challenge(id: '1', title: 'صيام الاثنين والخميس', desc: 'سنة مؤكدة عن النبي ﷺ', icon: 'nights_stay', gradient: ['#1A237E', '#3949AB'], target: 8, current: 0),
+          Challenge(id: '2', title: 'الورد القرآني', desc: 'استمرار قراءة القرآن', icon: 'auto_stories', gradient: ['#4A148C', '#7B1FA2'], target: 30, current: 0),
+          Challenge(id: '3', title: 'قيام الليل', desc: 'شرف المؤمن', icon: 'star', gradient: ['#0D47A1', '#1976D2'], target: 30, current: 0),
         ];
-        _isLoading = false;
-      });
+        for (var c in _challenges) {
+          await _firebaseService.saveChallenge(userId, c);
+        }
+      } else {
+        _challenges = challenges;
+      }
+      setState(() => _isLoading = false);
     } catch (e) {
       debugPrint('Error loading challenges: $e');
       setState(() => _isLoading = false);
     }
   }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -79,117 +71,189 @@ class _ChallengesPageState extends State<ChallengesPage> {
       textDirection: TextDirection.rtl,
       child: Scaffold(
         backgroundColor: bg,
-        body: _isLoading ? const Center(child: CircularProgressIndicator(color: AppColors.gold)) : CustomScrollView(slivers: [
-          // ── Header ──
-          SliverToBoxAdapter(child: Container(
-            padding: EdgeInsets.only(top: MediaQuery.of(context).padding.top + 12, bottom: 28, left: 20, right: 20),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight,
-                colors: isDark ? [const Color(0xFF0D2818), const Color(0xFF0A3D22)] : [const Color(0xFF145A3A), const Color(0xFF1E8255)]),
-              borderRadius: const BorderRadius.only(bottomLeft: Radius.circular(32), bottomRight: Radius.circular(32)),
-            ),
-            child: Column(children: [
-              Row(children: [
-                GestureDetector(
-                  onTap: () => Navigator.pop(context),
-                  child: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(color: Colors.white.withOpacity(0.1), shape: BoxShape.circle),
-                    child: const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white, size: 20),
-                  ),
-                ),
-                Expanded(child: Text('التحديات الروحية', textAlign: TextAlign.center, style: _f(sz: 20, fw: FontWeight.w800, c: Colors.white))),
-                const SizedBox(width: 48),
-              ]),
-              const SizedBox(height: 20),
-              // Progress overview
-              Container(
-                padding: const EdgeInsets.all(18),
-                decoration: BoxDecoration(color: Colors.white.withOpacity(0.12), borderRadius: BorderRadius.circular(20), border: Border.all(color: Colors.white.withOpacity(0.15))),
-                child: Row(children: [
-                  SizedBox(width: 60, height: 60, child: Stack(alignment: Alignment.center, children: [
-                    CircularProgressIndicator(value: totalProgress, strokeWidth: 5, backgroundColor: Colors.white24, color: AppColors.goldLight, strokeCap: StrokeCap.round),
-                    Text('${(totalProgress * 100).toInt()}٪', style: _f(sz: 14, fw: FontWeight.w800, c: Colors.white)),
-                  ])),
-                  const SizedBox(width: 16),
-                  Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text('التقدم الإجمالي', style: _f(sz: 14, fw: FontWeight.w700, c: Colors.white)),
-                    const SizedBox(height: 4),
-                    Text('$completed من ${_challenges.length} تحديات مكتملة', style: _f(sz: 12, c: Colors.white60)),
-                  ])),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(color: AppColors.gold.withOpacity(0.2), borderRadius: BorderRadius.circular(20)),
-                    child: Text('🔥 ${_challenges.fold<int>(0, (s, c) => s + c.current)}', style: _f(sz: 13, fw: FontWeight.w700, c: AppColors.goldLight)),
-                  ),
-                ]),
-              ),
-            ]),
-          )),
-
-          SliverToBoxAdapter(child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
-            child: Text('تحدياتك', style: _f(sz: 18, fw: FontWeight.w800, c: textColor)),
-          )),
-
-          // ── Challenge Cards ──
-          SliverPadding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            sliver: SliverList(delegate: SliverChildBuilderDelegate((ctx, i) {
-              final c = _challenges[i];
-              final pct = (c.current / c.target).clamp(0.0, 1.0);
-              final done = c.current >= c.target;
-              final cardBg = isDark ? const Color(0xFF1A1F1C) : Colors.white;
-
-              return Container(
-                margin: const EdgeInsets.only(bottom: 12),
+        body: _isLoading ? const Center(child: CircularProgressIndicator(color: AppColors.gold)) : CustomScrollView(
+          physics: const BouncingScrollPhysics(),
+          slivers: [
+            // ── Modern Header ──
+            SliverToBoxAdapter(
+              child: Container(
+                padding: EdgeInsets.only(top: MediaQuery.of(context).padding.top + 16, bottom: 28, left: 20, right: 20),
                 decoration: BoxDecoration(
-                  color: cardBg, borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: isDark ? Colors.white.withOpacity(0.06) : Colors.black.withOpacity(0.04)),
-                  boxShadow: [if (!isDark) BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 10, offset: const Offset(0, 4))],
+                  gradient: LinearGradient(
+                    colors: isDark ? [const Color(0xFF0D2818), const Color(0xFF0A3D22)] : [const Color(0xFF145A3A), const Color(0xFF1E8255)],
+                  ),
+                  borderRadius: const BorderRadius.only(bottomLeft: Radius.circular(32), bottomRight: Radius.circular(32)),
                 ),
-                child: Padding(padding: const EdgeInsets.all(16), child: Row(children: [
-                  // Icon with gradient
-                  Container(width: 56, height: 56,
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(colors: done ? [AppColors.darkGreen, AppColors.midGreen] : c.gradient),
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: [BoxShadow(color: c.gradient[0].withOpacity(0.3), blurRadius: 8, offset: const Offset(0, 3))],
+                child: Column(
+                  children: [
+                    Row(
+                      children: [
+                        _BackButton(),
+                        Expanded(child: Text('التحديات الروحية', textAlign: TextAlign.center, style: _f(sz: 20, fw: FontWeight.w800, c: Colors.white))),
+                        IconButton(icon: const Icon(Icons.add_rounded, color: Colors.white), onPressed: () => _showAddChallengeDialog(isDark)),
+                      ],
                     ),
-                    child: Icon(done ? Icons.check_rounded : c.icon, color: Colors.white, size: 28)),
-                  const SizedBox(width: 14),
-                  // Info
-                  Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text(c.title, style: _f(sz: 15, fw: FontWeight.w700, c: textColor)),
-                    const SizedBox(height: 4),
-                    Text(c.desc, style: _f(sz: 12, c: isDark ? Colors.white54 : AppColors.textSecondary)),
-                    const SizedBox(height: 10),
-                    ClipRRect(borderRadius: BorderRadius.circular(6),
-                      child: LinearProgressIndicator(value: pct, minHeight: 6,
-                        backgroundColor: isDark ? Colors.white12 : Colors.grey[200],
-                        color: done ? AppColors.lightGreen : Color.lerp(c.gradient[0], c.gradient[1], 0.5))),
-                  ])),
-                  const SizedBox(width: 12),
-                  // Count
-                  Column(children: [
-                    Text('${c.current}', style: _f(sz: 22, fw: FontWeight.w800, c: done ? AppColors.darkGreen : Color.lerp(c.gradient[0], c.gradient[1], 0.5))),
-                    Text('/ ${c.target}', style: _f(sz: 11, c: isDark ? Colors.white38 : AppColors.gray)),
-                  ]),
-                ])),
-              );
-            }, childCount: _challenges.length)),
+                    const SizedBox(height: 24),
+                    _ProgressOverview(totalProgress: totalProgress, completedCount: completed, totalCount: _challenges.length, totalFire: _challenges.fold(0, (s, c) => s + c.current)),
+                  ],
+                ),
+              ),
+            ),
+
+            SliverToBoxAdapter(child: Padding(padding: const EdgeInsets.fromLTRB(20, 24, 20, 12), child: Text('تحدياتك النشطة', style: _f(sz: 18, fw: FontWeight.w800, c: textColor)))),
+
+            // ── Challenge List ──
+            SliverPadding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              sliver: SliverList(
+                delegate: SliverChildBuilderDelegate((ctx, i) {
+                  final c = _challenges[i];
+                  return _ChallengeCard(challenge: c, isDark: isDark, onUpdate: () => _updateProgress(c));
+                }, childCount: _challenges.length),
+              ),
+            ),
+            const SliverToBoxAdapter(child: SizedBox(height: 100)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showAddChallengeDialog(bool isDark) {
+    final titleController = TextEditingController();
+    final targetController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (ctx) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+          title: Text('إضافة تحدي جديد', style: _f(sz: 18, fw: FontWeight.w800)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(controller: titleController, decoration: InputDecoration(hintText: 'اسم التحدي (مثلاً: ركعتي الضحى)', hintStyle: _f(c: AppColors.gray))),
+              const SizedBox(height: 12),
+              TextField(controller: targetController, keyboardType: TextInputType.number, decoration: InputDecoration(hintText: 'الهدف (مثلاً: 30 يوماً)', hintStyle: _f(c: AppColors.gray))),
+            ],
           ),
-          const SliverToBoxAdapter(child: SizedBox(height: 32)),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: Text('إلغاء', style: _f(c: Colors.grey))),
+            ElevatedButton(
+              onPressed: () => _addNewChallenge(titleController.text, targetController.text),
+              style: ElevatedButton.styleFrom(backgroundColor: AppColors.darkGreen, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+              child: const Text('إضافة', style: TextStyle(color: Colors.white)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _addNewChallenge(String title, String targetStr) async {
+    final target = int.tryParse(targetStr) ?? 30;
+    if (title.isEmpty) return;
+
+    final userId = context.read<AppAuthProvider>().userId;
+    final newChallenge = Challenge(
+      id: const Uuid().v4(),
+      title: title,
+      desc: 'تحدي مخصص',
+      icon: 'star',
+      target: target,
+      current: 0,
+      gradient: ['#1B5E20', '#388E3C'],
+    );
+
+    await _firebaseService.saveChallenge(userId, newChallenge);
+    Navigator.pop(context);
+    _loadChallenges();
+  }
+
+  Future<void> _updateProgress(Challenge c) async {
+    if (c.current >= c.target) return;
+    final userId = context.read<AppAuthProvider>().userId;
+    await _firebaseService.updateChallengeProgress(userId, c.id, c.current + 1);
+    _loadChallenges();
+  }
+}
+
+class _BackButton extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) => GestureDetector(
+    onTap: () => Navigator.pop(context),
+    child: Container(
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(color: Colors.white.withOpacity(0.15), shape: BoxShape.circle),
+      child: const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white, size: 18),
+    ),
+  );
+}
+
+class _ProgressOverview extends StatelessWidget {
+  final double totalProgress; final int completedCount, totalCount, totalFire;
+  const _ProgressOverview({required this.totalProgress, required this.completedCount, required this.totalCount, required this.totalFire});
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.all(20),
+    decoration: BoxDecoration(color: Colors.white.withOpacity(0.1), borderRadius: BorderRadius.circular(24), border: Border.all(color: Colors.white.withOpacity(0.1))),
+    child: Row(children: [
+      Stack(alignment: Alignment.center, children: [
+        SizedBox(width: 60, height: 60, child: CircularProgressIndicator(value: totalProgress, strokeWidth: 6, backgroundColor: Colors.white12, color: AppColors.gold, strokeCap: StrokeCap.round)),
+        Text('${(totalProgress * 100).toInt()}%', style: _f(sz: 12, fw: FontWeight.w800, c: Colors.white)),
+      ]),
+      const SizedBox(width: 20),
+      Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text('تقدمك الإجمالي', style: _f(sz: 15, fw: FontWeight.w800, c: Colors.white)),
+        Text('$completedCount من $totalCount تحديات مكتملة', style: _f(sz: 12, c: Colors.white70)),
+      ])),
+      Container(padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6), decoration: BoxDecoration(color: AppColors.gold.withOpacity(0.2), borderRadius: BorderRadius.circular(12)), child: Text('🔥 $totalFire', style: _f(sz: 13, fw: FontWeight.bold, c: AppColors.gold))),
+    ]),
+  );
+}
+
+class _ChallengeCard extends StatelessWidget {
+  final Challenge challenge; final bool isDark; final VoidCallback onUpdate;
+  const _ChallengeCard({required this.challenge, required this.isDark, required this.onUpdate});
+
+  @override
+  Widget build(BuildContext context) {
+    final done = challenge.current >= challenge.target;
+    final progress = (challenge.current / challenge.target).clamp(0.0, 1.0);
+    final color = _parseColor(challenge.gradient[0]);
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 14),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1A1F1C) : Colors.white,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: isDark ? Colors.white.withOpacity(0.05) : Colors.black.withOpacity(0.03)),
+        boxShadow: [if (!isDark) BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10, offset: const Offset(0, 4))],
+      ),
+      child: ListTile(
+        onTap: onUpdate,
+        contentPadding: const EdgeInsets.all(16),
+        leading: Container(
+          width: 56, height: 56,
+          decoration: BoxDecoration(gradient: LinearGradient(colors: [color, color.withOpacity(0.7)]), borderRadius: BorderRadius.circular(16)),
+          child: Icon(done ? Icons.check_rounded : _getIcon(challenge.icon), color: Colors.white, size: 28),
+        ),
+        title: Text(challenge.title, style: _f(sz: 16, fw: FontWeight.w800)),
+        subtitle: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          const SizedBox(height: 4),
+          Text(challenge.desc, style: _f(sz: 12, c: AppColors.gray)),
+          const SizedBox(height: 12),
+          ClipRRect(borderRadius: BorderRadius.circular(4), child: LinearProgressIndicator(value: progress, minHeight: 6, backgroundColor: Colors.grey.withOpacity(0.1), color: color)),
+        ]),
+        trailing: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+          Text('${challenge.current}', style: _f(sz: 18, fw: FontWeight.w900, c: color)),
+          Text('/ ${challenge.target}', style: _f(sz: 10, c: AppColors.gray)),
         ]),
       ),
     );
   }
-}
 
-class _Challenge {
-  final String title, desc;
-  final IconData icon;
-  final List<Color> gradient;
-  final int target, current;
-  _Challenge({required this.title, required this.desc, required this.icon, required this.gradient, required this.target, required this.current});
+  Color _parseColor(String hex) => Color(int.parse(hex.replaceFirst('#', '0xFF')));
+  IconData _getIcon(String name) => name == 'nights_stay' ? Icons.nights_stay_rounded : name == 'auto_stories' ? Icons.auto_stories_rounded : Icons.star_rounded;
 }

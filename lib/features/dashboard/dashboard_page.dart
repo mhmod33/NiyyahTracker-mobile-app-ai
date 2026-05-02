@@ -2,8 +2,10 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'package:uuid/uuid.dart' as uuid;
 import '../../core/app_colors.dart';
 import '../../core/theme_provider.dart';
+import '../../core/app_models.dart';
 import '../worship/worship_page.dart';
 import '../goals/goals_page.dart';
 import '../plan/smart_plan_page.dart';
@@ -21,8 +23,6 @@ import '../azkar/azkar_library_page.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/firebase_service.dart';
 import '../../models/worship_model.dart' as db_model;
-import '../../core/app_models.dart';
-import 'package:uuid/uuid.dart' as uuid;
 
 TextStyle _f({double sz = 14, FontWeight fw = FontWeight.w400, Color? c, double? h}) =>
     GoogleFonts.ibmPlexSansArabic(fontSize: sz, fontWeight: fw, color: c, height: h);
@@ -113,8 +113,7 @@ class _DashboardPageState extends State<DashboardPage> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bgColor = isDark ? const Color(0xFF121212) : AppColors.background;
-    final textColor = isDark ? Colors.white : AppColors.textPrimary;
+    final bgColor = isDark ? const Color(0xFF0A0A0A) : const Color(0xFFF8FAF9);
     final authProvider = context.watch<AppAuthProvider>();
     final userName = authProvider.displayName;
 
@@ -123,274 +122,133 @@ class _DashboardPageState extends State<DashboardPage> {
       child: Scaffold(
         backgroundColor: bgColor,
         body: CustomScrollView(
+          physics: const BouncingScrollPhysics(),
           slivers: [
-            // ── Header ──
+            // ── Modern Header ──
             SliverToBoxAdapter(
               child: Container(
-                padding: EdgeInsets.only(top: MediaQuery.of(context).padding.top + 16, bottom: 24, left: 20, right: 20),
+                padding: EdgeInsets.only(top: MediaQuery.of(context).padding.top + 16, bottom: 28, left: 20, right: 20),
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                     colors: isDark
-                        ? [const Color(0xFF0A1912), const Color(0xFF143023)]
-                        : [const Color(0xFF145A3A), const Color(0xFF1E8255)], // A bit deeper green
+                        ? [const Color(0xFF0D2818), const Color(0xFF051109)]
+                        : [const Color(0xFF145A3A), const Color(0xFF1E8255)],
                   ),
-                  borderRadius: const BorderRadius.only(
-                    bottomLeft: Radius.circular(32),
-                    bottomRight: Radius.circular(32),
-                  ),
+                  borderRadius: const BorderRadius.only(bottomLeft: Radius.circular(32), bottomRight: Radius.circular(32)),
                 ),
-                child: Stack(
+                child: Column(
                   children: [
-                    // Background Pattern
-                    Positioned.fill(
-                      child: Opacity(
-                        opacity: isDark ? 0.05 : 0.08,
-                        child: CustomPaint(painter: _IslamicPatternPainter()),
-                      ),
-                    ),
-                    Column(
-                      children: [
                     Row(
                       children: [
-                        Container(
-                          width: 48, height: 48,
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(14),
-                            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 10)],
-                          ),
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(14),
-                            child: Image.asset('assets/logo.png', fit: BoxFit.cover),
-                          ),
+                        CircleAvatar(
+                          radius: 26,
+                          backgroundColor: Colors.white.withOpacity(0.2),
+                          child: Text(userName.isNotEmpty ? userName[0].toUpperCase() : '؟', style: _f(sz: 20, fw: FontWeight.bold, c: Colors.white)),
                         ),
-                        const SizedBox(width: 12),
+                        const SizedBox(width: 14),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text('السلام عليكم، ${userName.split(' ').first}', style: _f(sz: 13, c: Colors.white70)),
-                              Text('النية', style: _f(sz: 22, fw: FontWeight.w800, c: Colors.white)),
+                              Text('مرحباً بك في النية', style: _f(sz: 20, fw: FontWeight.w800, c: Colors.white)),
                             ],
                           ),
                         ),
-                        IconButton(
-                          icon: const Icon(Icons.person_outline_rounded, color: Colors.white, size: 26),
-                          onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfilePage())),
-                        ),
+                        _IconButton(icon: Icons.notifications_none_rounded, onTap: () {}),
                       ],
                     ),
-                    const SizedBox(height: 20),
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.12),
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: Colors.white.withOpacity(0.15)),
-                      ),
-                      child: Column(
-                        children: [
-                          Text('وإنما لكل امرئ ما نوى', style: _f(sz: 18, fw: FontWeight.w700, c: Colors.white)),
-                          const SizedBox(height: 4),
-                          Text(_getArabicDate(), style: _f(sz: 12, c: Colors.white60)),
-                        ],
-                      ),
-                    ),
-                  ],
-                ), // Column
-              ],
-            ), // Stack
-          ), // Container
-        ), // SliverToBoxAdapter
-
-            // ── Daily Accountability (المحاسبة اليومية) ──
-            SliverToBoxAdapter(
-              child: _buildDailyAccountability(isDark, textColor),
-            ),
-
-            // ── Quick Access ──
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 24, 20, 12),
-                child: Text('الوصول السريع', style: _f(sz: 18, fw: FontWeight.w800, c: textColor)),
-              ),
-            ),
-
-            SliverToBoxAdapter(
-              child: SizedBox(
-                height: 100,
-                child: ListView(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  children: [
-                    _QuickChip(icon: Icons.access_time_rounded, label: 'الصلاة', color: const Color(0xFF2196F3),
-                      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const PrayerTimesPage()))),
-                    _QuickChip(icon: Icons.explore_rounded, label: 'القبلة', color: const Color(0xFF4CAF50),
-                      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const QiblaPage()))),
-                    _QuickChip(icon: Icons.auto_stories_rounded, label: 'المصحف', color: const Color(0xFF9C27B0),
-                      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const QuranPage()))),
-                    _QuickChip(icon: Icons.mosque_rounded, label: 'المساجد', color: const Color(0xFF00BCD4),
-                      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const NearbyMosquesPage()))),
-                    _QuickChip(icon: Icons.front_hand_rounded, label: 'الأذكار', color: const Color(0xFFFF9800),
-                      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AzkarCounterPage()))),
+                    const SizedBox(height: 24),
+                    _HeaderQuote(date: _getArabicDate()),
                   ],
                 ),
               ),
             ),
 
-            // ── Features Grid ──
+            // ── Today's Focus Section ──
+            SliverToBoxAdapter(child: _SectionTitle(title: 'محاسبة اليوم', icon: Icons.auto_awesome_rounded)),
+            SliverToBoxAdapter(child: _buildDailyAccountability(isDark)),
+
+            // ── Quick Access Section ──
+            SliverToBoxAdapter(child: _SectionTitle(title: 'الوصول السريع', icon: Icons.grid_view_rounded)),
             SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
-                child: Text('الميزات', style: _f(sz: 18, fw: FontWeight.w800, c: textColor)),
+              child: SizedBox(
+                height: 110,
+                child: ListView(
+                  scrollDirection: Axis.horizontal,
+                  physics: const BouncingScrollPhysics(),
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  children: [
+                    _QuickChip(icon: Icons.access_time_filled_rounded, label: 'مواقيت الصلاة', color: Colors.blue, onTap: () => _to(const PrayerTimesPage())),
+                    _QuickChip(icon: Icons.explore_rounded, label: 'اتجاة القبلة', color: Colors.green, onTap: () => _to(const QiblaPage())),
+                    _QuickChip(icon: Icons.menu_book_rounded, label: 'المصحف الشريف', color: Colors.purple, onTap: () => _to(const QuranPage())),
+                    _QuickChip(icon: Icons.location_on_rounded, label: 'المساجد', color: Colors.cyan, onTap: () => _to(const NearbyMosquesPage())),
+                    _QuickChip(icon: Icons.front_hand_rounded, label: 'الأذكار اليومية', color: Colors.orange, onTap: () => _to(const AzkarCounterPage())),
+                  ],
+                ),
               ),
             ),
 
+            // ── Features Sections ──
+            SliverToBoxAdapter(child: _SectionTitle(title: 'أدوات العبادة', icon: Icons.stars_rounded)),
             SliverPadding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               sliver: SliverGrid.count(
                 crossAxisCount: 3,
-                mainAxisSpacing: 12,
-                crossAxisSpacing: 12,
-                childAspectRatio: 0.95,
+                mainAxisSpacing: 14,
+                crossAxisSpacing: 14,
                 children: [
-                  _FeatureCard(icon: Icons.wb_sunny_rounded, label: 'عبادات اليوم', color: const Color(0xFFFF9800), isDark: isDark,
-                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const WorshipPage()))),
-                  _FeatureCard(icon: Icons.track_changes_rounded, label: 'أهدافي', color: const Color(0xFFE91E63), isDark: isDark,
-                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const GoalsPage()))),
-                  _FeatureCard(icon: Icons.calendar_today_rounded, label: 'الخطة الذكية', color: const Color(0xFF2196F3), isDark: isDark,
-                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SmartPlanPage()))),
-                  _FeatureCard(icon: Icons.description_rounded, label: 'تقرير الروح', color: const Color(0xFF607D8B), isDark: isDark,
-                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ReportsPage()))),
-                  _FeatureCard(icon: Icons.analytics_rounded, label: 'التحليلات', color: const Color(0xFF9C27B0), isDark: isDark,
-                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AnalyticsPage()))),
-                  _FeatureCard(icon: Icons.emoji_events_rounded, label: 'التحديات', color: const Color(0xFFFFC107), isDark: isDark,
-                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ChallengesPage()))),
-                  _FeatureCard(icon: Icons.today_rounded, label: 'سنن الجمعة', color: const Color(0xFF00BCD4), isDark: isDark,
-                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const FridayTipsPage()))),
-                  _FeatureCard(icon: Icons.menu_book_rounded, label: 'مكتبة الأذكار', color: const Color(0xFF4CAF50), isDark: isDark,
-                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AzkarLibraryPage()))),
-                  _FeatureCard(icon: Icons.front_hand_rounded, label: 'عدّاد الأذكار', color: const Color(0xFFFF5722), isDark: isDark,
-                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AzkarCounterPage()))),
-                  _FeatureCard(icon: Icons.mosque_rounded, label: 'المساجد القريبة', color: const Color(0xFF009688), isDark: isDark,
-                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const NearbyMosquesPage()))),
+                  _FeatureCard(icon: Icons.wb_sunny_rounded, label: 'عباداتي', color: Colors.amber, isDark: isDark, onTap: () => _to(const WorshipPage())),
+                  _FeatureCard(icon: Icons.track_changes_rounded, label: 'الأهداف', color: Colors.pink, isDark: isDark, onTap: () => _to(const GoalsPage())),
+                  _FeatureCard(icon: Icons.calendar_today_rounded, label: 'الخطة', color: Colors.indigo, isDark: isDark, onTap: () => _to(const SmartPlanPage())),
+                  _FeatureCard(icon: Icons.analytics_rounded, label: 'التحليلات', color: Colors.deepPurple, isDark: isDark, onTap: () => _to(const AnalyticsPage())),
+                  _FeatureCard(icon: Icons.emoji_events_rounded, label: 'التحديات', color: Colors.orange, isDark: isDark, onTap: () => _to(const ChallengesPage())),
+                  _FeatureCard(icon: Icons.description_rounded, label: 'التقارير', color: Colors.blueGrey, isDark: isDark, onTap: () => _to(const ReportsPage())),
                 ],
               ),
             ),
 
-            const SliverToBoxAdapter(child: SizedBox(height: 120)), // Added padding for floating navbar
+            SliverToBoxAdapter(child: _SectionTitle(title: 'المزيد', icon: Icons.add_circle_outline_rounded)),
+            SliverPadding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              sliver: SliverGrid.count(
+                crossAxisCount: 3,
+                mainAxisSpacing: 14,
+                crossAxisSpacing: 14,
+                children: [
+                  _FeatureCard(icon: Icons.today_rounded, label: 'سنن الجمعة', color: Colors.teal, isDark: isDark, onTap: () => _to(const FridayTipsPage())),
+                  _FeatureCard(icon: Icons.import_contacts_rounded, label: 'المكتبة', color: Colors.green, isDark: isDark, onTap: () => _to(const AzkarLibraryPage())),
+                  _FeatureCard(icon: Icons.mosque_rounded, label: 'المساجد', color: Colors.blueAccent, isDark: isDark, onTap: () => _to(const NearbyMosquesPage())),
+                ],
+              ),
+            ),
+
+            const SliverToBoxAdapter(child: SizedBox(height: 120)),
           ],
         ),
         extendBody: true,
-        bottomNavigationBar: Container(
-          margin: const EdgeInsets.only(left: 20, right: 20, bottom: 20),
-          decoration: BoxDecoration(
-            color: isDark ? const Color(0xFF1E1E1E).withOpacity(0.8) : Colors.white.withOpacity(0.8),
-            borderRadius: BorderRadius.circular(30),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(isDark ? 0.3 : 0.1),
-                blurRadius: 20,
-                offset: const Offset(0, 10),
-              ),
-            ],
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(30),
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: [
-                    // Right Side (RTL context)
-                    _NavBarItem(icon: Icons.dashboard_rounded, label: 'الرئيسية', isSelected: _currentIndex == 0, onTap: () => setState(() => _currentIndex = 0)),
-                    _NavBarItem(icon: Icons.auto_stories_rounded, label: 'المصحف', isSelected: _currentIndex == 3, onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const QuranPage()))),
-                    
-                    // Center Logo
-                    GestureDetector(
-                      onTap: () => setState(() => _currentIndex = 0), // Just goes to home
-                      child: Container(
-                        padding: const EdgeInsets.all(2),
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: Colors.white,
-                          boxShadow: [BoxShadow(color: AppColors.gold.withOpacity(0.5), blurRadius: 10)],
-                        ),
-                        child: CircleAvatar(
-                          radius: 22,
-                          backgroundColor: AppColors.darkGreen,
-                          backgroundImage: const AssetImage('assets/logo.png'),
-                        ),
-                      ),
-                    ),
-
-                    // Left Side
-                    _NavBarItem(icon: Icons.mosque_rounded, label: 'المساجد', isSelected: _currentIndex == 1, onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const NearbyMosquesPage()))),
-                    _NavBarItem(icon: Icons.person_rounded, label: 'حسابي', isSelected: _currentIndex == 4, onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfilePage()))),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ),
+        bottomNavigationBar: _ModernNavBar(currentIndex: _currentIndex, onTap: (i) => setState(() => _currentIndex = i)),
       ),
     );
   }
 
-  Widget _buildDailyAccountability(bool isDark, Color textColor) {
-    if (_isLoadingAccountability) {
-      return const Padding(
-        padding: EdgeInsets.all(20),
-        child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
-      );
-    }
+  void _to(Widget page) => Navigator.push(context, MaterialPageRoute(builder: (_) => page));
+
+  Widget _buildDailyAccountability(bool isDark) {
+    if (_isLoadingAccountability) return const Center(child: Padding(padding: EdgeInsets.all(20), child: CircularProgressIndicator(strokeWidth: 2)));
 
     if (_isAccountabilityDone) {
       return Padding(
-        padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
-        child: Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: AppColors.paleGreen.withOpacity(isDark ? 0.1 : 0.5),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: AppColors.midGreen.withOpacity(0.3)),
-          ),
-          child: Row(
-            children: [
-              const Icon(Icons.check_circle_rounded, color: AppColors.darkGreen, size: 28),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text('تقبل الله! أتممت محاسبة اليوم بنجاح 🤍', style: _f(sz: 14, fw: FontWeight.w700, c: AppColors.darkGreen)),
-              ),
-            ],
-          ),
-        ),
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        child: _SuccessCard(isDark: isDark),
       );
     }
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const Icon(Icons.fact_check_rounded, color: AppColors.gold, size: 22),
-              const SizedBox(width: 8),
-              Text('المحاسبة اليومية', style: _f(sz: 18, fw: FontWeight.w800, c: textColor)),
-              const Spacer(),
-              IconButton(
-                onPressed: () => _showAccountabilityDialog(isDark),
-                icon: const Icon(Icons.add_circle_outline_rounded, color: AppColors.darkGreen, size: 28),
-              ),
-            ],
-          ),
-        ],
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: _AccountabilityCard(isDark: isDark, onAdd: () => _showAccountabilityDialog(isDark)),
     );
   }
 
@@ -401,216 +259,237 @@ class _DashboardPageState extends State<DashboardPage> {
         builder: (context, setDialogState) => Directionality(
           textDirection: TextDirection.rtl,
           child: AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
             title: Text('المحاسبة اليومية', style: _f(sz: 18, fw: FontWeight.w800)),
             content: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                _buildChecklistItem('هل صليت الفجر اليوم؟', 'الصلاة خير من النوم', Icons.wb_twilight_rounded, _fajrChecked, (val) {
-                  setDialogState(() => _fajrChecked = val ?? false);
+                _CheckItem(title: 'صلاة الفجر', subtitle: 'في وقتها', icon: Icons.wb_twilight_rounded, value: _fajrChecked, onChanged: (v) {
+                  setDialogState(() => _fajrChecked = v ?? false);
                   setState(() {});
-                }, isDark),
-                const Divider(),
-                _buildChecklistItem('هل تصدقت اليوم؟', 'ولو بشق تمرة', Icons.volunteer_activism_rounded, _charityChecked, (val) {
-                  setDialogState(() => _charityChecked = val ?? false);
+                }),
+                const SizedBox(height: 12),
+                _CheckItem(title: 'الصدقة', subtitle: 'ولو بالقليل', icon: Icons.volunteer_activism_rounded, value: _charityChecked, onChanged: (v) {
+                  setDialogState(() => _charityChecked = v ?? false);
                   setState(() {});
-                }, isDark),
+                }),
               ],
             ),
             actions: [
-              TextButton(onPressed: () => Navigator.pop(context), child: const Text('إلغاء')),
+              TextButton(onPressed: () => Navigator.pop(context), child: Text('إلغاء', style: _f(c: Colors.grey))),
               ElevatedButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                  _saveQuickAccountability();
-                },
-                style: ElevatedButton.styleFrom(backgroundColor: AppColors.darkGreen),
-                child: const Text('حفظ', style: TextStyle(color: Colors.white)),
+                onPressed: () { Navigator.pop(context); _saveQuickAccountability(); },
+                style: ElevatedButton.styleFrom(backgroundColor: AppColors.darkGreen, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+                child: const Text('حفظ الإنجاز', style: TextStyle(color: Colors.white)),
               ),
             ],
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildChecklistItem(String title, String subtitle, IconData icon, bool value, ValueChanged<bool?> onChanged, bool isDark) {
-    return Theme(
-      data: ThemeData(
-        unselectedWidgetColor: isDark ? Colors.white54 : Colors.grey[400],
-      ),
-      child: CheckboxListTile(
-        value: value,
-        onChanged: onChanged,
-        activeColor: AppColors.darkGreen,
-        checkColor: Colors.white,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-        title: Text(title, style: _f(sz: 15, fw: FontWeight.w700, c: isDark ? Colors.white : AppColors.textPrimary)),
-        subtitle: Text(subtitle, style: _f(sz: 12, c: AppColors.gray)),
-        secondary: Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: value ? AppColors.darkGreen.withOpacity(0.1) : (isDark ? Colors.white10 : AppColors.paleGreen),
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: Icon(icon, color: value ? AppColors.darkGreen : (isDark ? Colors.white70 : AppColors.midGreen), size: 20),
-        ),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       ),
     );
   }
 }
 
-class _NavBarItem extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final bool isSelected;
-  final VoidCallback onTap;
+// ── Small Support Widgets ──
 
-  const _NavBarItem({
-    required this.icon,
-    required this.label,
-    required this.isSelected,
-    required this.onTap,
-  });
-
+class _IconButton extends StatelessWidget {
+  final IconData icon; final VoidCallback onTap;
+  const _IconButton({required this.icon, required this.onTap});
   @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    
-    return GestureDetector(
-      onTap: onTap,
-      behavior: HitTestBehavior.opaque,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeOutQuint,
-        padding: EdgeInsets.symmetric(horizontal: isSelected ? 16 : 10, vertical: 8),
-        decoration: BoxDecoration(
-          color: isSelected 
-              ? AppColors.darkGreen.withOpacity(isDark ? 0.3 : 0.15)
-              : Colors.transparent,
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Row(
-          children: [
-            Icon(
-              icon,
-              color: isSelected ? AppColors.darkGreen : (isDark ? Colors.white54 : AppColors.gray),
-              size: 24,
-            ),
-            if (isSelected) ...[
-              const SizedBox(width: 8),
-              Text(
-                label,
-                style: _f(
-                  sz: 13,
-                  fw: FontWeight.w700,
-                  c: AppColors.darkGreen,
-                ),
-              ),
-            ],
-          ],
-        ),
+  Widget build(BuildContext context) => GestureDetector(
+    onTap: onTap,
+    child: Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(color: Colors.white.withOpacity(0.15), borderRadius: BorderRadius.circular(14)),
+      child: Icon(icon, color: Colors.white, size: 22),
+    ),
+  );
+}
+
+class _HeaderQuote extends StatelessWidget {
+  final String date;
+  const _HeaderQuote({required this.date});
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+    decoration: BoxDecoration(
+      color: Colors.white.withOpacity(0.12), borderRadius: BorderRadius.circular(20),
+      border: Border.all(color: Colors.white.withOpacity(0.2)),
+    ),
+    child: Row(children: [
+      const Icon(Icons.format_quote_rounded, color: AppColors.gold, size: 28),
+      const SizedBox(width: 12),
+      Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text('وإنما لكل امرئ ما نوى', style: _f(sz: 18, fw: FontWeight.w700, c: Colors.white)),
+        Text(date, style: _f(sz: 11, c: Colors.white60)),
+      ])),
+    ]),
+  );
+}
+
+class _SectionTitle extends StatelessWidget {
+  final String title; final IconData icon;
+  const _SectionTitle({required this.title, required this.icon});
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.fromLTRB(20, 24, 20, 14),
+    child: Row(children: [
+      Icon(icon, color: AppColors.gold, size: 20),
+      const SizedBox(width: 10),
+      Text(title, style: _f(sz: 18, fw: FontWeight.w800, c: Theme.of(context).brightness == Brightness.dark ? Colors.white : AppColors.darkGreen)),
+    ]),
+  );
+}
+
+class _SuccessCard extends StatelessWidget {
+  final bool isDark;
+  const _SuccessCard({required this.isDark});
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.all(18),
+    decoration: BoxDecoration(
+      color: isDark ? const Color(0xFF1A1F1C) : Colors.white,
+      borderRadius: BorderRadius.circular(22),
+      border: Border.all(color: AppColors.lightGreen.withOpacity(0.3)),
+      boxShadow: [if (!isDark) BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 10, offset: const Offset(0, 4))],
+    ),
+    child: Row(children: [
+      Container(padding: const EdgeInsets.all(8), decoration: const BoxDecoration(color: AppColors.paleGreen, shape: BoxShape.circle), child: const Icon(Icons.check_circle_rounded, color: AppColors.darkGreen, size: 24)),
+      const SizedBox(width: 14),
+      Expanded(child: Text('تقبل الله طاعتك! أتممت محاسبة اليوم بنجاح 🤍', style: _f(sz: 14, fw: FontWeight.w700, c: isDark ? Colors.white : AppColors.darkGreen))),
+    ]),
+  );
+}
+
+class _AccountabilityCard extends StatelessWidget {
+  final bool isDark; final VoidCallback onAdd;
+  const _AccountabilityCard({required this.isDark, required this.onAdd});
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.all(20),
+    decoration: BoxDecoration(
+      color: isDark ? const Color(0xFF1A1F1C) : Colors.white,
+      borderRadius: BorderRadius.circular(22),
+      border: Border.all(color: isDark ? Colors.white.withOpacity(0.05) : Colors.black.withOpacity(0.03)),
+      boxShadow: [if (!isDark) BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 10, offset: const Offset(0, 4))],
+    ),
+    child: Row(children: [
+      Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text('ابدأ محاسبتك اليومية', style: _f(sz: 16, fw: FontWeight.w800)),
+        const SizedBox(height: 4),
+        Text('سجل إنجازاتك الروحية لليوم', style: _f(sz: 12, c: AppColors.gray)),
+      ])),
+      ElevatedButton(
+        onPressed: onAdd,
+        style: ElevatedButton.styleFrom(backgroundColor: AppColors.darkGreen, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)), padding: const EdgeInsets.symmetric(horizontal: 20)),
+        child: const Icon(Icons.add_rounded, color: Colors.white),
       ),
-    );
-  }
+    ]),
+  );
+}
+
+class _CheckItem extends StatelessWidget {
+  final String title, subtitle; final IconData icon; final bool value; final ValueChanged<bool?> onChanged;
+  const _CheckItem({required this.title, required this.subtitle, required this.icon, required this.value, required this.onChanged});
+  @override
+  Widget build(BuildContext context) => Container(
+    decoration: BoxDecoration(color: Colors.grey.withOpacity(0.05), borderRadius: BorderRadius.circular(16)),
+    child: CheckboxListTile(
+      value: value, onChanged: onChanged,
+      title: Text(title, style: _f(fw: FontWeight.w700, sz: 14)),
+      subtitle: Text(subtitle, style: _f(sz: 11)),
+      secondary: Icon(icon, color: AppColors.darkGreen),
+      activeColor: AppColors.darkGreen, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+    ),
+  );
 }
 
 class _QuickChip extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final Color color;
-  final VoidCallback onTap;
+  final IconData icon; final String label; final Color color; final VoidCallback onTap;
   const _QuickChip({required this.icon, required this.label, required this.color, required this.onTap});
-
   @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 80,
-        margin: const EdgeInsets.symmetric(horizontal: 6),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              width: 52, height: 52,
-              decoration: BoxDecoration(color: color.withOpacity(0.12), borderRadius: BorderRadius.circular(16)),
-              child: Icon(icon, color: color, size: 26),
-            ),
-            const SizedBox(height: 8),
-            Text(label, textAlign: TextAlign.center, maxLines: 1, overflow: TextOverflow.ellipsis,
-              style: _f(sz: 11, fw: FontWeight.w700, c: isDark ? Colors.white70 : AppColors.textPrimary)),
-          ],
+  Widget build(BuildContext context) => GestureDetector(
+    onTap: onTap,
+    child: Container(
+      width: 90, margin: const EdgeInsets.only(right: 12),
+      child: Column(children: [
+        Container(
+          width: 60, height: 60,
+          decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(20), border: Border.all(color: color.withOpacity(0.1))),
+          child: Icon(icon, color: color, size: 28),
         ),
-      ),
-    );
-  }
+        const SizedBox(height: 8),
+        Text(label, textAlign: TextAlign.center, maxLines: 1, overflow: TextOverflow.ellipsis, style: _f(sz: 11, fw: FontWeight.w700)),
+      ]),
+    ),
+  );
 }
 
 class _FeatureCard extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final Color color;
-  final bool isDark;
-  final VoidCallback onTap;
+  final IconData icon; final String label; final Color color; final bool isDark; final VoidCallback onTap;
   const _FeatureCard({required this.icon, required this.label, required this.color, required this.isDark, required this.onTap});
+  @override
+  Widget build(BuildContext context) => Material(
+    color: isDark ? const Color(0xFF1A1F1C) : Colors.white,
+    borderRadius: BorderRadius.circular(20),
+    child: InkWell(
+      onTap: onTap, borderRadius: BorderRadius.circular(20),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(borderRadius: BorderRadius.circular(20), border: Border.all(color: isDark ? Colors.white.withOpacity(0.05) : Colors.black.withOpacity(0.04))),
+        child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+          Container(width: 46, height: 46, decoration: BoxDecoration(color: color.withOpacity(0.12), borderRadius: BorderRadius.circular(14)), child: Icon(icon, color: color, size: 24)),
+          const SizedBox(height: 10),
+          Text(label, textAlign: TextAlign.center, style: _f(sz: 12, fw: FontWeight.w700)),
+        ]),
+      ),
+    ),
+  );
+}
 
+class _ModernNavBar extends StatelessWidget {
+  final int currentIndex; final ValueChanged<int> onTap;
+  const _ModernNavBar({required this.currentIndex, required this.onTap});
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
-      borderRadius: BorderRadius.circular(18),
-      elevation: isDark ? 0 : 1,
-      shadowColor: Colors.black12,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(18),
-        child: Container(
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: isDark ? Colors.white10 : Colors.black.withOpacity(0.04)),
-          ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                width: 44, height: 44,
-                decoration: BoxDecoration(color: color.withOpacity(isDark ? 0.2 : 0.1), borderRadius: BorderRadius.circular(13)),
-                child: Icon(icon, color: color, size: 24),
-              ),
-              const SizedBox(height: 8),
-              Text(label, textAlign: TextAlign.center, maxLines: 2, overflow: TextOverflow.ellipsis,
-                style: _f(sz: 12, fw: FontWeight.w700, c: isDark ? Colors.white : AppColors.textPrimary)),
-            ],
-          ),
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      margin: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+      height: 70,
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1E1E1E).withOpacity(0.9) : Colors.white.withOpacity(0.9),
+        borderRadius: BorderRadius.circular(30),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 20, offset: const Offset(0, 10))],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(30),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+          child: Row(mainAxisAlignment: MainAxisAlignment.spaceAround, children: [
+            _NavButton(icon: Icons.dashboard_rounded, label: 'الرئيسية', selected: currentIndex == 0, onTap: () => onTap(0)),
+            _NavButton(icon: Icons.auto_stories_rounded, label: 'المصحف', selected: currentIndex == 1, onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const QuranPage()))),
+            _NavButton(icon: Icons.person_rounded, label: 'حسابي', selected: currentIndex == 2, onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfilePage()))),
+          ]),
         ),
       ),
     );
   }
 }
 
-class _IslamicPatternPainter extends CustomPainter {
+class _NavButton extends StatelessWidget {
+  final IconData icon; final String label; final bool selected; final VoidCallback onTap;
+  const _NavButton({required this.icon, required this.label, required this.selected, required this.onTap});
   @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = Colors.white
-      ..strokeWidth = 1.0
-      ..style = PaintingStyle.stroke;
-
-    final double step = 60.0;
-    for (double x = 0; x < size.width + step; x += step) {
-      for (double y = 0; y < size.height + step; y += step) {
-        canvas.drawLine(Offset(x - 10, y), Offset(x + 10, y), paint);
-        canvas.drawLine(Offset(x, y - 10), Offset(x, y + 10), paint);
-        canvas.drawLine(Offset(x - 7, y - 7), Offset(x + 7, y + 7), paint);
-        canvas.drawLine(Offset(x - 7, y + 7), Offset(x + 7, y - 7), paint);
-        canvas.drawRect(Rect.fromCenter(center: Offset(x, y), width: step, height: step), paint);
-      }
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+  Widget build(BuildContext context) => GestureDetector(
+    onTap: onTap,
+    child: AnimatedContainer(
+      duration: const Duration(milliseconds: 300),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(color: selected ? AppColors.darkGreen.withOpacity(0.15) : Colors.transparent, borderRadius: BorderRadius.circular(20)),
+      child: Row(children: [
+        Icon(icon, color: selected ? AppColors.darkGreen : AppColors.gray, size: 24),
+        if (selected) ...[const SizedBox(width: 8), Text(label, style: _f(sz: 13, fw: FontWeight.w700, c: AppColors.darkGreen))],
+      ]),
+    ),
+  );
 }

@@ -1,9 +1,11 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 import '../models/worship_model.dart';
 import '../models/monthly_goal_model.dart';
 import '../models/weekly_plan_model.dart';
 import '../models/ramadan_model.dart';
 import '../models/hajj_model.dart';
+import '../models/challenge_model.dart';
 
 class FirebaseService {
   static final FirebaseService _instance = FirebaseService._internal();
@@ -17,6 +19,7 @@ class FirebaseService {
 
   // ===== Daily Worship Methods =====
   Future<void> saveDailyWorship(String userId, DailyWorship worship) async {
+    debugPrint('Firebase: Saving Worship for $userId, ID: ${worship.id}');
     try {
       await _db
           .collection('users')
@@ -24,7 +27,9 @@ class FirebaseService {
           .collection('daily_worship')
           .doc(worship.id)
           .set(worship.toMap());
+      debugPrint('Firebase: Save Worship SUCCESS');
     } catch (e) {
+      debugPrint('Firebase: Save Worship ERROR: $e');
       throw Exception('فشل حفظ العبادة اليومية: $e');
     }
   }
@@ -91,6 +96,7 @@ class FirebaseService {
 
   // ===== Monthly Goal Methods =====
   Future<void> saveMonthlyGoal(String userId, MonthlyGoal goal) async {
+    debugPrint('Firebase: Saving Monthly Goal for $userId, Title: ${goal.goalTitle}');
     try {
       await _db
           .collection('users')
@@ -98,7 +104,9 @@ class FirebaseService {
           .collection('monthly_goals')
           .doc(goal.id)
           .set(goal.toMap());
+      debugPrint('Firebase: Save Goal SUCCESS');
     } catch (e) {
+      debugPrint('Firebase: Save Goal ERROR: $e');
       throw Exception('فشل حفظ الهدف الشهري: $e');
     }
   }
@@ -361,6 +369,51 @@ class FirebaseService {
       };
     } catch (e) {
       throw Exception('فشل جلب الإحصائيات: $e');
+    }
+  }
+  // ===== Challenge Methods =====
+  Future<void> saveChallenge(String userId, Challenge challenge) async {
+    debugPrint('Firebase: Saving Challenge for $userId, ID: ${challenge.id}');
+    try {
+      await _db
+          .collection('users')
+          .doc(userId)
+          .collection('challenges')
+          .doc(challenge.id)
+          .set(challenge.toMap());
+      debugPrint('Firebase: Save Challenge SUCCESS');
+    } catch (e) {
+      debugPrint('Firebase: Save Challenge ERROR: $e');
+      throw Exception('فشل حفظ التحدي: $e');
+    }
+  }
+
+  Future<List<Challenge>> getChallenges(String userId) async {
+    try {
+      final query = await _db
+          .collection('users')
+          .doc(userId)
+          .collection('challenges')
+          .get();
+
+      return query.docs
+          .map((doc) => Challenge.fromMap(doc.data()))
+          .toList();
+    } catch (e) {
+      throw Exception('فشل جلب التحديات: $e');
+    }
+  }
+
+  Future<void> updateChallengeProgress(String userId, String challengeId, int current) async {
+    try {
+      await _db
+          .collection('users')
+          .doc(userId)
+          .collection('challenges')
+          .doc(challengeId)
+          .update({'current': current});
+    } catch (e) {
+      throw Exception('فشل تحديث التحدي: $e');
     }
   }
 }

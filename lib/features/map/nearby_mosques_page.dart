@@ -1,5 +1,7 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:geolocator_android/geolocator_android.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -146,12 +148,22 @@ class _NearbyMosquesPageState extends State<NearbyMosquesPage>
         return;
       }
 
-      final pos = await Geolocator.getCurrentPosition(
-        locationSettings: const LocationSettings(
+      LocationSettings locationSettings;
+      if (defaultTargetPlatform == TargetPlatform.android) {
+        locationSettings = AndroidSettings(
           accuracy: LocationAccuracy.high,
-          timeLimit: Duration(seconds: 15),
-        ),
-      );
+          distanceFilter: 10,
+          forceLocationManager: true,
+          timeLimit: const Duration(seconds: 20),
+        );
+      } else {
+        locationSettings = const LocationSettings(
+          accuracy: LocationAccuracy.high,
+          timeLimit: Duration(seconds: 20),
+        );
+      }
+
+      final pos = await Geolocator.getCurrentPosition(locationSettings: locationSettings);
 
       setState(() {
         _userLocation = LatLng(pos.latitude, pos.longitude);
@@ -211,7 +223,8 @@ class _NearbyMosquesPageState extends State<NearbyMosquesPage>
           url,
           body: {'data': query},
           headers: {
-            'User-Agent': 'NiyyahTracker/1.1 (Flutter; Android)',
+            'User-Agent': 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Mobile Safari/537.36',
+            'Accept': 'application/json',
           },
         ).timeout(const Duration(seconds: 25));
 
@@ -248,16 +261,14 @@ class _NearbyMosquesPageState extends State<NearbyMosquesPage>
         }
         return; // success — stop trying endpoints
       } catch (e) {
-        debugPrint('🕌 Error with $endpoint: $e');
-        continue;
+        debugPrint('NearbyMosques Error: $e');
+        setState(() {
+          _mosques = [];
+          _error = 'تعذر الاتصال بخادم المساجد. تأكد من الإنترنت أو حاول لاحقاً.';
+          _loading = false;
+        });
       }
     }
-
-    // All endpoints failed
-    setState(() {
-      _error = 'تعذّر الاتصال بخادم المساجد. تحقق من اتصالك بالإنترنت.';
-      _loading = false;
-    });
   }
 
 
