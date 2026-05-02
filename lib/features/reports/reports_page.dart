@@ -61,8 +61,7 @@ class _ReportsPageState extends State<ReportsPage> {
         quran += w.quranPages;
         prayers += w.prayerCount;
         
-        if ((w.worships[WorshipType.morningRemembrance.name] == true) || 
-            (w.worships[WorshipType.eveningRemembrance.name] == true)) {
+        if (w.worships[WorshipType.dhikr.name] == true) {
           remembrance++;
         }
 
@@ -91,7 +90,6 @@ class _ReportsPageState extends State<ReportsPage> {
       setState(() => _isLoading = false);
     }
   }
-  DateTime _selectedDate = DateTime.now();
 
   Future<void> _selectMonth(BuildContext context) async {
     // Simple month picker using standard date picker
@@ -442,4 +440,7 @@ class _ReportsPageState extends State<ReportsPage> {
             ),
           );
         }),
-      
+      ]),
+    );
+  }
+}
