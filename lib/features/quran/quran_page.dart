@@ -277,7 +277,70 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
       child: Scaffold(
         backgroundColor: bg,
         body: SafeArea(
-          child: PageView.builder(
+          child: Column(
+            children: [
+              // Top bar with back button
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 14),
+                child: Row(
+                  children: [
+                    // Back button
+                    Container(
+                      decoration: BoxDecoration(
+                        color: isDark ? Colors.white.withOpacity(0.1) : Colors.black.withOpacity(0.05),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: IconButton(
+                        icon: Icon(
+                          Icons.arrow_forward_ios_rounded, // RTL: forward means back
+                          size: 16,
+                          color: isDark ? Colors.white70 : Colors.black54,
+                        ),
+                        onPressed: () => Navigator.pop(context),
+                        padding: const EdgeInsets.all(8),
+                        constraints: const BoxConstraints(
+                          minWidth: 36,
+                          minHeight: 36,
+                        ),
+                      ),
+                    ),
+                    const Spacer(),
+                    // Page info
+                    Text(
+                      'صفحة ${_currentPage + 1} من 604',
+                      style: GoogleFonts.inter(
+                        fontSize: 10,
+                        color: isDark ? Colors.white60 : Colors.black54,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const Spacer(),
+                    // Search button
+                    Container(
+                      decoration: BoxDecoration(
+                        color: isDark ? Colors.white.withOpacity(0.1) : Colors.black.withOpacity(0.05),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: IconButton(
+                        icon: Icon(
+                          Icons.search_rounded,
+                          size: 16,
+                          color: isDark ? Colors.white70 : Colors.black54,
+                        ),
+                        onPressed: () => _searchInSurah(context),
+                        padding: const EdgeInsets.all(8),
+                        constraints: const BoxConstraints(
+                          minWidth: 36,
+                          minHeight: 36,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              // Quran content
+              Expanded(
+                child: PageView.builder(
             controller: _pageController,
             itemCount: 604, // Exact number of pages in the Mushaf
             onPageChanged: (i) {
@@ -343,8 +406,8 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
                                         // Ultra-compact Surah Banner
                                         if (isNewSurah)
                                           Container(
-                                            margin: const EdgeInsets.symmetric(vertical: 2),
-                                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                            margin: const EdgeInsets.symmetric(vertical: 3),
+                                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                                             decoration: BoxDecoration(
                                               gradient: LinearGradient(
                                                 colors: isDark 
@@ -370,7 +433,7 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
                                                   quran.getSurahNameArabic(surah),
                                                   style: TextStyle(
                                                     fontFamily: 'KFGQPC Uthmanic Script Hafs',
-                                                    fontSize: 14,
+                                                    fontSize: 17, // Larger surah name
                                                     fontWeight: FontWeight.bold,
                                                     color: isDark ? const Color(0xFFE8F5E9) : const Color(0xFF2E7D32),
                                                   ),
@@ -379,10 +442,10 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
                                             ),
                                           ),
                                           
-                                        // Ultra-compact Basmala
-                                        if (isNewSurah && surah != 1 && surah != 9)
+                                        // Basmala - Only show once per page, before the first surah that needs it
+                                        if (isNewSurah && surah != 1 && surah != 9 && pageData.indexOf(data) == pageData.indexWhere((d) => (d['surah'] as int) != 1 && (d['surah'] as int) != 9 && (d['start'] as int) == 1))
                                           Container(
-                                            margin: const EdgeInsets.only(bottom: 2),
+                                            margin: const EdgeInsets.only(bottom: 3),
                                             child: Stack(
                                               alignment: Alignment.center,
                                               children: [
@@ -409,7 +472,7 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
                                                     textAlign: TextAlign.center,
                                                     style: TextStyle(
                                                       fontFamily: 'KFGQPC Uthmanic Script Hafs',
-                                                      fontSize: 16,
+                                                      fontSize: 19, // Larger Basmala
                                                       color: isDark ? const Color(0xFF81C784) : const Color(0xFF4A7C59),
                                                       fontWeight: FontWeight.w600,
                                                     ),
@@ -434,8 +497,8 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
                                                   text: text,
                                                   style: TextStyle(
                                                     fontFamily: 'KFGQPC Uthmanic Script Hafs',
-                                                    fontSize: 16, // Much smaller font for tight fit
-                                                    height: 1.2, // Very tight line height
+                                                    fontSize: 26, // Much larger for better readability
+                                                    height: 1.5, // More comfortable line height
                                                     color: isBookmarked ? Colors.red : (isSelected ? AppColors.gold : ayahColor),
                                                     backgroundColor: isSelected ? (isDark ? Colors.white10 : AppColors.darkGreen.withOpacity(0.05)) : Colors.transparent,
                                                   ),
@@ -455,8 +518,8 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
                                                     },
                                                     child: Container(
                                                       margin: const EdgeInsets.symmetric(horizontal: 1),
-                                                      width: 20,
-                                                      height: 20,
+                                                      width: 26,
+                                                      height: 26,
                                                       child: Stack(
                                                         alignment: Alignment.center,
                                                         children: [
@@ -465,7 +528,7 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
                                                             '\u06DD',
                                                             style: TextStyle(
                                                               fontFamily: 'KFGQPC Uthmanic Script Hafs',
-                                                              fontSize: 18,
+                                                              fontSize: 24,
                                                               color: isBookmarked ? Colors.red : (isDark ? const Color(0xFF81C784) : const Color(0xFF4A7C59)),
                                                               height: 1.0,
                                                             ),
@@ -475,7 +538,7 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
                                                             _arabicNumber(v),
                                                             style: TextStyle(
                                                               fontFamily: 'KFGQPC Uthmanic Script Hafs',
-                                                              fontSize: 8,
+                                                              fontSize: 11,
                                                               fontWeight: FontWeight.bold,
                                                               color: isBookmarked ? Colors.red : (isDark ? Colors.white : const Color(0xFF2E7D32)),
                                                             ),
@@ -526,6 +589,9 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
                 ],
               );
             },
+          ),
+              ),
+            ],
           ),
         ),
       ),
