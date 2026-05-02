@@ -10,304 +10,212 @@ TextStyle _f({double sz = 14, FontWeight fw = FontWeight.w400, Color? c, double?
 
 class PrayerTimesPage extends StatefulWidget {
   const PrayerTimesPage({super.key});
-
   @override
   State<PrayerTimesPage> createState() => _PrayerTimesPageState();
 }
 
-class _PrayerTimesPageState extends State<PrayerTimesPage> {
+class _PrayerTimesPageState extends State<PrayerTimesPage> with SingleTickerProviderStateMixin {
   PrayerTimes? _prayerTimes;
   bool _loading = true;
   String? _error;
-  String? _currentPrayerName;
-  DateTime? _nextPrayerTime;
   String? _nextPrayerName;
+  DateTime? _nextPrayerTime;
   Timer? _timer;
   Duration _timeLeft = Duration.zero;
+  late AnimationController _glowCtrl;
+  late Animation<double> _glowAnim;
 
   @override
   void initState() {
     super.initState();
+    _glowCtrl = AnimationController(vsync: this, duration: const Duration(seconds: 2))..repeat(reverse: true);
+    _glowAnim = Tween<double>(begin: 0.3, end: 0.8).animate(CurvedAnimation(parent: _glowCtrl, curve: Curves.easeInOut));
     _fetchPrayerTimes();
-    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
       if (_nextPrayerTime != null) {
         setState(() {
           _timeLeft = _nextPrayerTime!.difference(DateTime.now());
-          if (_timeLeft.isNegative) {
-            _fetchPrayerTimes(); // Refresh if time passed
-          }
+          if (_timeLeft.isNegative) _fetchPrayerTimes();
         });
       }
     });
   }
 
   @override
-  void dispose() {
-    _timer?.cancel();
-    super.dispose();
-  }
+  void dispose() { _timer?.cancel(); _glowCtrl.dispose(); super.dispose(); }
 
   Future<void> _fetchPrayerTimes() async {
     setState(() { _loading = true; _error = null; });
-
     try {
-      Position position = await Geolocator.getCurrentPosition(
-          locationSettings: const LocationSettings(accuracy: LocationAccuracy.low));
-
-      final coordinates = Coordinates(position.latitude, position.longitude);
-      final params = CalculationMethod.egyptian.getParameters();
-      params.madhab = Madhab.shafi;
-
-      final date = DateComponents.from(DateTime.now());
-      final prayerTimes = PrayerTimes(coordinates, date, params);
-
-      // Determine current and next prayer
+      Position pos = await Geolocator.getCurrentPosition(locationSettings: const LocationSettings(accuracy: LocationAccuracy.low));
+      final coords = Coordinates(pos.latitude, pos.longitude);
+      final params = CalculationMethod.egyptian.getParameters()..madhab = Madhab.shafi;
+      final pt = PrayerTimes(coords, DateComponents.from(DateTime.now()), params);
       final now = DateTime.now();
-      String current = 'العشاء';
       String next = 'الفجر';
-      DateTime nextTime = prayerTimes.fajr.add(const Duration(days: 1)); // Default to tomorrow's fajr
-      
-      if (now.isBefore(prayerTimes.fajr)) {
-        current = 'العشاء'; next = 'الفجر'; nextTime = prayerTimes.fajr;
-      } else if (now.isBefore(prayerTimes.sunrise)) {
-        current = 'الفجر'; next = 'الشروق'; nextTime = prayerTimes.sunrise;
-      } else if (now.isBefore(prayerTimes.dhuhr)) {
-        current = 'الشروق'; next = 'الظهر'; nextTime = prayerTimes.dhuhr;
-      } else if (now.isBefore(prayerTimes.asr)) {
-        current = 'الظهر'; next = 'العصر'; nextTime = prayerTimes.asr;
-      } else if (now.isBefore(prayerTimes.maghrib)) {
-        current = 'العصر'; next = 'المغرب'; nextTime = prayerTimes.maghrib;
-      } else if (now.isBefore(prayerTimes.isha)) {
-        current = 'المغرب'; next = 'العشاء'; nextTime = prayerTimes.isha;
-      }
-
-      setState(() {
-        _prayerTimes = prayerTimes;
-        _currentPrayerName = next; // The design highlights the NEXT prayer usually, or current. We'll highlight 'next' as the one we are waiting for.
-        _nextPrayerName = next;
-        _nextPrayerTime = nextTime;
-        _timeLeft = nextTime.difference(now);
-        _loading = false;
-      });
+      DateTime nextTime = pt.fajr.add(const Duration(days: 1));
+      if (now.isBefore(pt.fajr)) { next = 'الفجر'; nextTime = pt.fajr; }
+      else if (now.isBefore(pt.sunrise)) { next = 'الشروق'; nextTime = pt.sunrise; }
+      else if (now.isBefore(pt.dhuhr)) { next = 'الظهر'; nextTime = pt.dhuhr; }
+      else if (now.isBefore(pt.asr)) { next = 'العصر'; nextTime = pt.asr; }
+      else if (now.isBefore(pt.maghrib)) { next = 'المغرب'; nextTime = pt.maghrib; }
+      else if (now.isBefore(pt.isha)) { next = 'العشاء'; nextTime = pt.isha; }
+      setState(() { _prayerTimes = pt; _nextPrayerName = next; _nextPrayerTime = nextTime; _timeLeft = nextTime.difference(now); _loading = false; });
     } catch (e) {
-      setState(() {
-        _error = 'تعذر الحصول على أوقات الصلاة';
-        _loading = false;
-      });
+      setState(() { _error = 'تعذر الحصول على أوقات الصلاة'; _loading = false; });
     }
   }
 
-  String _formatTime(DateTime time, {bool withAmPm = true}) {
-    final h = time.hour > 12 ? time.hour - 12 : (time.hour == 0 ? 12 : time.hour);
-    final m = time.minute.toString().padLeft(2, '0');
-    final p = time.hour >= 12 ? 'PM' : 'AM';
-    return withAmPm ? '$h:$m $p' : '$h:$m';
+  String _fmtTime(DateTime t) {
+    final h = t.hour > 12 ? t.hour - 12 : (t.hour == 0 ? 12 : t.hour);
+    return '$h:${t.minute.toString().padLeft(2, '0')} ${t.hour >= 12 ? 'م' : 'ص'}';
   }
 
-  String _formatCountdown(Duration duration) {
-    if (duration.isNegative) return "00:00:00";
-    String twoDigits(int n) => n.toString().padLeft(2, "0");
-    String h = twoDigits(duration.inHours);
-    String m = twoDigits(duration.inMinutes.remainder(60));
-    String s = twoDigits(duration.inSeconds.remainder(60));
-    return "$h:$m:$s";
+  String _fmtCountdown(Duration d) {
+    if (d.isNegative) return "00:00:00";
+    String p(int n) => n.toString().padLeft(2, "0");
+    return "${p(d.inHours)}:${p(d.inMinutes.remainder(60))}:${p(d.inSeconds.remainder(60))}";
   }
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bg = isDark ? const Color(0xFF121212) : AppColors.background;
-    final cardColor = isDark ? const Color(0xFF1A1A1A) : Colors.white;
+    final bg = isDark ? const Color(0xFF0A0A0A) : const Color(0xFFF5F7F6);
     final textColor = isDark ? Colors.white : AppColors.textPrimary;
+    final subColor = isDark ? Colors.white60 : AppColors.textSecondary;
 
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
         backgroundColor: bg,
-        appBar: AppBar(
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          leading: IconButton(
-            icon: Icon(Icons.arrow_forward_ios, color: textColor, size: 20),
-            onPressed: () => Navigator.pop(context),
-          ),
-          title: Text('أوقات الصلاة', style: _f(sz: 18, fw: FontWeight.w800, c: textColor)),
-          centerTitle: true,
-        ),
         body: _loading
-            ? const Center(child: CircularProgressIndicator(color: AppColors.darkGreen))
+            ? Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
+                const CircularProgressIndicator(color: AppColors.darkGreen),
+                const SizedBox(height: 16),
+                Text('جاري تحميل أوقات الصلاة...', style: _f(sz: 14, c: subColor)),
+              ]))
             : _error != null
-                ? Center(child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.error_outline, size: 48, color: Colors.red[300]),
-                      const SizedBox(height: 12),
-                      Text(_error!, style: _f(sz: 16, c: Colors.red[300])),
-                      const SizedBox(height: 16),
-                      ElevatedButton(
-                        style: ElevatedButton.styleFrom(backgroundColor: AppColors.darkGreen),
-                        onPressed: _fetchPrayerTimes,
-                        child: Text('إعادة المحاولة', style: _f(c: Colors.white)),
-                      ),
-                    ],
-                  ))
-                : SingleChildScrollView(
-                    padding: const EdgeInsets.all(20),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: cardColor,
-                        borderRadius: BorderRadius.circular(24),
-                        boxShadow: [
-                          BoxShadow(color: Colors.black.withOpacity(isDark ? 0.3 : 0.05), blurRadius: 20, offset: const Offset(0, 10)),
-                        ],
-                      ),
-                      child: Column(
-                        children: [
-                          // Top Header
-                          Padding(
-                            padding: const EdgeInsets.all(24),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                // Left: Countdown
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text('بعد', style: _f(sz: 16, fw: FontWeight.w600, c: isDark ? Colors.white70 : AppColors.gray)),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      _formatCountdown(_timeLeft),
-                                      style: GoogleFonts.ibmPlexMono(fontSize: 32, fontWeight: FontWeight.bold, color: textColor),
-                                    ),
-                                  ],
-                                ),
-                                // Right: Next Prayer Info
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.end,
-                                  children: [
-                                    Text(_nextPrayerName ?? '', style: _f(sz: 28, fw: FontWeight.bold, c: const Color(0xFF8B1538))), // Deep red/burgundy color
-                                    const SizedBox(height: 4),
-                                    Row(
-                                      children: [
-                                        Text(_nextPrayerTime!.hour >= 12 ? 'مساءً' : 'صباحاً', style: _f(sz: 20, fw: FontWeight.bold, c: textColor)),
-                                        const SizedBox(width: 8),
-                                        Text(_formatTime(_nextPrayerTime!, withAmPm: false), style: GoogleFonts.ibmPlexMono(fontSize: 28, fontWeight: FontWeight.bold, color: textColor)),
-                                      ],
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                          ),
-                          
-                          Divider(height: 1, color: isDark ? Colors.white10 : Colors.black12, indent: 24, endIndent: 24),
-                          
-                          // Date
-                          Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
-                            child: Align(
-                              alignment: Alignment.centerRight,
-                              child: Text('التاريخ الهجري اليوم', style: _f(sz: 16, fw: FontWeight.w600, c: textColor)),
-                            ),
-                          ),
-                          
-                          // Horizontal Prayers List
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                            child: SingleChildScrollView(
-                              scrollDirection: Axis.horizontal,
-                              child: Row(
-                                children: [
-                                  _PrayerColumn(name: 'الفجر', time: _prayerTimes!.fajr, icon: Icons.wb_twilight_rounded, isCurrent: _nextPrayerName == 'الفجر', isDark: isDark, formatTime: _formatTime),
-                                  _PrayerColumn(name: 'الشروق', time: _prayerTimes!.sunrise, icon: Icons.wb_sunny_rounded, isCurrent: _nextPrayerName == 'الشروق', isDark: isDark, formatTime: _formatTime),
-                                  _PrayerColumn(name: 'الظهر', time: _prayerTimes!.dhuhr, icon: Icons.light_mode_rounded, isCurrent: _nextPrayerName == 'الظهر', isDark: isDark, formatTime: _formatTime),
-                                  _PrayerColumn(name: 'العصر', time: _prayerTimes!.asr, icon: Icons.cloud_rounded, isCurrent: _nextPrayerName == 'العصر', isDark: isDark, formatTime: _formatTime),
-                                  _PrayerColumn(name: 'المغرب', time: _prayerTimes!.maghrib, icon: Icons.wb_twilight_rounded, isCurrent: _nextPrayerName == 'المغرب', isDark: isDark, formatTime: _formatTime),
-                                  _PrayerColumn(name: 'العشاء', time: _prayerTimes!.isha, icon: Icons.nights_stay_rounded, isCurrent: _nextPrayerName == 'العشاء', isDark: isDark, formatTime: _formatTime),
-                                ],
-                              ),
-                            ),
-                          ),
-                          
-                          const SizedBox(height: 24),
-                          
-                          // Bottom Button
-                          Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            decoration: BoxDecoration(
-                              color: isDark ? const Color(0xFF2A2A2A) : const Color(0xFFF0EBE1),
-                              borderRadius: const BorderRadius.only(bottomLeft: Radius.circular(24), bottomRight: Radius.circular(24)),
-                            ),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                const Icon(Icons.arrow_back_ios_rounded, size: 14),
-                                const SizedBox(width: 8),
-                                Text('المزيد من أوقات الصلاة', style: _f(sz: 16, fw: FontWeight.w700)),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
+                ? Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
+                    Icon(Icons.error_outline, size: 56, color: Colors.red[300]),
+                    const SizedBox(height: 12),
+                    Text(_error!, style: _f(sz: 16, c: Colors.red[300])),
+                    const SizedBox(height: 20),
+                    ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(backgroundColor: AppColors.darkGreen, padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 14), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))),
+                      onPressed: _fetchPrayerTimes,
+                      icon: const Icon(Icons.refresh, color: Colors.white),
+                      label: Text('إعادة المحاولة', style: _f(c: Colors.white, fw: FontWeight.w600)),
                     ),
-                  ),
+                  ]))
+                : CustomScrollView(slivers: [
+                    // ── Header ──
+                    SliverToBoxAdapter(child: Container(
+                      padding: EdgeInsets.only(top: MediaQuery.of(context).padding.top + 12, bottom: 32, left: 20, right: 20),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight,
+                          colors: isDark ? [const Color(0xFF0D2818), const Color(0xFF0A3D22)] : [const Color(0xFF145A3A), const Color(0xFF1E8255)]),
+                        borderRadius: const BorderRadius.only(bottomLeft: Radius.circular(32), bottomRight: Radius.circular(32)),
+                      ),
+                      child: Column(children: [
+                        Row(children: [
+                          IconButton(icon: const Icon(Icons.arrow_forward_ios, color: Colors.white, size: 20), onPressed: () => Navigator.pop(context)),
+                          Expanded(child: Text('أوقات الصلاة', textAlign: TextAlign.center, style: _f(sz: 20, fw: FontWeight.w800, c: Colors.white))),
+                          const SizedBox(width: 48),
+                        ]),
+                        const SizedBox(height: 24),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 6),
+                          decoration: BoxDecoration(color: Colors.white.withOpacity(0.15), borderRadius: BorderRadius.circular(30), border: Border.all(color: Colors.white.withOpacity(0.2))),
+                          child: Text('الصلاة القادمة', style: _f(sz: 12, fw: FontWeight.w600, c: Colors.white70)),
+                        ),
+                        const SizedBox(height: 12),
+                        Text(_nextPrayerName ?? '', style: _f(sz: 34, fw: FontWeight.w900, c: Colors.white)),
+                        const SizedBox(height: 6),
+                        if (_nextPrayerTime != null)
+                          Text(_fmtTime(_nextPrayerTime!), style: GoogleFonts.ibmPlexMono(fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.goldLight)),
+                        const SizedBox(height: 20),
+                        AnimatedBuilder(animation: _glowAnim, builder: (ctx, _) => Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 16),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withOpacity(0.2), borderRadius: BorderRadius.circular(20),
+                            border: Border.all(color: AppColors.gold.withOpacity(_glowAnim.value), width: 1.5),
+                            boxShadow: [BoxShadow(color: AppColors.gold.withOpacity(_glowAnim.value * 0.15), blurRadius: 20, spreadRadius: 2)],
+                          ),
+                          child: Row(mainAxisSize: MainAxisSize.min, children: [
+                            const Icon(Icons.timer_outlined, color: AppColors.goldLight, size: 22),
+                            const SizedBox(width: 12),
+                            Text(_fmtCountdown(_timeLeft), style: GoogleFonts.ibmPlexMono(fontSize: 30, fontWeight: FontWeight.bold, color: Colors.white, letterSpacing: 3)),
+                          ]),
+                        )),
+                      ]),
+                    )),
+                    // ── Prayer List ──
+                    SliverToBoxAdapter(child: Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 24, 20, 8),
+                      child: Text('مواقيت اليوم', style: _f(sz: 18, fw: FontWeight.w800, c: textColor)),
+                    )),
+                    SliverPadding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      sliver: SliverList(delegate: SliverChildListDelegate([
+                        _PrayerRow(name: 'الفجر', time: _prayerTimes!.fajr, icon: Icons.wb_twilight_rounded, isCurrent: _nextPrayerName == 'الفجر', isDark: isDark, fmt: _fmtTime),
+                        _PrayerRow(name: 'الشروق', time: _prayerTimes!.sunrise, icon: Icons.wb_sunny_rounded, isCurrent: _nextPrayerName == 'الشروق', isDark: isDark, fmt: _fmtTime),
+                        _PrayerRow(name: 'الظهر', time: _prayerTimes!.dhuhr, icon: Icons.light_mode_rounded, isCurrent: _nextPrayerName == 'الظهر', isDark: isDark, fmt: _fmtTime),
+                        _PrayerRow(name: 'العصر', time: _prayerTimes!.asr, icon: Icons.cloud_rounded, isCurrent: _nextPrayerName == 'العصر', isDark: isDark, fmt: _fmtTime),
+                        _PrayerRow(name: 'المغرب', time: _prayerTimes!.maghrib, icon: Icons.wb_twilight_rounded, isCurrent: _nextPrayerName == 'المغرب', isDark: isDark, fmt: _fmtTime),
+                        _PrayerRow(name: 'العشاء', time: _prayerTimes!.isha, icon: Icons.nights_stay_rounded, isCurrent: _nextPrayerName == 'العشاء', isDark: isDark, fmt: _fmtTime),
+                        const SizedBox(height: 32),
+                      ])),
+                    ),
+                  ]),
       ),
     );
   }
 }
 
-class _PrayerColumn extends StatelessWidget {
+class _PrayerRow extends StatelessWidget {
   final String name;
   final DateTime time;
   final IconData icon;
   final bool isCurrent;
   final bool isDark;
-  final String Function(DateTime, {bool withAmPm}) formatTime;
-
-  const _PrayerColumn({
-    required this.name,
-    required this.time,
-    required this.icon,
-    required this.isCurrent,
-    required this.isDark,
-    required this.formatTime,
-  });
+  final String Function(DateTime) fmt;
+  const _PrayerRow({required this.name, required this.time, required this.icon, required this.isCurrent, required this.isDark, required this.fmt});
 
   @override
   Widget build(BuildContext context) {
-    final activeColor = const Color(0xFF8B1538); // Deep red/burgundy matching the image
-    final textColor = isDark ? Colors.white : Colors.black;
+    final accent = AppColors.darkGreen;
+    final cardBg = isCurrent ? (isDark ? accent.withOpacity(0.15) : accent.withOpacity(0.06)) : (isDark ? const Color(0xFF1A1F1C) : Colors.white);
+    final textCol = isDark ? Colors.white : AppColors.textPrimary;
+    final subCol = isDark ? Colors.white54 : AppColors.textSecondary;
 
-    return Container(
-      width: 70,
-      margin: const EdgeInsets.symmetric(horizontal: 4),
-      padding: const EdgeInsets.symmetric(vertical: 12),
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 300),
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
       decoration: BoxDecoration(
-        color: isCurrent ? (isDark ? activeColor.withOpacity(0.1) : activeColor.withOpacity(0.05)) : Colors.transparent,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: isCurrent ? activeColor.withOpacity(0.5) : Colors.transparent,
-          width: 1.5,
+        color: cardBg, borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: isCurrent ? accent.withOpacity(isDark ? 0.5 : 0.3) : (isDark ? Colors.white.withOpacity(0.06) : Colors.black.withOpacity(0.04)), width: isCurrent ? 1.5 : 1),
+        boxShadow: isCurrent ? [BoxShadow(color: accent.withOpacity(0.1), blurRadius: 12, offset: const Offset(0, 4))] : null,
+      ),
+      child: Row(children: [
+        Container(width: 44, height: 44,
+          decoration: BoxDecoration(color: isCurrent ? accent.withOpacity(isDark ? 0.3 : 0.12) : (isDark ? Colors.white.withOpacity(0.08) : const Color(0xFFF0F4F2)), borderRadius: BorderRadius.circular(12)),
+          child: Icon(icon, color: isCurrent ? accent : subCol, size: 22)),
+        const SizedBox(width: 14),
+        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(name, style: _f(sz: 17, fw: isCurrent ? FontWeight.w800 : FontWeight.w600, c: isCurrent ? accent : textCol)),
+          if (isCurrent) Text('الصلاة القادمة', style: _f(sz: 11, fw: FontWeight.w500, c: accent.withOpacity(0.7))),
+        ])),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+          decoration: BoxDecoration(color: isCurrent ? accent.withOpacity(isDark ? 0.25 : 0.1) : Colors.transparent, borderRadius: BorderRadius.circular(10)),
+          child: Text(fmt(time), style: GoogleFonts.ibmPlexMono(fontSize: 15, fontWeight: FontWeight.w700, color: isCurrent ? accent : textCol)),
         ),
-      ),
-      child: Column(
-        children: [
-          Text(name, style: _f(sz: 15, fw: isCurrent ? FontWeight.w800 : FontWeight.w600, c: isCurrent ? activeColor : textColor)),
-          const SizedBox(height: 12),
-          Icon(icon, color: isCurrent ? activeColor : textColor, size: 28),
-          const SizedBox(height: 16),
-          Text(
-            formatTime(time),
-            style: GoogleFonts.ibmPlexMono(
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-              color: isCurrent ? activeColor : textColor,
-            ),
-          ),
+        if (isCurrent) ...[
+          const SizedBox(width: 8),
+          Container(width: 8, height: 8, decoration: BoxDecoration(color: accent, shape: BoxShape.circle, boxShadow: [BoxShadow(color: accent.withOpacity(0.5), blurRadius: 6)])),
         ],
-      ),
+      ]),
     );
   }
 }
-
