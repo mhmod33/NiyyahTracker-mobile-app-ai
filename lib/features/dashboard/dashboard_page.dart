@@ -1,4 +1,4 @@
-﻿import 'dart:ui';
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
@@ -126,9 +126,11 @@ class _DashboardPageState extends State<DashboardPage> {
                       ),
                     ),
                   ],
-                ),
-              ),
-            ),
+                ), // Column
+              ],
+            ), // Stack
+          ), // Container
+        ), // SliverToBoxAdapter
 
             // ── Quick Access ──
             SliverToBoxAdapter(
@@ -388,3 +390,29 @@ class _FeatureCard extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+class _IslamicPatternPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = Colors.white
+      ..strokeWidth = 1.0
+      ..style = PaintingStyle.stroke;
+
+    final double step = 60.0;
+    for (double x = 0; x < size.width + step; x += step) {
+      for (double y = 0; y < size.height + step; y += step) {
+        canvas.drawLine(Offset(x - 10, y), Offset(x + 10, y), paint);
+        canvas.drawLine(Offset(x, y - 10), Offset(x, y + 10), paint);
+        canvas.drawLine(Offset(x - 7, y - 7), Offset(x + 7, y + 7), paint);
+        canvas.drawLine(Offset(x - 7, y + 7), Offset(x + 7, y - 7), paint);
+        canvas.drawRect(Rect.fromCenter(center: Offset(x, y), width: step, height: step), paint);
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
