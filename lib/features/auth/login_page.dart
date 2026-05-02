@@ -23,13 +23,14 @@ class LoginPage extends StatelessWidget {
               children: [
                 const SizedBox(height: 40),
                 Center(
-                  child: Container(
-                    padding: const EdgeInsets.all(20),
-                    decoration: const BoxDecoration(
-                      color: AppColors.darkGreen,
-                      shape: BoxShape.circle,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(20),
+                    child: Image.asset(
+                      'assets/logo.png',
+                      width: 90,
+                      height: 90,
+                      fit: BoxFit.cover,
                     ),
-                    child: const Icon(Icons.favorite, color: Colors.white, size: 40),
                   ),
                 ),
                 const SizedBox(height: 32),

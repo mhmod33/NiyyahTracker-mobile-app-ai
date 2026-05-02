@@ -370,13 +370,15 @@ class _NearbyMosquesPageState extends State<NearbyMosquesPage>
                 icon: const Icon(Icons.arrow_forward_ios, color: Colors.white, size: 20),
                 onPressed: () => Navigator.pop(context),
               ),
-              const SizedBox(width: 4),
-              Text(
-                '🕌 المساجد القريبة',
-                style: GoogleFonts.cairo(
-                  color: Colors.white,
-                  fontSize: 20,
-                  fontWeight: FontWeight.w800,
+              Flexible(
+                child: Text(
+                  '🕌 المساجد القريبة',
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.cairo(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
               ),
               const Spacer(),

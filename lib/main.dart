@@ -10,6 +10,21 @@ import 'core/theme_provider.dart';
 import 'features/splash/splash_page.dart';
 import 'firebase_options.dart';
 
+/// App-wide font helper — IBM Plex Sans Arabic everywhere.
+TextStyle _font({
+  double fontSize = 14,
+  FontWeight fontWeight = FontWeight.w400,
+  Color? color,
+  double? height,
+}) {
+  return GoogleFonts.ibmPlexSansArabic(
+    fontSize: fontSize,
+    fontWeight: fontWeight,
+    color: color,
+    height: height,
+  );
+}
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -70,13 +85,14 @@ class NiyyahTrackerApp extends StatelessWidget {
           surface: AppColors.cardBg,
           brightness: Brightness.light,
         ),
-        textTheme: GoogleFonts.cairoTextTheme(),
+        textTheme: GoogleFonts.ibmPlexSansArabicTextTheme(),
         scaffoldBackgroundColor: AppColors.background,
-        appBarTheme: const AppBarTheme(
+        appBarTheme: AppBarTheme(
           backgroundColor: AppColors.cardBg,
           foregroundColor: AppColors.textPrimary,
           elevation: 0,
           scrolledUnderElevation: 1,
+          titleTextStyle: _font(fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
         ),
         cardTheme: CardThemeData(
           color: AppColors.cardBg,
@@ -96,13 +112,14 @@ class NiyyahTrackerApp extends StatelessWidget {
           surface: const Color(0xFF1E1E1E),
           brightness: Brightness.dark,
         ),
-        textTheme: GoogleFonts.cairoTextTheme(ThemeData.dark().textTheme),
+        textTheme: GoogleFonts.ibmPlexSansArabicTextTheme(ThemeData.dark().textTheme),
         scaffoldBackgroundColor: const Color(0xFF121212),
-        appBarTheme: const AppBarTheme(
-          backgroundColor: Color(0xFF1E1E1E),
+        appBarTheme: AppBarTheme(
+          backgroundColor: const Color(0xFF1E1E1E),
           foregroundColor: Colors.white,
           elevation: 0,
           scrolledUnderElevation: 1,
+          titleTextStyle: _font(fontSize: 18, fontWeight: FontWeight.w700, color: Colors.white),
         ),
         cardTheme: CardThemeData(
           color: const Color(0xFF1E1E1E),

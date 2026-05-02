@@ -59,6 +59,10 @@ dependencies:
   adhan: ^2.0.0+1
   flutter_qiblah: ^3.2.0
   quran: ^1.1.2
+  share_plus: ^10.1.4
+  screenshot: ^3.0.0
+  path_provider: ^2.1.5
+
 
 dev_dependencies:
   flutter_test:

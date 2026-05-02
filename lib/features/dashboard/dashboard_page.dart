@@ -1,3 +1,4 @@
+﻿import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
@@ -8,8 +9,6 @@ import '../goals/goals_page.dart';
 import '../plan/smart_plan_page.dart';
 import '../analytics/analytics_page.dart';
 import '../reports/reports_page.dart';
-import '../ramadan/ramadan_page.dart';
-import '../hajj/hajj_page.dart';
 import '../map/nearby_mosques_page.dart';
 import '../profile/profile_page.dart';
 import '../friday/friday_tips_page.dart';
@@ -19,6 +18,9 @@ import '../qibla/qibla_page.dart';
 import '../challenges/challenges_page.dart';
 import '../quran/quran_page.dart';
 import '../azkar/azkar_library_page.dart';
+
+TextStyle _f({double sz = 14, FontWeight fw = FontWeight.w400, Color? c, double? h}) =>
+    GoogleFonts.ibmPlexSansArabic(fontSize: sz, fontWeight: fw, color: c, height: h);
 
 class DashboardPage extends StatefulWidget {
   const DashboardPage({super.key});
@@ -41,9 +43,7 @@ class _DashboardPageState extends State<DashboardPage> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final bgColor = isDark ? const Color(0xFF121212) : AppColors.background;
-    final cardColor = isDark ? const Color(0xFF1E1E1E) : AppColors.cardBg;
     final textColor = isDark ? Colors.white : AppColors.textPrimary;
-    final subTextColor = isDark ? Colors.white70 : AppColors.textSecondary;
 
     return Directionality(
       textDirection: TextDirection.rtl,
@@ -60,27 +60,32 @@ class _DashboardPageState extends State<DashboardPage> {
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                     colors: isDark
-                        ? [const Color(0xFF0D3B26), const Color(0xFF145A3A)]
-                        : [AppColors.darkGreen, AppColors.midGreen],
+                        ? [const Color(0xFF0A1912), const Color(0xFF143023)]
+                        : [const Color(0xFF145A3A), const Color(0xFF1E8255)], // A bit deeper green
                   ),
                   borderRadius: const BorderRadius.only(
-                    bottomLeft: Radius.circular(28),
-                    bottomRight: Radius.circular(28),
+                    bottomLeft: Radius.circular(32),
+                    bottomRight: Radius.circular(32),
                   ),
                 ),
-                child: Column(
+                child: Stack(
                   children: [
-                    // Top row: logo + profile
+                    // Background Pattern
+                    Positioned.fill(
+                      child: Opacity(
+                        opacity: isDark ? 0.05 : 0.08,
+                        child: CustomPaint(painter: _IslamicPatternPainter()),
+                      ),
+                    ),
+                    Column(
+                      children: [
                     Row(
                       children: [
                         Container(
-                          width: 48,
-                          height: 48,
+                          width: 48, height: 48,
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(14),
-                            boxShadow: [
-                              BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 10),
-                            ],
+                            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 10)],
                           ),
                           child: ClipRRect(
                             borderRadius: BorderRadius.circular(14),
@@ -92,21 +97,8 @@ class _DashboardPageState extends State<DashboardPage> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(
-                                'السلام عليكم 👋',
-                                style: GoogleFonts.cairo(
-                                  color: Colors.white70,
-                                  fontSize: 13,
-                                ),
-                              ),
-                              Text(
-                                'النية',
-                                style: GoogleFonts.cairo(
-                                  color: Colors.white,
-                                  fontSize: 22,
-                                  fontWeight: FontWeight.w900,
-                                ),
-                              ),
+                              Text('السلام عليكم', style: _f(sz: 13, c: Colors.white70)),
+                              Text('النية', style: _f(sz: 22, fw: FontWeight.w800, c: Colors.white)),
                             ],
                           ),
                         ),
@@ -117,7 +109,6 @@ class _DashboardPageState extends State<DashboardPage> {
                       ],
                     ),
                     const SizedBox(height: 20),
-                    // Slogan card
                     Container(
                       width: double.infinity,
                       padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
@@ -128,22 +119,9 @@ class _DashboardPageState extends State<DashboardPage> {
                       ),
                       child: Column(
                         children: [
-                          Text(
-                            'وإنما لكل امرئ ما نوى',
-                            style: GoogleFonts.cairo(
-                              color: Colors.white,
-                              fontSize: 18,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
+                          Text('وإنما لكل امرئ ما نوى', style: _f(sz: 18, fw: FontWeight.w700, c: Colors.white)),
                           const SizedBox(height: 4),
-                          Text(
-                            _getArabicDate(),
-                            style: GoogleFonts.cairo(
-                              color: Colors.white60,
-                              fontSize: 12,
-                            ),
-                          ),
+                          Text(_getArabicDate(), style: _f(sz: 12, c: Colors.white60)),
                         ],
                       ),
                     ),
@@ -152,22 +130,14 @@ class _DashboardPageState extends State<DashboardPage> {
               ),
             ),
 
-            // ── Section: Quick Access ──
+            // ── Quick Access ──
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(20, 24, 20, 12),
-                child: Text(
-                  'الوصول السريع',
-                  style: GoogleFonts.cairo(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w800,
-                    color: textColor,
-                  ),
-                ),
+                child: Text('الوصول السريع', style: _f(sz: 18, fw: FontWeight.w800, c: textColor)),
               ),
             ),
 
-            // Quick access horizontal scroll
             SliverToBoxAdapter(
               child: SizedBox(
                 height: 100,
@@ -190,22 +160,14 @@ class _DashboardPageState extends State<DashboardPage> {
               ),
             ),
 
-            // ── Section: Features ──
+            // ── Features Grid ──
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
-                child: Text(
-                  'الميزات',
-                  style: GoogleFonts.cairo(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w800,
-                    color: textColor,
-                  ),
-                ),
+                child: Text('الميزات', style: _f(sz: 18, fw: FontWeight.w800, c: textColor)),
               ),
             ),
 
-            // Feature grid
             SliverPadding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               sliver: SliverGrid.count(
@@ -220,14 +182,8 @@ class _DashboardPageState extends State<DashboardPage> {
                     onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const GoalsPage()))),
                   _FeatureCard(icon: Icons.calendar_today_rounded, label: 'الخطة الذكية', color: const Color(0xFF2196F3), isDark: isDark,
                     onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SmartPlanPage()))),
-                  _FeatureCard(icon: Icons.bar_chart_rounded, label: 'التحليلات', color: const Color(0xFF9C27B0), isDark: isDark,
-                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AnalyticsPage()))),
                   _FeatureCard(icon: Icons.description_rounded, label: 'تقرير الروح', color: const Color(0xFF607D8B), isDark: isDark,
                     onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ReportsPage()))),
-                  _FeatureCard(icon: Icons.nightlight_round, label: 'مود رمضان', color: const Color(0xFF3F51B5), isDark: isDark,
-                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const RamadanPage()))),
-                  _FeatureCard(icon: Icons.landscape_rounded, label: 'مود الحج', color: const Color(0xFF795548), isDark: isDark,
-                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const HajjPage()))),
                   _FeatureCard(icon: Icons.emoji_events_rounded, label: 'التحديات', color: const Color(0xFFFFC107), isDark: isDark,
                     onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ChallengesPage()))),
                   _FeatureCard(icon: Icons.today_rounded, label: 'سنن الجمعة', color: const Color(0xFF00BCD4), isDark: isDark,
@@ -245,34 +201,113 @@ class _DashboardPageState extends State<DashboardPage> {
             const SliverToBoxAdapter(child: SizedBox(height: 24)),
           ],
         ),
-        bottomNavigationBar: NavigationBar(
-          height: 65,
-          selectedIndex: _currentIndex,
-          onDestinationSelected: (i) {
-            if (i == 1) {
-              Navigator.push(context, MaterialPageRoute(builder: (_) => const PrayerTimesPage()));
-              return;
-            }
-            if (i == 2) {
-              Navigator.push(context, MaterialPageRoute(builder: (_) => const QuranPage()));
-              return;
-            }
-            if (i == 3) {
-              Navigator.push(context, MaterialPageRoute(builder: (_) => const NearbyMosquesPage()));
-              return;
-            }
-            if (i == 4) {
-              Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfilePage()));
-              return;
-            }
-            setState(() => _currentIndex = i);
-          },
-          destinations: const [
-            NavigationDestination(icon: Icon(Icons.dashboard_rounded), label: 'الرئيسية'),
-            NavigationDestination(icon: Icon(Icons.access_time_rounded), label: 'الصلاة'),
-            NavigationDestination(icon: Icon(Icons.auto_stories_rounded), label: 'المصحف'),
-            NavigationDestination(icon: Icon(Icons.mosque_rounded), label: 'المساجد'),
-            NavigationDestination(icon: Icon(Icons.person_rounded), label: 'حسابي'),
+        extendBody: true,
+        bottomNavigationBar: Container(
+          margin: const EdgeInsets.only(left: 20, right: 20, bottom: 20),
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xFF1E1E1E).withOpacity(0.8) : Colors.white.withOpacity(0.8),
+            borderRadius: BorderRadius.circular(30),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(isDark ? 0.3 : 0.1),
+                blurRadius: 20,
+                offset: const Offset(0, 10),
+              ),
+            ],
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(30),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    // Right Side (RTL context)
+                    _NavBarItem(icon: Icons.dashboard_rounded, label: 'الرئيسية', isSelected: _currentIndex == 0, onTap: () => setState(() => _currentIndex = 0)),
+                    _NavBarItem(icon: Icons.auto_stories_rounded, label: 'المصحف', isSelected: _currentIndex == 3, onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const QuranPage()))),
+                    
+                    // Center Logo
+                    GestureDetector(
+                      onTap: () => setState(() => _currentIndex = 0), // Just goes to home
+                      child: Container(
+                        padding: const EdgeInsets.all(2),
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: Colors.white,
+                          boxShadow: [BoxShadow(color: AppColors.gold.withOpacity(0.5), blurRadius: 10)],
+                        ),
+                        child: CircleAvatar(
+                          radius: 22,
+                          backgroundColor: AppColors.darkGreen,
+                          backgroundImage: const AssetImage('assets/logo.png'),
+                        ),
+                      ),
+                    ),
+
+                    // Left Side
+                    _NavBarItem(icon: Icons.mosque_rounded, label: 'المساجد', isSelected: _currentIndex == 1, onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const NearbyMosquesPage()))),
+                    _NavBarItem(icon: Icons.person_rounded, label: 'حسابي', isSelected: _currentIndex == 4, onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfilePage()))),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _NavBarItem extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  const _NavBarItem({
+    required this.icon,
+    required this.label,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOutQuint,
+        padding: EdgeInsets.symmetric(horizontal: isSelected ? 16 : 10, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected 
+              ? AppColors.darkGreen.withOpacity(isDark ? 0.3 : 0.15)
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              icon,
+              color: isSelected ? AppColors.darkGreen : (isDark ? Colors.white54 : AppColors.gray),
+              size: 24,
+            ),
+            if (isSelected) ...[
+              const SizedBox(width: 8),
+              Text(
+                label,
+                style: _f(
+                  sz: 13,
+                  fw: FontWeight.w700,
+                  c: AppColors.darkGreen,
+                ),
+              ),
+            ],
           ],
         ),
       ),
@@ -280,17 +315,16 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 }
 
-// ── Quick Access Chip ──
 class _QuickChip extends StatelessWidget {
   final IconData icon;
   final String label;
   final Color color;
   final VoidCallback onTap;
-
   const _QuickChip({required this.icon, required this.label, required this.color, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -300,26 +334,13 @@ class _QuickChip extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              width: 52,
-              height: 52,
-              decoration: BoxDecoration(
-                color: color.withOpacity(0.12),
-                borderRadius: BorderRadius.circular(16),
-              ),
+              width: 52, height: 52,
+              decoration: BoxDecoration(color: color.withOpacity(0.12), borderRadius: BorderRadius.circular(16)),
               child: Icon(icon, color: color, size: 26),
             ),
             const SizedBox(height: 8),
-            Text(
-              label,
-              textAlign: TextAlign.center,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: GoogleFonts.cairo(
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-                color: Theme.of(context).brightness == Brightness.dark ? Colors.white70 : AppColors.textPrimary,
-              ),
-            ),
+            Text(label, textAlign: TextAlign.center, maxLines: 1, overflow: TextOverflow.ellipsis,
+              style: _f(sz: 11, fw: FontWeight.w700, c: isDark ? Colors.white70 : AppColors.textPrimary)),
           ],
         ),
       ),
@@ -327,21 +348,13 @@ class _QuickChip extends StatelessWidget {
   }
 }
 
-// ── Feature Card (3-column grid) ──
 class _FeatureCard extends StatelessWidget {
   final IconData icon;
   final String label;
   final Color color;
   final bool isDark;
   final VoidCallback onTap;
-
-  const _FeatureCard({
-    required this.icon,
-    required this.label,
-    required this.color,
-    required this.isDark,
-    required this.onTap,
-  });
+  const _FeatureCard({required this.icon, required this.label, required this.color, required this.isDark, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -357,38 +370,21 @@ class _FeatureCard extends StatelessWidget {
           padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(18),
-            border: Border.all(
-              color: isDark ? Colors.white10 : Colors.black.withOpacity(0.04),
-            ),
+            border: Border.all(color: isDark ? Colors.white10 : Colors.black.withOpacity(0.04)),
           ),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: color.withOpacity(isDark ? 0.2 : 0.1),
-                  borderRadius: BorderRadius.circular(13),
-                ),
+                width: 44, height: 44,
+                decoration: BoxDecoration(color: color.withOpacity(isDark ? 0.2 : 0.1), borderRadius: BorderRadius.circular(13)),
                 child: Icon(icon, color: color, size: 24),
               ),
               const SizedBox(height: 8),
-              Text(
-                label,
-                textAlign: TextAlign.center,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: GoogleFonts.cairo(
-                  fontWeight: FontWeight.w700,
-                  fontSize: 12,
-                  color: isDark ? Colors.white : AppColors.textPrimary,
-                ),
-              ),
+              Text(label, textAlign: TextAlign.center, maxLines: 2, overflow: TextOverflow.ellipsis,
+                style: _f(sz: 12, fw: FontWeight.w700, c: isDark ? Colors.white : AppColors.textPrimary)),
             ],
           ),
         ),
       ),
     );
-  }
-}
