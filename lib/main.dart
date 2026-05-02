@@ -7,6 +7,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:provider/provider.dart';
 import 'core/app_colors.dart';
 import 'core/theme_provider.dart';
+import 'providers/auth_provider.dart';
 import 'features/splash/splash_page.dart';
 import 'firebase_options.dart';
 
@@ -48,8 +49,11 @@ void main() async {
   }
 
   runApp(
-    ChangeNotifierProvider(
-      create: (_) => ThemeProvider(),
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => ThemeProvider()),
+        ChangeNotifierProvider(create: (_) => AppAuthProvider()),
+      ],
       child: const NiyyahTrackerApp(),
     ),
   );

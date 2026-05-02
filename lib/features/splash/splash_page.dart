@@ -1,8 +1,11 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 import '../../core/app_colors.dart';
+import '../../providers/auth_provider.dart';
 import '../onboarding/onboarding_page.dart';
+import '../dashboard/dashboard_page.dart';
 
 class SplashPage extends StatefulWidget {
   const SplashPage({super.key});
@@ -39,13 +42,36 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
       _slideController.forward();
     });
 
-    Timer(const Duration(seconds: 4), () {
-      if (mounted) {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (_) => const OnboardingPage()),
-        );
-      }
+    // Navigate after splash delay, checking auth state
+    Timer(const Duration(seconds: 3), () {
+      if (!mounted) return;
+      _navigateBasedOnAuth();
     });
+  }
+
+  void _navigateBasedOnAuth() {
+    final authProvider = context.read<AppAuthProvider>();
+
+    // If still loading auth state, wait a bit more
+    if (authProvider.isLoading) {
+      Future.delayed(const Duration(milliseconds: 500), () {
+        if (mounted) _navigateBasedOnAuth();
+      });
+      return;
+    }
+
+    final Widget destination;
+    if (authProvider.isAuthenticated) {
+      // User is already logged in → go to Dashboard
+      destination = const DashboardPage();
+    } else {
+      // Not logged in → go to Onboarding
+      destination = const OnboardingPage();
+    }
+
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(builder: (_) => destination),
+    );
   }
 
   @override

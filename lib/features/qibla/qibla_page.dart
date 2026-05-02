@@ -8,34 +8,8 @@ import '../../core/app_colors.dart';
 TextStyle _f({double sz = 14, FontWeight fw = FontWeight.w400, Color? c, double? h}) =>
     GoogleFonts.ibmPlexSansArabic(fontSize: sz, fontWeight: fw, color: c, height: h);
 
-class QiblaPage extends StatefulWidget {
+class QiblaPage extends StatelessWidget {
   const QiblaPage({super.key});
-  @override
-  State<QiblaPage> createState() => _QiblaPageState();
-}
-
-class _QiblaPageState extends State<QiblaPage> {
-  bool _deviceSupported = true;
-  bool _checking = true;
-
-  @override
-  void initState() {
-    super.initState();
-    _checkSupport();
-  }
-
-  Future<void> _checkSupport() async {
-    if (kIsWeb) {
-      setState(() { _deviceSupported = false; _checking = false; });
-      return;
-    }
-    try {
-      final supported = await FlutterQiblah.androidDeviceSensorCheck();
-      setState(() { _deviceSupported = supported?.fold(0, (a, b) => 1) == 1; _checking = false; });
-    } catch (e) {
-      setState(() { _deviceSupported = false; _checking = false; });
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -47,65 +21,46 @@ class _QiblaPageState extends State<QiblaPage> {
       textDirection: TextDirection.rtl,
       child: Scaffold(
         backgroundColor: bg,
-        body: Column(
-          children: [
-            // ── Header ──
-            Container(
-              padding: EdgeInsets.only(top: MediaQuery.of(context).padding.top + 12, bottom: 20, left: 20, right: 20),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight,
-                  colors: isDark ? [const Color(0xFF0D3B26), const Color(0xFF145A3A)] : [AppColors.darkGreen, AppColors.midGreen]),
-                borderRadius: const BorderRadius.only(bottomLeft: Radius.circular(28), bottomRight: Radius.circular(28)),
-              ),
-              child: Row(children: [
-                IconButton(icon: const Icon(Icons.arrow_forward_ios, color: Colors.white, size: 20), onPressed: () => Navigator.pop(context)),
-                Expanded(child: Text('اتجاه القبلة', textAlign: TextAlign.center, style: _f(sz: 20, fw: FontWeight.w800, c: Colors.white))),
-                const SizedBox(width: 48),
-              ]),
+        body: Column(children: [
+          // ── Header ──
+          Container(
+            padding: EdgeInsets.only(top: MediaQuery.of(context).padding.top + 12, bottom: 20, left: 20, right: 20),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight,
+                colors: isDark ? [const Color(0xFF0D3B26), const Color(0xFF145A3A)] : [AppColors.darkGreen, AppColors.midGreen]),
+              borderRadius: const BorderRadius.only(bottomLeft: Radius.circular(28), bottomRight: Radius.circular(28)),
             ),
-
-            // ── Body ──
-            Expanded(
-              child: _checking
-                  ? Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
-                      const CircularProgressIndicator(color: AppColors.darkGreen),
-                      const SizedBox(height: 16),
-                      Text('جاري التحقق من المستشعر...', style: _f(sz: 14, c: isDark ? Colors.white60 : AppColors.gray)),
-                    ]))
-                  : !_deviceSupported
-                      ? _buildUnsupported(isDark, textColor)
-                      : _buildCompass(isDark, textColor),
-            ),
-          ],
-        ),
+            child: Row(children: [
+              IconButton(icon: const Icon(Icons.arrow_forward_ios, color: Colors.white, size: 20), onPressed: () => Navigator.pop(context)),
+              Expanded(child: Text('اتجاه القبلة', textAlign: TextAlign.center, style: _f(sz: 20, fw: FontWeight.w800, c: Colors.white))),
+              const SizedBox(width: 48),
+            ]),
+          ),
+          // ── Body ──
+          Expanded(
+            child: kIsWeb
+                ? _buildUnsupported(isDark, textColor, true)
+                : _buildCompass(isDark, textColor),
+          ),
+        ]),
       ),
     );
   }
 
-  Widget _buildUnsupported(bool isDark, Color textColor) {
+  Widget _buildUnsupported(bool isDark, Color textColor, bool isWeb) {
     return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(mainAxisSize: MainAxisSize.min, children: [
-          Container(
-            width: 80, height: 80,
-            decoration: BoxDecoration(
-              color: (isDark ? Colors.red[900] : Colors.red[50])!.withOpacity(0.5),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(Icons.sensors_off_rounded, size: 40, color: Colors.red[300]),
-          ),
-          const SizedBox(height: 24),
-          Text('البوصلة غير متاحة', textAlign: TextAlign.center, style: _f(sz: 20, fw: FontWeight.w700, c: textColor)),
-          const SizedBox(height: 12),
-          Text(
-            kIsWeb ? 'اتجاه القبلة غير مدعوم على متصفح الويب.\nيرجى استخدام التطبيق على هاتفك.'
-                   : 'تأكد أن جهازك يحتوي على بوصلة رقمية\nوأن الأذونات مفعّلة.',
-            textAlign: TextAlign.center,
-            style: _f(sz: 14, c: isDark ? Colors.white54 : AppColors.gray, h: 1.8),
-          ),
-        ]),
-      ),
+      child: Padding(padding: const EdgeInsets.all(32), child: Column(mainAxisSize: MainAxisSize.min, children: [
+        Container(width: 80, height: 80,
+          decoration: BoxDecoration(color: (isDark ? Colors.red[900]! : Colors.red[50]!).withOpacity(0.5), shape: BoxShape.circle),
+          child: Icon(Icons.sensors_off_rounded, size: 40, color: Colors.red[300])),
+        const SizedBox(height: 24),
+        Text('البوصلة غير متاحة', textAlign: TextAlign.center, style: _f(sz: 20, fw: FontWeight.w700, c: textColor)),
+        const SizedBox(height: 12),
+        Text(
+          isWeb ? 'اتجاه القبلة غير مدعوم على متصفح الويب.\nيرجى استخدام التطبيق على هاتفك.'
+                : 'تأكد أن جهازك يحتوي على بوصلة رقمية\nوأن الأذونات مفعّلة.',
+          textAlign: TextAlign.center, style: _f(sz: 14, c: isDark ? Colors.white54 : AppColors.gray, h: 1.8)),
+      ])),
     );
   }
 
@@ -121,7 +76,7 @@ class _QiblaPageState extends State<QiblaPage> {
           ]));
         }
         if (snapshot.hasError || !snapshot.hasData || snapshot.data == null) {
-          return _buildUnsupported(isDark, textColor);
+          return _buildUnsupported(isDark, textColor, false);
         }
 
         final q = snapshot.data!;
@@ -135,8 +90,7 @@ class _QiblaPageState extends State<QiblaPage> {
             decoration: BoxDecoration(
               color: isAligned ? AppColors.darkGreen.withOpacity(0.12) : (isDark ? Colors.white10 : const Color(0xFFF5F5F5)),
               borderRadius: BorderRadius.circular(14),
-              border: isAligned ? Border.all(color: AppColors.darkGreen, width: 1.5) : null,
-            ),
+              border: isAligned ? Border.all(color: AppColors.darkGreen, width: 1.5) : null),
             child: Row(mainAxisSize: MainAxisSize.min, children: [
               if (isAligned) Padding(padding: const EdgeInsets.only(left: 8), child: Icon(Icons.check_circle_rounded, color: AppColors.darkGreen, size: 20)),
               Text(isAligned ? 'أنت في اتجاه القبلة' : '${q.direction.toStringAsFixed(0)}°',
@@ -173,26 +127,23 @@ class _CompassPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final center = Offset(size.width / 2, size.height / 2);
     final radius = size.width / 2;
-    final ringPaint = Paint()..color = isDark ? Colors.white24 : Colors.black12..style = PaintingStyle.stroke..strokeWidth = 2;
-    canvas.drawCircle(center, radius - 4, ringPaint);
+    canvas.drawCircle(center, radius - 4, Paint()..color = isDark ? Colors.white24 : Colors.black12..style = PaintingStyle.stroke..strokeWidth = 2);
     for (int i = 0; i < 360; i += 10) {
       final angle = i * pi / 180;
       final isMajor = i % 90 == 0;
       final isMinor = i % 30 == 0;
       final len = isMajor ? 16.0 : (isMinor ? 10.0 : 5.0);
-      final tickPaint = Paint()..color = isMajor ? (isDark ? Colors.white70 : Colors.black54) : (isDark ? Colors.white24 : Colors.black12)..strokeWidth = isMajor ? 2.5 : 1;
-      final p1 = Offset(center.dx + (radius - 6) * cos(angle - pi / 2), center.dy + (radius - 6) * sin(angle - pi / 2));
-      final p2 = Offset(center.dx + (radius - 6 - len) * cos(angle - pi / 2), center.dy + (radius - 6 - len) * sin(angle - pi / 2));
-      canvas.drawLine(p1, p2, tickPaint);
+      final tp = Paint()..color = isMajor ? (isDark ? Colors.white70 : Colors.black54) : (isDark ? Colors.white24 : Colors.black12)..strokeWidth = isMajor ? 2.5 : 1;
+      canvas.drawLine(
+        Offset(center.dx + (radius - 6) * cos(angle - pi / 2), center.dy + (radius - 6) * sin(angle - pi / 2)),
+        Offset(center.dx + (radius - 6 - len) * cos(angle - pi / 2), center.dy + (radius - 6 - len) * sin(angle - pi / 2)), tp);
     }
     final labels = {'N': 0, 'E': 90, 'S': 180, 'W': 270};
-    final arabicLabels = {'N': 'ش', 'E': 'شر', 'S': 'ج', 'W': 'غ'};
+    final arabic = {'N': 'ش', 'E': 'شر', 'S': 'ج', 'W': 'غ'};
     labels.forEach((key, deg) {
       final angle = deg * pi / 180 - pi / 2;
-      final tp = TextPainter(
-        text: TextSpan(text: arabicLabels[key], style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: key == 'N' ? Colors.red[400] : (isDark ? Colors.white54 : Colors.black45))),
-        textDirection: TextDirection.ltr,
-      )..layout();
+      final tp = TextPainter(text: TextSpan(text: arabic[key], style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800,
+        color: key == 'N' ? Colors.red[400] : (isDark ? Colors.white54 : Colors.black45))), textDirection: TextDirection.ltr)..layout();
       tp.paint(canvas, Offset(center.dx + (radius - 32) * cos(angle) - tp.width / 2, center.dy + (radius - 32) * sin(angle) - tp.height / 2));
     });
   }
