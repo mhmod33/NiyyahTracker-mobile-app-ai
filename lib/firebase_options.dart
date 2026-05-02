@@ -45,23 +45,20 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'YOUR_WEB_API_KEY',
-    appId: 'YOUR_WEB_APP_ID',
-    messagingSenderId: 'YOUR_MESSAGING_SENDER_ID',
-    projectId: 'YOUR_PROJECT_ID',
-    authDomain: 'YOUR_AUTH_DOMAIN',
-    databaseURL: 'YOUR_DATABASE_URL',
-    storageBucket: 'YOUR_STORAGE_BUCKET',
-    measurementId: 'YOUR_MEASUREMENT_ID',
+    apiKey: 'AIzaSyDYlIG3FQwPhua7CTY3J6PWB_8sbBBMqic',
+    appId: '1:567760606155:web:30fcef1da6725a85d29c4e', // Using android one temporarily
+    messagingSenderId: '567760606155',
+    projectId: 'niyyahtracker',
+    authDomain: 'niyyahtracker.firebaseapp.com',
+    storageBucket: 'niyyahtracker.firebasestorage.app',
   );
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'YOUR_ANDROID_API_KEY',
-    appId: 'YOUR_ANDROID_APP_ID',
-    messagingSenderId: 'YOUR_MESSAGING_SENDER_ID',
-    projectId: 'YOUR_PROJECT_ID',
-    databaseURL: 'YOUR_DATABASE_URL',
-    storageBucket: 'YOUR_STORAGE_BUCKET',
+    apiKey: 'AIzaSyDYlIG3FQwPhua7CTY3J6PWB_8sbBBMqic',
+    appId: '1:567760606155:android:30fcef1da6725a85d29c4e',
+    messagingSenderId: '567760606155',
+    projectId: 'niyyahtracker',
+    storageBucket: 'niyyahtracker.firebasestorage.app',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
