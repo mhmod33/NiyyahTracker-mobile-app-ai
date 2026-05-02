@@ -31,7 +31,7 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> {
 
     try {
       Position position = await Geolocator.getCurrentPosition(
-          desiredAccuracy: LocationAccuracy.low);
+          locationSettings: const LocationSettings(accuracy: LocationAccuracy.low));
       
       final coordinates = Coordinates(position.latitude, position.longitude);
       final params = CalculationMethod.egyptian.getParameters();

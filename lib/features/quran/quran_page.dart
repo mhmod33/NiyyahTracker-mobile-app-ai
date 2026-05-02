@@ -88,7 +88,7 @@ class SurahDetailsPage extends StatelessWidget {
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: 8),
                   child: Text(
-                    '${quran.getVerse(surahNumber, verseNumber, textAlign: false)} ($verseNumber)',
+                    '${quran.getVerse(surahNumber, verseNumber)} ﴿$verseNumber﴾',
                     textAlign: TextAlign.justify,
                     style: GoogleFonts.amiri(fontSize: 20, height: 2),
                   ),

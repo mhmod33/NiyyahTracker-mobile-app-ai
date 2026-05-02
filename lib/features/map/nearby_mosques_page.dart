@@ -184,65 +184,81 @@ class _NearbyMosquesPageState extends State<NearbyMosquesPage>
     final lon = _userLocation!.longitude;
     final rad = (_radiusKm * 1000).toInt();
 
-    // Overpass QL — even broader query:
-    // We search for anything tagged as place_of_worship or mosque
+    // Very broad query — no religion filter.
+    // In Egypt & MENA, place_of_worship is almost always a mosque.
     final query =
-        '[out:json][timeout:25];'
+        '[out:json][timeout:30];'
         '('
-        'node["amenity"~"place_of_worship|mosque"](around:$rad,$lat,$lon);'
-        'way["amenity"~"place_of_worship|mosque"](around:$rad,$lat,$lon);'
-        'relation["amenity"~"place_of_worship|mosque"](around:$rad,$lat,$lon);'
-        'node["building"="mosque"](around:$rad,$lat,$lon);'
-        'way["building"="mosque"](around:$rad,$lat,$lon);'
-        'relation["building"="mosque"](around:$rad,$lat,$lon);'
+        'nwr["amenity"="place_of_worship"](around:$rad,$lat,$lon);'
+        'nwr["building"="mosque"](around:$rad,$lat,$lon);'
         ');out center;';
 
-    try {
-      final url = Uri.parse(
-        'https://overpass-api.de/api/interpreter'
-        '?data=${Uri.encodeComponent(query)}',
-      );
-      print('Fetching mosques from: $url');
-      final resp = await http.get(
-        url,
-        headers: {
-          'User-Agent': 'NiyyahTracker/1.1 (Flutter; Android; contact@niyyah.app)',
-          'Accept': 'application/json',
-        },
-      ).timeout(const Duration(seconds: 30));
+    // Try multiple Overpass endpoints (main + mirrors)
+    final endpoints = [
+      'https://overpass-api.de/api/interpreter',
+      'https://overpass.kumi.systems/api/interpreter',
+      'https://maps.mail.ru/osm/tools/overpass/api/interpreter',
+    ];
 
-      if (resp.statusCode != 200) {
-        throw Exception('HTTP ${resp.statusCode}: ${resp.reasonPhrase}');
+    for (final endpoint in endpoints) {
+      try {
+        final url = Uri.parse('$endpoint?data=${Uri.encodeComponent(query)}');
+        debugPrint('🕌 Overpass request: lat=$lat, lon=$lon, radius=${rad}m');
+        debugPrint('🕌 Trying: $endpoint');
+
+        final resp = await http.get(
+          url,
+          headers: {
+            'User-Agent': 'NiyyahTracker/1.1 (Flutter; Android)',
+            'Accept': '*/*',
+          },
+        ).timeout(const Duration(seconds: 25));
+
+        debugPrint('🕌 Response status: ${resp.statusCode}');
+
+        if (resp.statusCode != 200) {
+          debugPrint('🕌 Response body: ${resp.body.substring(0, (resp.body.length).clamp(0, 500))}');
+          continue; // try next endpoint
+        }
+
+        final json = jsonDecode(resp.body) as Map<String, dynamic>;
+        final elements = json['elements'] as List<dynamic>? ?? [];
+        debugPrint('🕌 Found ${elements.length} elements');
+
+        final mosques = elements
+            .map((e) => MosqueModel.fromOverpass(e as Map<String, dynamic>, _userLocation))
+            .where((m) => m.location.latitude != 0.0 && m.location.longitude != 0.0)
+            .toList()
+          ..sort((a, b) => (a.distance ?? 0).compareTo(b.distance ?? 0));
+
+        // Remove duplicates by ID
+        final seen = <int>{};
+        mosques.retainWhere((m) => seen.add(m.id));
+
+        debugPrint('🕌 After filter: ${mosques.length} mosques');
+
+        setState(() {
+          _mosques = mosques;
+          _loading = false;
+        });
+
+        if (mosques.isEmpty) {
+          setState(() => _error = 'لم يتم العثور على مساجد في نطاق ${_radiusKm.toStringAsFixed(1)} كم.\nجرّب زيادة النطاق.');
+        }
+        return; // success — stop trying endpoints
+      } catch (e) {
+        debugPrint('🕌 Error with $endpoint: $e');
+        continue;
       }
-
-      final json = jsonDecode(resp.body) as Map<String, dynamic>;
-      final elements = json['elements'] as List<dynamic>? ?? [];
-      print('Found ${elements.length} raw elements from Overpass');
-
-      final mosques = elements
-          .map((e) => MosqueModel.fromOverpass(e as Map<String, dynamic>, _userLocation))
-          .where((m) => m.location.latitude != 0.0)
-          // Filtering logic: In predominantly Muslim areas, place_of_worship is usually a mosque.
-          // We can also check tags if needed, but let's be inclusive.
-          .toList()
-        ..sort((a, b) => (a.distance ?? 0).compareTo(b.distance ?? 0));
-
-      setState(() {
-        _mosques = mosques;
-        _loading = false;
-      });
-
-      if (mosques.isEmpty) {
-        setState(() => _error = 'لم يتم العثور على مساجد في نطاق ${_radiusKm.toStringAsFixed(1)} كم. جرب زيادة النطاق.');
-      }
-    } catch (e) {
-      print('Error fetching mosques: $e');
-      setState(() {
-        _error = 'تعذّر جلب بيانات المساجد: $e';
-        _loading = false;
-      });
     }
+
+    // All endpoints failed
+    setState(() {
+      _error = 'تعذّر الاتصال بخادم المساجد. تحقق من اتصالك بالإنترنت.';
+      _loading = false;
+    });
   }
+
 
   // ── Select mosque ──────────────────────────
   void _selectMosque(MosqueModel m) {
