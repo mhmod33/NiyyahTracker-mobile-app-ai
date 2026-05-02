@@ -8,9 +8,29 @@ import '../analytics/analytics_page.dart';
 import '../reports/reports_page.dart';
 import '../ramadan/ramadan_page.dart';
 import '../hajj/hajj_page.dart';
+import '../map/nearby_mosques_page.dart';
 
-class DashboardPage extends StatelessWidget {
+class DashboardPage extends StatefulWidget {
   const DashboardPage({super.key});
+
+  @override
+  State<DashboardPage> createState() => _DashboardPageState();
+}
+
+class _DashboardPageState extends State<DashboardPage> {
+  int _currentIndex = 0;
+
+  void _onNavTap(int index) {
+    if (index == 2) {
+      // Mosques tab → push as a full page
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const NearbyMosquesPage()),
+      );
+      return;
+    }
+    setState(() => _currentIndex = index);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -94,32 +114,42 @@ class DashboardPage extends StatelessWidget {
                   _MenuCard(
                     title: 'الخطة الذكية',
                     icon: '📅',
-                    color: const Color(0xFFE0F2FE), // light blue
+                    color: const Color(0xFFE0F2FE),
                     onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SmartPlanPage())),
                   ),
                   _MenuCard(
                     title: 'التحليلات',
                     icon: '📊',
-                    color: const Color(0xFFF3E8FF), // light purple
+                    color: const Color(0xFFF3E8FF),
                     onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AnalyticsPage())),
                   ),
                   _MenuCard(
                     title: 'تقرير الروح',
                     icon: '📄',
-                    color: const Color(0xFFFFEDD5), // light orange
+                    color: const Color(0xFFFFEDD5),
                     onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ReportsPage())),
                   ),
                   _MenuCard(
                     title: 'مود رمضان',
                     icon: '🌙',
-                    color: const Color(0xFFE0E7FF), // light indigo
+                    color: const Color(0xFFE0E7FF),
                     onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const RamadanPage())),
                   ),
                   _MenuCard(
                     title: 'مود الحج',
                     icon: '🕋',
-                    color: const Color(0xFFF1F5F9), // slate
+                    color: const Color(0xFFF1F5F9),
                     onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const HajjPage())),
+                  ),
+                  // ── New: Nearby Mosques card ──
+                  _MenuCard(
+                    title: 'المساجد القريبة',
+                    icon: '🕌',
+                    color: const Color(0xFFD1FAE5),
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const NearbyMosquesPage()),
+                    ),
                   ),
                 ],
               ),
@@ -127,6 +157,8 @@ class DashboardPage extends StatelessWidget {
           ],
         ),
         bottomNavigationBar: BottomNavigationBar(
+          currentIndex: _currentIndex == 2 ? 0 : _currentIndex,
+          onTap: _onNavTap,
           selectedItemColor: AppColors.darkGreen,
           unselectedItemColor: Colors.grey,
           showSelectedLabels: true,
@@ -135,7 +167,7 @@ class DashboardPage extends StatelessWidget {
           items: const [
             BottomNavigationBarItem(icon: Icon(Icons.dashboard), label: 'الرئيسية'),
             BottomNavigationBarItem(icon: Icon(Icons.calendar_month), label: 'الخطة'),
-            BottomNavigationBarItem(icon: Icon(Icons.map), label: 'المساجد'),
+            BottomNavigationBarItem(icon: Icon(Icons.mosque_outlined), label: 'المساجد'),
             BottomNavigationBarItem(icon: Icon(Icons.person), label: 'حسابي'),
           ],
         ),
@@ -189,4 +221,3 @@ class _MenuCard extends StatelessWidget {
     );
   }
 }
-
