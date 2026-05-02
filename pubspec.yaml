@@ -54,10 +54,10 @@ dependencies:
   firebase_ui_auth: ^1.14.0
   firebase_ui_localizations: ^1.14.0
   google_sign_in: ^6.2.1
-  geolocator: ^13.0.2
+  geolocator: ^14.0.2
   http: ^1.2.2
-  adhan: ^2.1.0
-  flutter_qiblah: ^2.3.1
+  adhan: ^2.0.0+1
+  flutter_qiblah: ^3.2.0
   quran: ^1.1.2
 
 dev_dependencies:

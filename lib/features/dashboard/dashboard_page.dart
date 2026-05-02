@@ -12,6 +12,11 @@ import '../map/nearby_mosques_page.dart';
 import '../profile/profile_page.dart';
 import '../friday/friday_tips_page.dart';
 import '../azkar/azkar_counter_page.dart';
+import '../prayer_times/prayer_times_page.dart';
+import '../qibla/qibla_page.dart';
+import '../challenges/challenges_page.dart';
+import '../quran/quran_page.dart';
+import '../azkar/azkar_library_page.dart';
 
 class DashboardPage extends StatefulWidget {
   const DashboardPage({super.key});
@@ -200,6 +205,36 @@ class _DashboardPageState extends State<DashboardPage> {
                     icon: '🌟',
                     color: const Color(0xFFEFF6FF),
                     onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const FridayTipsPage())),
+                  ),
+                  _MenuCard(
+                    title: 'أوقات الصلاة',
+                    icon: '🕌',
+                    color: const Color(0xFFE0F2FE),
+                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const PrayerTimesPage())),
+                  ),
+                  _MenuCard(
+                    title: 'القبلة',
+                    icon: '🧭',
+                    color: const Color(0xFFF1F5F9),
+                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const QiblaPage())),
+                  ),
+                  _MenuCard(
+                    title: 'التحديات',
+                    icon: '🏆',
+                    color: const Color(0xFFFEF3C7),
+                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ChallengesPage())),
+                  ),
+                  _MenuCard(
+                    title: 'المصحف',
+                    icon: '📖',
+                    color: const Color(0xFFECFDF5),
+                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const QuranPage())),
+                  ),
+                  _MenuCard(
+                    title: 'مكتبة الأذكار',
+                    icon: '🤲',
+                    color: const Color(0xFFFDF2F8),
+                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AzkarLibraryPage())),
                   ),
                 ],
               ),
