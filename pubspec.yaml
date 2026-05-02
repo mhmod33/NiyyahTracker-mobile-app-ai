@@ -98,6 +98,11 @@ flutter:
   assets:
     - assets/logo.png
 
+  fonts:
+    - family: KFGQPC Uthmanic Script Hafs
+      fonts:
+        - asset: "assets/fonts/KFGQPC Uthmanic Script HAFS.otf"
+
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images
 
