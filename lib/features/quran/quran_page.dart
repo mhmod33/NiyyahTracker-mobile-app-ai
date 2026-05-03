@@ -40,20 +40,27 @@ class _QuranPageState extends State<QuranPage> with SingleTickerProviderStateMix
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bg = isDark ? const Color(0xFF0A0A0A) : AppColors.background;
+    final bg = isDark ? const Color(0xFF0A0A0A) : const Color(0xFFF5F5F5);
+    final primaryColor = isDark ? AppColors.darkGreen : AppColors.darkGreen;
+    final cardColor = isDark ? const Color(0xFF1A1A1A) : Colors.white;
+    final textColor = isDark ? Colors.white : Colors.black87;
 
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
         backgroundColor: bg,
         appBar: AppBar(
-          backgroundColor: isDark ? const Color(0xFF0D2818) : AppColors.darkGreen,
+          backgroundColor: primaryColor,
           foregroundColor: Colors.white,
           elevation: 0,
           title: Text('المصحف الشريف', style: _f(fw: FontWeight.w800, sz: 18, c: Colors.white)),
           centerTitle: true,
           actions: [
-            IconButton(icon: const Icon(Icons.search_rounded, size: 24), onPressed: () => _showSearch(context)),
+            IconButton(
+              icon: const Icon(Icons.search_rounded, size: 24), 
+              onPressed: () => _showSearch(context),
+              style: IconButton.styleFrom(foregroundColor: Colors.white),
+            ),
           ],
           bottom: TabBar(
             controller: _tabController,
@@ -73,6 +80,10 @@ class _QuranPageState extends State<QuranPage> with SingleTickerProviderStateMix
   }
 
   Widget _buildSurahList(bool isDark) {
+    final cardColor = isDark ? const Color(0xFF1A1A1A) : Colors.white;
+    final textColor = isDark ? Colors.white : Colors.black87;
+    final subtitleColor = isDark ? Colors.white70 : Colors.black54;
+    
     return ListView.builder(
       padding: const EdgeInsets.all(12),
       itemCount: 114,
@@ -146,23 +157,67 @@ class _QuranIndexTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cardColor = isDark ? const Color(0xFF1A1A1A) : Colors.white;
+    final textColor = isDark ? Colors.white : Colors.black87;
+    final subtitleColor = isDark ? Colors.white70 : Colors.black54;
+    final primaryColor = AppColors.darkGreen;
+    final accentColor = AppColors.gold;
+    
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1A1F1C) : Colors.white,
+        color: cardColor,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: isDark ? Colors.white.withOpacity(0.05) : Colors.black.withOpacity(0.03)),
+        boxShadow: [
+          BoxShadow(
+            color: isDark ? Colors.black.withOpacity(0.3) : Colors.black.withOpacity(0.1),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: ListTile(
         onTap: onTap,
         leading: Container(
-          width: 44, height: 44,
-          decoration: BoxDecoration(color: AppColors.paleGreen.withOpacity(0.1), borderRadius: BorderRadius.circular(12)),
-          child: Center(child: Text('$index', style: _f(sz: 14, fw: FontWeight.bold, c: isDark ? AppColors.gold : AppColors.darkGreen))),
+          width: 44, 
+          height: 44,
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                primaryColor.withOpacity(0.1),
+                primaryColor.withOpacity(0.05),
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: primaryColor.withOpacity(0.2)),
+          ),
+          child: Center(
+            child: Text(
+              '$index', 
+              style: _f(sz: 14, fw: FontWeight.bold, c: primaryColor)
+            ),
+          ),
         ),
-        title: Text(title, style: GoogleFonts.amiri(fontSize: 20, fontWeight: FontWeight.bold, color: isDark ? Colors.white : Colors.black87)),
-        subtitle: Text(subtitle, style: _f(sz: 12, c: AppColors.gray)),
-        trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: AppColors.gray),
+        title: Text(
+          title, 
+          style: GoogleFonts.amiri(
+            fontSize: 20, 
+            fontWeight: FontWeight.bold, 
+            color: textColor
+          )
+        ),
+        subtitle: Text(
+          subtitle, 
+          style: _f(sz: 12, c: subtitleColor)
+        ),
+        trailing: Icon(
+          Icons.arrow_forward_ios_rounded, 
+          size: 14, 
+          color: isDark ? Colors.white60 : Colors.black38
+        ),
       ),
     );
   }
@@ -205,7 +260,7 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
           children: [
             // Top Bar - Minimal Margin
             Container(
-              padding: EdgeInsets.only(top: MediaQuery.of(context).padding.top, bottom: 2, left: 16, right: 16),
+              padding: EdgeInsets.only(top: MediaQuery.of(context).padding.top - 10, bottom: 1, left: 16, right: 16),
               color: Colors.black,
               child: _buildReaderHeader(_currentPage + 1),
             ),
@@ -222,7 +277,7 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
             ),
             // Footer
             Container(
-              padding: const EdgeInsets.symmetric(vertical: 8),
+              padding: const EdgeInsets.symmetric(vertical: 2),
               color: Colors.black,
               child: Text(
                 '${_currentPage + 1}',
@@ -595,7 +650,7 @@ class _MushafPage extends StatelessWidget {
     return Container(
       width: double.infinity,
       height: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
       child: Center(
         child: SingleChildScrollView(
           physics: const NeverScrollableScrollPhysics(),
@@ -623,16 +678,15 @@ class _MushafPage extends StatelessWidget {
                       text: TextSpan(
                         children: List.generate(end - start + 1, (i) => start + i).expand((v) {
                           String verseText = quran.getVerse(surah, v, verseEndSymbol: false);
-                          // If it's Fatiha or the first verse of any surah, the package might include Basmala.
-                          // We need to strip it if we are already showing our OrnateBasmala.
+                          // Remove Basmala from first verse of any surah (except Fatiha and Tawbah)
                           if (v == 1 && surah != 1 && surah != 9) {
-                             // Remove Basmala in various forms it might appear
-                             verseText = verseText.replaceFirst('بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيمِ', '').trim();
-                             verseText = verseText.replaceFirst(quran.basmala, '').trim();
-                             // Remove any remaining Basmala-like text at the beginning
-                             if (verseText.startsWith('بسم الله')) {
-                               verseText = verseText.replaceFirst(RegExp(r'^بسم الله.*?الرحيم\s*'), '').trim();
-                             }
+                            // Remove Basmala in all possible forms
+                            verseText = verseText
+                                .replaceFirst(RegExp(r'^بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيمِ\s*'), '')
+                                .replaceFirst(RegExp(r'^بسم الله الرحمن الرحيم\s*'), '')
+                                .replaceFirst(RegExp(r'^بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ\s*'), '')
+                                .replaceFirst(RegExp(r'^بسم الله\s*[\u064B-\u065F\u0670\u06D6-\u06ED]*الرحمن[\u064B-\u065F\u0670\u06D6-\u06ED]*الرحيم\s*'), '')
+                                .trim();
                           }
 
                           return [
@@ -675,98 +729,164 @@ class _OrnateSurahHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final surahInfo = '${quran.getVerseCount(surahIndex)} آية • ${quran.getPlaceOfRevelation(surahIndex) == "Makkah" ? "مكية" : "مدنية"}';
+    final primaryColor = AppColors.darkGreen;
+    final accentColor = AppColors.gold;
     
     return Container(
       width: double.infinity,
-      margin: const EdgeInsets.symmetric(vertical: 8),
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+      margin: const EdgeInsets.symmetric(vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: isDark ? [
-            const Color(0xFF1A1A1A),
-            const Color(0xFF2A2A2A),
+            const Color(0xFF1A1A1A).withOpacity(0.9),
+            const Color(0xFF2A2A2A).withOpacity(0.9),
           ] : [
-            AppColors.darkGreen.withOpacity(0.1),
-            AppColors.gold.withOpacity(0.05),
+            primaryColor.withOpacity(0.08),
+            accentColor.withOpacity(0.04),
           ],
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(24),
         border: Border.all(
-          color: AppColors.gold.withOpacity(0.4),
-          width: 1.5,
+          color: accentColor.withOpacity(0.3),
+          width: 2,
         ),
         boxShadow: [
           BoxShadow(
-            color: AppColors.gold.withOpacity(0.2),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
+            color: accentColor.withOpacity(0.15),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
           ),
+          if (!isDark)
+            BoxShadow(
+              color: primaryColor.withOpacity(0.1),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
         ],
       ),
       child: Column(
         children: [
+          // Top decorative elements
           Row(
-            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
               Container(
-                padding: const EdgeInsets.all(6),
+                width: 40,
+                height: 40,
                 decoration: BoxDecoration(
-                  color: AppColors.gold.withOpacity(0.15),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.auto_awesome_outlined,
-                  size: 18,
-                  color: AppColors.gold,
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Text(
-                  quran.getSurahNameArabic(surahIndex),
-                  style: TextStyle(
-                    fontFamily: 'KFGQPC Uthmanic Script Hafs',
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
-                    color: isDark ? AppColors.gold : AppColors.darkGreen,
-                    height: 1.4,
-                    shadows: [
-                      Shadow(
-                        color: AppColors.gold.withOpacity(0.3),
-                        blurRadius: 4,
-                        offset: const Offset(0, 2),
-                      ),
+                  gradient: LinearGradient(
+                    colors: [
+                      accentColor.withOpacity(0.2),
+                      accentColor.withOpacity(0.1),
                     ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
                   ),
-                  textAlign: TextAlign.center,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: accentColor.withOpacity(0.4), width: 1.5),
+                ),
+                child: Icon(
+                  Icons.brightness_7_outlined,
+                  color: accentColor,
+                  size: 20,
                 ),
               ),
-              const SizedBox(width: 16),
               Container(
-                padding: const EdgeInsets.all(6),
+                width: 40,
+                height: 40,
                 decoration: BoxDecoration(
-                  color: AppColors.gold.withOpacity(0.15),
+                  gradient: LinearGradient(
+                    colors: [
+                      primaryColor.withOpacity(0.2),
+                      primaryColor.withOpacity(0.1),
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
                   shape: BoxShape.circle,
+                  border: Border.all(color: primaryColor.withOpacity(0.4), width: 1.5),
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.auto_awesome_outlined,
-                  size: 18,
-                  color: AppColors.gold,
+                  color: primaryColor,
+                  size: 20,
+                ),
+              ),
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      accentColor.withOpacity(0.2),
+                      accentColor.withOpacity(0.1),
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  shape: BoxShape.circle,
+                  border: Border.all(color: accentColor.withOpacity(0.4), width: 1.5),
+                ),
+                child: Icon(
+                  Icons.brightness_7_outlined,
+                  color: accentColor,
+                  size: 20,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 8),
-          Text(
-            surahInfo,
-            style: GoogleFonts.ibmPlexSansArabic(
-              fontSize: 14,
-              color: isDark ? Colors.white70 : AppColors.gray,
-              fontWeight: FontWeight.w500,
+          const SizedBox(height: 12),
+          // Surah name
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            decoration: BoxDecoration(
+              color: isDark ? Colors.white.withOpacity(0.05) : primaryColor.withOpacity(0.05),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: isDark ? accentColor.withOpacity(0.2) : primaryColor.withOpacity(0.2),
+                width: 1,
+              ),
             ),
-            textAlign: TextAlign.center,
+            child: Text(
+              quran.getSurahNameArabic(surahIndex),
+              style: TextStyle(
+                fontFamily: 'KFGQPC Uthmanic Script Hafs',
+                fontSize: 32,
+                fontWeight: FontWeight.bold,
+                color: isDark ? accentColor : primaryColor,
+                height: 1.5,
+                shadows: [
+                  Shadow(
+                    color: (isDark ? accentColor : primaryColor).withOpacity(0.3),
+                    blurRadius: 6,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ),
+          const SizedBox(height: 8),
+          // Surah info
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+            decoration: BoxDecoration(
+              color: isDark ? Colors.white.withOpacity(0.03) : accentColor.withOpacity(0.03),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(
+              surahInfo,
+              style: GoogleFonts.ibmPlexSansArabic(
+                fontSize: 16,
+                color: isDark ? Colors.white70 : Colors.black54,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 0.5,
+              ),
+              textAlign: TextAlign.center,
+            ),
           ),
         ],
       ),
@@ -780,8 +900,8 @@ class _OrnateBasmala extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     
     return Container(
-      margin: const EdgeInsets.symmetric(vertical: 12),
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      margin: const EdgeInsets.symmetric(vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: isDark ? [
