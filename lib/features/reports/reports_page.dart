@@ -219,13 +219,13 @@ class _ReportsPageState extends State<ReportsPage> {
                     child: pw.Column(
                       crossAxisAlignment: pw.CrossAxisAlignment.start,
                       children: [
-                        _pdfStatRow('صفحات القرآن:', '$_totalQuranPages صفحة', arabicFont),
+                        _pdfStatRow('صفحات القرآن:', '$_totalQuranPages صفحة', arabicFont!),
                         pw.SizedBox(height: 10),
-                        _pdfStatRow('الصلوات المكتملة:', '$_totalPrayers صلاة', arabicFont),
+                        _pdfStatRow('الصلوات المكتملة:', '$_totalPrayers صلاة', arabicFont!),
                         pw.SizedBox(height: 10),
-                        _pdfStatRow('أيام الأذكار:', '$_remembranceDays يوم', arabicFont),
+                        _pdfStatRow('أيام الأذكار:', '$_remembranceDays يوم', arabicFont!),
                         pw.SizedBox(height: 10),
-                        _pdfStatRow('أطول فترة استمرار (ستريك):', '$_maxStreak يوم', arabicFont),
+                        _pdfStatRow('أطول فترة استمرار (ستريك):', '$_maxStreak يوم', arabicFont!),
                       ],
                     ),
                   ),
@@ -245,13 +245,13 @@ class _ReportsPageState extends State<ReportsPage> {
                       children: [
                         pw.Text('الهداف والتحديات', style: pw.TextStyle(fontSize: 20, color: PdfColors.blue800, fontWeight: pw.FontWeight.bold, font: arabicFont)),
                         pw.SizedBox(height: 15),
-                        _pdfStatRow('إجمالي الأهداف الشهرية:', '${_monthlyGoals.length} هدف', arabicFont),
+                        _pdfStatRow('إجمالي الأهداف الشهرية:', '${_monthlyGoals.length} هدف', arabicFont!),
                         pw.SizedBox(height: 10),
-                        _pdfStatRow('الأهداف المكتملة:', '$_completedGoals هدف', arabicFont),
+                        _pdfStatRow('الأهداف المكتملة:', '$_completedGoals هدف', arabicFont!),
                         pw.SizedBox(height: 10),
-                        _pdfStatRow('نسبة إنجاز الأهداف:', '${_goalsCompletionRate.toStringAsFixed(1)}%', arabicFont),
+                        _pdfStatRow('نسبة إنجاز الأهداف:', '${_goalsCompletionRate.toStringAsFixed(1)}%', arabicFont!),
                         pw.SizedBox(height: 10),
-                        _pdfStatRow('التحديات النشطة:', '$_activeChallenges تحدي', arabicFont),
+                        _pdfStatRow('التحديات النشطة:', '$_activeChallenges تحدي', arabicFont!),
                       ],
                     ),
                   ),
@@ -289,12 +289,12 @@ class _ReportsPageState extends State<ReportsPage> {
     }
   }
 
-  pw.Widget _pdfStatRow(String label, String value) {
+  pw.Widget _pdfStatRow(String label, String value, pw.Font arabicFont) {
     return pw.Row(
       mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
       children: [
-        pw.Text(label, style: const pw.TextStyle(fontSize: 18)),
-        pw.Text(value, style: const pw.TextStyle(fontSize: 18, color: PdfColors.green800)),
+        pw.Text(label, style: pw.TextStyle(fontSize: 18, font: arabicFont)),
+        pw.Text(value, style: pw.TextStyle(fontSize: 18, color: PdfColors.green800, font: arabicFont)),
       ],
     );
   }
