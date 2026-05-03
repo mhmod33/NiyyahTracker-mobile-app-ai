@@ -14,7 +14,12 @@ class AzkarLibraryPage extends StatelessWidget {
     {'title': 'أذكار المساء', 'key': 'أذكار المساء', 'icon': '🌙', 'color': 0xFF3F51B5},
     {'title': 'أذكار النوم', 'key': 'أذكار النوم', 'icon': '🛌', 'color': 0xFF673AB7},
     {'title': 'أذكار بعد الصلاة', 'key': 'أذكار بعد الصلاة', 'icon': '📿', 'color': 0xFF4CAF50},
+    {'title': 'أذكار الطعام', 'key': 'أذكار الطعام', 'icon': '🍽️', 'color': 0xFFFF5722},
+    {'title': 'أذكار الوضوء', 'key': 'أذكار الوضوء', 'icon': '💧', 'color': 0xFF2196F3},
+    {'title': 'أذكار المسجد', 'key': 'أذكار المسجد', 'icon': '🕌', 'color': 0xFF795548},
+    {'title': 'تسابيح', 'key': 'تسابيح', 'icon': '📿', 'color': 0xFF9C27B0},
     {'title': 'أدعية نبوية', 'key': 'أدعية نبوية', 'icon': '🤲', 'color': 0xFF009688},
+    {'title': 'عدّاد الأذكار', 'key': 'عام', 'icon': '🔢', 'color': 0xFF607D8B},
   ];
 
   @override

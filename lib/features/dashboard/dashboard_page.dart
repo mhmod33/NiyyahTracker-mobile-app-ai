@@ -20,6 +20,7 @@ import '../qibla/qibla_page.dart';
 import '../challenges/challenges_page.dart';
 import '../quran/quran_page.dart';
 import '../azkar/azkar_library_page.dart';
+import '../settings/notification_settings_page.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/firebase_service.dart';
 import '../../services/daily_summary_service.dart';
@@ -183,7 +184,7 @@ class _DashboardPageState extends State<DashboardPage> {
                             ],
                           ),
                         ),
-                        _IconButton(icon: Icons.notifications_none_rounded, onTap: () {}),
+                        _IconButton(icon: Icons.notifications_none_rounded, onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const NotificationSettingsPage()))),
                       ],
                     ),
                     const SizedBox(height: 24),

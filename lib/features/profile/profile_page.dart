@@ -8,6 +8,7 @@ import '../../providers/auth_provider.dart';
 import '../ramadan/ramadan_page.dart';
 import '../hajj/hajj_page.dart';
 import '../auth/login_page.dart';
+import '../settings/notification_settings_page.dart';
 
 TextStyle _f({double sz = 14, FontWeight fw = FontWeight.w400, Color? c, double? h}) =>
     GoogleFonts.ibmPlexSansArabic(fontSize: sz, fontWeight: fw, color: c, height: h);
@@ -130,9 +131,7 @@ class ProfilePage extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // ── User Stats ──
-                    _buildStatsRow(authProvider, isDark),
-                    const SizedBox(height: 32),
+                    const SizedBox(height: 20),
 
                     // ── Settings Group ──
                     _SectionHeader(title: 'الإعدادات والتفضيلات', isDark: isDark),
@@ -156,17 +155,9 @@ class ProfilePage extends StatelessWidget {
                           color: Colors.blue,
                           title: 'تنبيهات الأذكار',
                           subtitle: 'إدارة مواعيد التذكير',
-                          onTap: () {},
+                          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const NotificationSettingsPage())),
                         ),
-                        const _Divider(),
-                        _ModernSettingsTile(
-                          icon: Icons.translate_rounded,
-                          color: Colors.teal,
-                          title: 'لغة التطبيق',
-                          subtitle: 'العربية',
-                          onTap: () {},
-                        ),
-                      ],
+                                              ],
                     ),
 
                     const SizedBox(height: 24),
@@ -204,15 +195,7 @@ class ProfilePage extends StatelessWidget {
                           subtitle: 'الإصدار $_appVersion',
                           onTap: () {},
                         ),
-                        const _Divider(),
-                        _ModernSettingsTile(
-                          icon: Icons.star_border_rounded,
-                          color: Colors.orange,
-                          title: 'قيّم تجربتك',
-                          subtitle: 'رأيك يهمنا في تطوير التطبيق',
-                          onTap: () {},
-                        ),
-                      ],
+                                              ],
                     ),
 
                     const SizedBox(height: 40),
@@ -239,16 +222,7 @@ class ProfilePage extends StatelessWidget {
     );
   }
 
-  Widget _buildStatsRow(AppAuthProvider auth, bool isDark) {
-    return Row(
-      children: [
-        _StatItem(label: 'أيام متتالية', value: '${auth.userProfile?['streakDays'] ?? 0}', icon: Icons.local_fire_department_rounded, color: Colors.orange, isDark: isDark),
-        const SizedBox(width: 12),
-        _StatItem(label: 'إجمالي الحسنات', value: '١,٢٤٠', icon: Icons.auto_graph_rounded, color: Colors.green, isDark: isDark),
-      ],
-    );
-  }
-
+  
   Widget _buildLogoutButton(BuildContext context, bool isDark) {
     return Container(
       width: double.infinity,
@@ -306,32 +280,6 @@ class ProfilePage extends StatelessWidget {
   }
 }
 
-class _StatItem extends StatelessWidget {
-  final String label, value; final IconData icon; final Color color; final bool isDark;
-  const _StatItem({required this.label, required this.value, required this.icon, required this.color, required this.isDark});
-  @override
-  Widget build(BuildContext context) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: isDark ? const Color(0xFF1A1F1C) : Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: isDark ? Colors.white.withOpacity(0.05) : Colors.black.withOpacity(0.05)),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Icon(icon, color: color, size: 24),
-            const SizedBox(height: 12),
-            Text(value, style: _f(sz: 20, fw: FontWeight.w800, c: isDark ? Colors.white : AppColors.darkGreen)),
-            Text(label, style: _f(sz: 12, c: isDark ? Colors.white54 : AppColors.gray)),
-          ],
-        ),
-      ),
-    );
-  }
-}
 
 class _SectionHeader extends StatelessWidget {
   final String title; final bool isDark;

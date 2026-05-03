@@ -181,13 +181,12 @@ class _NearbyMosquesPageState extends State<NearbyMosquesPage>
     }
   }
 
-  // ── Overpass ──────────────────────────────
+  // ── Enhanced Mosque Search ──────────────────────────────
   Future<void> _fetchMosques() async {
     if (_userLocation == null) return;
     setState(() {
       _loading = true;
       _error = '';
-      _mosques = [];
       _selected = null;
     });
 
@@ -195,48 +194,75 @@ class _NearbyMosquesPageState extends State<NearbyMosquesPage>
     final lon = _userLocation!.longitude;
     final rad = (_radiusKm * 1000).toInt();
 
-    // Refined query for mosques
+    debugPrint('🕌 Starting mosque search: lat=$lat, lon=$lon, radius=${_radiusKm.toStringAsFixed(1)}km');
+
+    // Try OpenStreetMap Overpass API first (free, no API key needed)
+    final osmSuccess = await _tryOverpassAPI(lat, lon, rad);
+    if (osmSuccess) return;
+
+    // If all fails, show a clean error state instead of fake data
+    if (mounted) {
+      setState(() {
+        _error = 'نواجه ضغطاً مؤقتاً على خوادم المساجد المجانية. يرجى المحاولة بعد قليل أو التأكد من اتصال الإنترنت.';
+        _loading = false;
+      });
+    }
+  }
+
+  Future<bool> _tryOverpassAPI(double lat, double lon, int rad) async {
+    // Complete query for mosques (including common OSM tags in Arab countries)
     final query =
-        '[out:json][timeout:30];'
+        '[out:json][timeout:15];'
         '('
         'nwr["amenity"="place_of_worship"]["religion"="muslim"](around:$rad,$lat,$lon);'
         'nwr["amenity"="mosque"](around:$rad,$lat,$lon);'
         'nwr["building"="mosque"](around:$rad,$lat,$lon);'
-        'nwr["mosque"="yes"](around:$rad,$lat,$lon);'
         ');out center;';
 
-    // Try multiple Overpass endpoints (main + mirrors)
+    // The most reliable OSM Overpass instances
     final endpoints = [
-      'https://overpass-api.de/api/interpreter',
+      'https://maps.mail.ru/osm/tools/overpass/api/interpreter', // Fastest, no strict CORS
+      'https://overpass.kumi.systems/api/interpreter', // Reliable
+      'https://overpass-api.de/api/interpreter', // Official, heavily rate-limited
       'https://lz4.overpass-api.de/api/interpreter',
-      'https://z.overpass-api.de/api/interpreter',
     ];
 
-    for (final endpoint in endpoints) {
+    for (int i = 0; i < endpoints.length; i++) {
+      final endpoint = endpoints[i];
       try {
-        final url = Uri.parse(endpoint);
-        debugPrint('🕌 Overpass request: lat=$lat, lon=$lon, radius=${rad}m');
-        debugPrint('🕌 Trying: $endpoint');
+        debugPrint('🕌 Trying Overpass endpoint ${i + 1}/${endpoints.length}: $endpoint');
 
-        final uri = Uri.parse('${url.toString()}?data=${Uri.encodeQueryComponent(query)}');
+        final uri = Uri.parse('${endpoint}?data=${Uri.encodeQueryComponent(query)}');
         final resp = await http.get(
           uri,
           headers: {
             'Accept': 'application/json',
-            'User-Agent': 'NiyyahTrackerApp/1.0 (Contact: admin@niyyahtracker.com)',
+            'User-Agent': 'NiyyahTrackerApp/1.0',
           },
-        ).timeout(const Duration(seconds: 15));
+        ).timeout(const Duration(seconds: 10));
 
         debugPrint('🕌 Response status: ${resp.statusCode}');
 
         if (resp.statusCode != 200) {
-          debugPrint('🕌 Response body: ${resp.body.substring(0, (resp.body.length).clamp(0, 500))}');
-          continue; // try next endpoint
+          final bodySnippet = resp.body.length > 100 ? resp.body.substring(0, 100) : resp.body;
+          debugPrint('🕌 Bad response: ${resp.statusCode} - $bodySnippet');
+          continue;
         }
 
         final json = jsonDecode(resp.body) as Map<String, dynamic>;
+        
+        // Check for Overpass API errors
+        if (json['remark'] != null) {
+          debugPrint('🕌 Overpass remark: ${json['remark']}');
+        }
+        
+        if (json['elements'] == null) {
+          debugPrint('🕌 No elements in response');
+          continue;
+        }
+
         final elements = json['elements'] as List<dynamic>? ?? [];
-        debugPrint('🕌 Found ${elements.length} elements');
+        debugPrint('🕌 Found ${elements.length} raw elements');
 
         final mosques = elements
             .map((e) => MosqueModel.fromOverpass(e as Map<String, dynamic>, _userLocation))
@@ -248,32 +274,58 @@ class _NearbyMosquesPageState extends State<NearbyMosquesPage>
         final seen = <int>{};
         mosques.retainWhere((m) => seen.add(m.id));
 
-        debugPrint('🕌 After filter: ${mosques.length} mosques');
+        debugPrint('🕌 After processing: ${mosques.length} mosques');
 
         setState(() {
           _mosques = mosques;
           _loading = false;
         });
 
-        // Don't set error when empty - let the UI show empty state with option to increase radius
-        return; // success — stop trying endpoints
+        return true; // Success
       } catch (e) {
-        debugPrint('NearbyMosques Error: $e');
-        setState(() {
-          _mosques = [];
-          _error = 'تعذر الاتصال بخادم المساجد. تأكد من الإنترنت أو حاول لاحقاً.';
-          _loading = false;
-        });
+        debugPrint('🕌 Overpass endpoint $i failed: $e');
+        if (i == endpoints.length - 1) {
+          setState(() {
+            _error = 'تعذر الاتصال بخوادم المساجد. قد تكون المشكلة في اتصال الإنترنت.';
+            _loading = false;
+          });
+        }
       }
     }
     
-    // If all endpoints failed and we have no data, show error
-    if (_mosques.isEmpty && _userLocation != null && _error.isEmpty) {
-      setState(() {
-        _loading = false;
-        _error = 'تعذر الاتصال بخادم المساجد. تأكد من اتصالك بالإنترنت وحاول مرة أخرى.';
-      });
-    }
+    return false; // All endpoints failed
+  }
+
+  void _addSampleMosques(double lat, double lon) {
+    // Add some sample mosques for demonstration when API fails
+    debugPrint('🕌 Adding sample mosques for demonstration');
+    
+    final sampleMosques = [
+      MosqueModel(
+        id: 1001,
+        name: 'المسجد الرئيسي',
+        location: LatLng(lat + 0.001, lon + 0.001),
+        distance: 150.0,
+      ),
+      MosqueModel(
+        id: 1002,
+        name: 'مسجد الرحمة',
+        location: LatLng(lat - 0.002, lon + 0.003),
+        distance: 350.0,
+      ),
+      MosqueModel(
+        id: 1003,
+        name: 'جامع الفاتح',
+        location: LatLng(lat + 0.003, lon - 0.001),
+        distance: 420.0,
+      ),
+    ];
+
+    setState(() {
+      _mosques = sampleMosques;
+      _loading = false;
+      _error = 'يتم عرض مساجد نموذجية للتجربة. قد تحتاج إلى اتصال بالإنترنت للبيانات الحقيقية.';
+    });
   }
 
 
@@ -302,10 +354,13 @@ class _NearbyMosquesPageState extends State<NearbyMosquesPage>
   // ─────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bgColor = isDark ? const Color(0xFF121212) : const Color(0xFFF7F9F7);
+
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
-        backgroundColor: AppColors.background,
+        backgroundColor: bgColor,
         body: Column(
           children: [
             _buildHeader(),
@@ -325,9 +380,9 @@ class _NearbyMosquesPageState extends State<NearbyMosquesPage>
                     ),
 
                   // Error overlay on top of map
-                  if (!_loading && _error != null && _mosques.isEmpty)
+                  if (!_loading && _error != null && _error!.isNotEmpty && _mosques.isEmpty)
                     Container(
-                      color: AppColors.background.withOpacity(0.9),
+                      color: Theme.of(context).scaffoldBackgroundColor.withOpacity(0.9),
                       child: _buildError(),
                     ),
 
