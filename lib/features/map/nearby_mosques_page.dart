@@ -83,8 +83,8 @@ class _NearbyMosquesPageState extends State<NearbyMosquesPage>
   bool _mapReady = false;
   bool _isSatelliteView = false;
   String _error = '';
+  double _radiusKm = 2.0;
   final MapController _mapController = MapController();
-  final SheetController _sheetController = SheetController();
 
   // Bottom sheet
   late AnimationController _sheetAnim;
@@ -114,7 +114,7 @@ class _NearbyMosquesPageState extends State<NearbyMosquesPage>
   Future<void> _initLocation() async {
     setState(() {
       _loading = true;
-      _error = null;
+      _error = '';
     });
 
     try {
@@ -186,7 +186,7 @@ class _NearbyMosquesPageState extends State<NearbyMosquesPage>
     if (_userLocation == null) return;
     setState(() {
       _loading = true;
-      _error = null;
+      _error = '';
       _mosques = [];
       _selected = null;
     });
@@ -537,7 +537,6 @@ class _NearbyMosquesPageState extends State<NearbyMosquesPage>
             : 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
           userAgentPackageName: 'com.niyyahtracker.app',
           maxZoom: _isSatelliteView ? 18 : 19,
-          backgroundColor: _isSatelliteView ? Colors.black : Colors.transparent,
         ),
 
         // User accuracy circle
