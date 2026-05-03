@@ -209,6 +209,21 @@ class FirebaseService {
     }
   }
 
+  Future<void> deleteWeeklyPlan(String userId) async {
+    try {
+      final query = await _db
+          .collection('users')
+          .doc(userId)
+          .collection('weekly_plans')
+          .get();
+      for (var doc in query.docs) {
+        await doc.reference.delete();
+      }
+    } catch (e) {
+      debugPrint('Error deleting weekly plan: $e');
+    }
+  }
+
   // ===== Ramadan Methods =====
   Future<void> saveRamadanTracking(String userId, RamadanTracking tracking) async {
     try {

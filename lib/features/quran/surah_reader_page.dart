@@ -307,16 +307,17 @@ class _MushafPageWidget extends StatelessWidget {
 
   Widget _actionTile(IconData icon, String label, VoidCallback onTap) {
     return ListTile(
+      visualDensity: VisualDensity.compact,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 0),
       leading: Container(
-        width: 38, height: 38,
-        decoration: BoxDecoration(color: AppColors.darkGreen.withOpacity(0.12), borderRadius: BorderRadius.circular(10)),
-        child: Icon(icon, color: AppColors.darkGreen, size: 20),
+        width: 34, height: 34,
+        decoration: BoxDecoration(color: AppColors.darkGreen.withOpacity(0.12), borderRadius: BorderRadius.circular(8)),
+        child: Icon(icon, color: AppColors.darkGreen, size: 18),
       ),
-      title: Text(label, style: GoogleFonts.cairo(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w600)),
-      trailing: const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white24, size: 14),
+      title: Text(label, style: GoogleFonts.cairo(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600)),
+      trailing: const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white24, size: 12),
       onTap: onTap,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 8),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
     );
   }
 

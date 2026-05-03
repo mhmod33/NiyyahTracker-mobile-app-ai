@@ -36,19 +36,21 @@ class _SmartPlanPageState extends State<SmartPlanPage> {
       var plan = await _firebaseService.getCurrentWeeklyPlan(userId);
       
       if (plan == null) {
-        // Generate a new smart plan based on active goals
         final goals = await _firebaseService.getAllMonthlyGoals(userId);
-        final goalId = goals.isNotEmpty ? goals.first.id : 'no_goal_id';
+        final goalId = 'all_active_goals';
         
+        final allTasks = goals.isNotEmpty ? goals.map((g) => '• ${g.goalTitle}').join('\n') : 'الورد اليومي (اقرأ القرآن)';
+        final allDesc = goals.isNotEmpty ? 'أهداف: ${goals.map((g) => g.category).toSet().join('، ')}' : 'قم بإضافة أهدافك الشهرية';
+
         final today = DateTime.now();
         final days = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
         final dailyPlans = List.generate(7, (i) {
           final date = today.add(Duration(days: i));
           return DailyPlan(
             date: date,
-            task: goals.isNotEmpty ? goals.first.goalTitle : 'اقرأ ٢٠ صفحة من القرآن',
-            description: 'الورد اليومي للهدف الشهري',
-            targetAmount: 20,
+            task: allTasks,
+            description: allDesc,
+            targetAmount: goals.isNotEmpty ? goals.length : 1,
             isCompleted: false,
           );
         });
@@ -113,6 +115,18 @@ class _SmartPlanPageState extends State<SmartPlanPage> {
           backgroundColor: isDark ? const Color(0xFF0D2818) : AppColors.darkGreen,
           title: Text('الخطة الأسبوعية الذكية', style: GoogleFonts.ibmPlexSansArabic(color: Colors.white, fontWeight: FontWeight.bold)),
           centerTitle: true,
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.refresh_rounded, color: Colors.white),
+              tooltip: 'تحديث الخطة مع الأهداف الجديدة',
+              onPressed: () async {
+                setState(() => _isLoading = true);
+                final userId = context.read<AppAuthProvider>().userId;
+                await _firebaseService.deleteWeeklyPlan(userId);
+                await _loadOrGeneratePlan();
+              },
+            ),
+          ],
         ),
         body: _isLoading
           ? const Center(child: CircularProgressIndicator(color: AppColors.gold))
