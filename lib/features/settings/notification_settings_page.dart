@@ -239,44 +239,7 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
                           ],
                         ),
 
-                        const SizedBox(height: 24),
 
-                        // Test Section
-                        _SettingsSection(
-                          title: 'اختبار',
-                          icon: Icons.bug_report_rounded,
-                          isDark: isDark,
-                          children: [
-                            _TestTile(
-                              title: 'اختبار الإشعارات',
-                              subtitle: 'إرسال إشعار اختباري الآن',
-                              icon: Icons.notifications_active_rounded,
-                              onTap: _testNotification,
-                              isDark: isDark,
-                            ),
-                            _TestTile(
-                              title: 'اختبار أذكار الصباح',
-                              subtitle: 'محاكاة تذكير الصباح',
-                              icon: Icons.wb_twilight_rounded,
-                              onTap: () => _notificationService.showAzkarOverlay(context, 'morning'),
-                              isDark: isDark,
-                            ),
-                            _TestTile(
-                              title: 'اختبار أذكار المساء',
-                              subtitle: 'محاكاة تذكير المساء',
-                              icon: Icons.nights_stay_rounded,
-                              onTap: () => _notificationService.showAzkarOverlay(context, 'evening'),
-                              isDark: isDark,
-                            ),
-                            _TestTile(
-                              title: 'اختبار صلاة',
-                              subtitle: 'محاكاة أذان الصلاة',
-                              icon: Icons.mosque_rounded,
-                              onTap: () => _notificationService.showPrayerOverlay(context, 'الظهر'),
-                              isDark: isDark,
-                            ),
-                          ],
-                        ),
 
                         const SizedBox(height: 32),
                       ]),

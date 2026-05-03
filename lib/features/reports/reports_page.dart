@@ -122,13 +122,15 @@ class _ReportsPageState extends State<ReportsPage> {
   Future<void> _generatePdf(BuildContext context, AppAuthProvider authProvider) async {
     final pdf = pw.Document();
 
-    // Try to load Arabic font for PDF
-    pw.Font? arabicFont;
+    // Load Arabic font for PDF
+    pw.Font arabicFont;
     try {
       final fontData = await rootBundle.load('assets/fonts/KFGQPC Uthmanic Script HAFS.otf');
       arabicFont = pw.Font.ttf(fontData);
     } catch (e) {
       debugPrint('Could not load font for PDF: $e');
+      // Fallback to default font
+      arabicFont = pw.Font.helvetica();
     }
 
     final monthStr = DateFormat('MMMM yyyy', 'ar').format(_selectedDate);
@@ -147,16 +149,16 @@ class _ReportsPageState extends State<ReportsPage> {
               crossAxisAlignment: pw.CrossAxisAlignment.center,
               children: [
                 pw.SizedBox(height: 20),
-                pw.Text('النية', style: pw.TextStyle(fontSize: 40, color: PdfColors.green900)),
+                pw.Text('النية', style: pw.TextStyle(fontSize: 40, color: PdfColors.green900, font: arabicFont)),
                 pw.SizedBox(height: 10),
-                pw.Text('تقرير العبادات الشهري', style: pw.TextStyle(fontSize: 24, color: PdfColors.green700)),
+                pw.Text('تقرير العبادات الشهري', style: pw.TextStyle(fontSize: 24, color: PdfColors.green700, font: arabicFont)),
                 pw.Divider(color: PdfColors.green300, thickness: 2),
                 pw.SizedBox(height: 30),
                 pw.Row(
                   mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                   children: [
-                    pw.Text('اسم المستخدم: $userName', style: const pw.TextStyle(fontSize: 18)),
-                    pw.Text('عن شهر: $monthStr', style: const pw.TextStyle(fontSize: 18)),
+                    pw.Text('اسم المستخدم: $userName', style: pw.TextStyle(fontSize: 18, font: arabicFont)),
+                    pw.Text('عن شهر: $monthStr', style: pw.TextStyle(fontSize: 18, font: arabicFont)),
                   ],
                 ),
                 pw.SizedBox(height: 40),
@@ -172,13 +174,13 @@ class _ReportsPageState extends State<ReportsPage> {
                   child: pw.Column(
                     crossAxisAlignment: pw.CrossAxisAlignment.start,
                     children: [
-                      _pdfStatRow('صفحات القرآن:', '$_totalQuranPages صفحة'),
+                      _pdfStatRow('صفحات القرآن:', '$_totalQuranPages صفحة', arabicFont),
                       pw.SizedBox(height: 10),
-                      _pdfStatRow('الصلوات المكتملة:', '$_totalPrayers صلاة'),
+                      _pdfStatRow('الصلوات المكتملة:', '$_totalPrayers صلاة', arabicFont),
                       pw.SizedBox(height: 10),
-                      _pdfStatRow('أيام الأذكار:', '$_remembranceDays يوم'),
+                      _pdfStatRow('أيام الأذكار:', '$_remembranceDays يوم', arabicFont),
                       pw.SizedBox(height: 10),
-                      _pdfStatRow('أطول فترة استمرار (ستريك):', '$_maxStreak يوم'),
+                      _pdfStatRow('أطول فترة استمرار (ستريك):', '$_maxStreak يوم', arabicFont),
                     ],
                   ),
                 ),
@@ -186,7 +188,7 @@ class _ReportsPageState extends State<ReportsPage> {
                 pw.Spacer(),
                 pw.Text(
                   '"إنما الأعمال بالنيات"',
-                  style: const pw.TextStyle(fontSize: 16, color: PdfColors.grey700),
+                  style: pw.TextStyle(fontSize: 16, color: PdfColors.grey700, font: arabicFont),
                 ),
                 pw.SizedBox(height: 20),
               ],
@@ -202,12 +204,12 @@ class _ReportsPageState extends State<ReportsPage> {
     );
   }
 
-  pw.Widget _pdfStatRow(String label, String value) {
+  pw.Widget _pdfStatRow(String label, String value, pw.Font arabicFont) {
     return pw.Row(
       mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
       children: [
-        pw.Text(label, style: const pw.TextStyle(fontSize: 18)),
-        pw.Text(value, style: pw.TextStyle(fontSize: 18, color: PdfColors.green800)),
+        pw.Text(label, style: pw.TextStyle(fontSize: 18, font: arabicFont)),
+        pw.Text(value, style: pw.TextStyle(fontSize: 18, color: PdfColors.green800, font: arabicFont)),
       ],
     );
   }
