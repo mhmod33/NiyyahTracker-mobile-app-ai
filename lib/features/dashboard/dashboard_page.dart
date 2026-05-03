@@ -639,7 +639,7 @@ class _ModernNavBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
-      margin: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+      margin: const EdgeInsets.fromLTRB(16, 0, 16, 24),
       height: 70,
       decoration: BoxDecoration(
         color: isDark ? const Color(0xFF1E1E1E).withOpacity(0.9) : Colors.white.withOpacity(0.9),
@@ -652,8 +652,9 @@ class _ModernNavBar extends StatelessWidget {
           filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
           child: Row(mainAxisAlignment: MainAxisAlignment.spaceAround, children: [
             _NavButton(icon: Icons.dashboard_rounded, label: 'الرئيسية', selected: currentIndex == 0, onTap: () => onTap(0)),
-            _NavButton(icon: Icons.auto_stories_rounded, label: 'المصحف', selected: currentIndex == 1, onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const QuranPage()))),
-            _NavButton(icon: Icons.person_rounded, label: 'حسابي', selected: currentIndex == 2, onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfilePage()))),
+            _NavButton(icon: Icons.mosque_rounded, label: 'المساجد', selected: currentIndex == 1, onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const NearbyMosquesPage()))),
+            _NavButton(icon: Icons.auto_stories_rounded, label: 'المصحف', selected: currentIndex == 2, onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const QuranPage()))),
+            _NavButton(icon: Icons.person_rounded, label: 'حسابي', selected: currentIndex == 3, onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfilePage()))),
           ]),
         ),
       ),

@@ -269,12 +269,14 @@ class _MushafPageWidget extends StatelessWidget {
     showModalBottomSheet(
       context: context,
       backgroundColor: const Color(0xFF111611),
+      isScrollControlled: true,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
       builder: (ctx) => Directionality(
         textDirection: TextDirection.rtl,
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(mainAxisSize: MainAxisSize.min, children: [
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom + 20, left: 20, right: 20, top: 20),
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
             Container(width: 40, height: 4, decoration: BoxDecoration(color: AppColors.darkGreen.withOpacity(0.5), borderRadius: BorderRadius.circular(2))),
             const SizedBox(height: 16),
             Container(
@@ -290,13 +292,15 @@ class _MushafPageWidget extends StatelessWidget {
             Text('سورة $surahName - آية $verse', style: GoogleFonts.cairo(color: AppColors.darkGreen, fontSize: 13, fontWeight: FontWeight.w600)),
             const SizedBox(height: 16),
             _actionTile(Icons.copy_rounded, 'نسخ الآية', () { Navigator.pop(ctx); Clipboard.setData(ClipboardData(text: verseText)); _snack(context, 'تم نسخ الآية'); }),
-            _actionTile(Icons.menu_book_rounded, 'تفسير الآية', () { Navigator.pop(ctx); _showTafseer(context, surah, verse); }),
+            _actionTile(Icons.menu_book_rounded, 'التفسير الميسر', () { Navigator.pop(ctx); _showTafseer(context, surah, verse, 'ar.muyassar', 'التفسير الميسر'); }),
+            _actionTile(Icons.auto_stories_rounded, 'تفسير الجلالين', () { Navigator.pop(ctx); _showTafseer(context, surah, verse, 'ar.jalalayn', 'تفسير الجلالين'); }),
             _actionTile(Icons.share_rounded, 'مشاركة نص', () { Navigator.pop(ctx); Share.share('﴿$verse﴾ $verseText\n\n- سورة $surahName -\n\nNiyyah Tracker'); }),
             _actionTile(Icons.image_rounded, 'مشاركة كصورة', () { Navigator.pop(ctx); _shareAsImage(context, surah, verse); }),
             _actionTile(Icons.bookmark_border_rounded, 'إضافة علامة', () { Navigator.pop(ctx); _snack(context, 'تم إضافة العلامة'); }),
             const SizedBox(height: 8),
           ]),
         ),
+      ),
       ),
     );
   }
@@ -320,7 +324,7 @@ class _MushafPageWidget extends StatelessWidget {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg, style: GoogleFonts.cairo()), backgroundColor: AppColors.darkGreen));
   }
 
-  Future<void> _showTafseer(BuildContext context, int surah, int verse) async {
+  Future<void> _showTafseer(BuildContext context, int surah, int verse, String edition, String title) async {
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -328,12 +332,12 @@ class _MushafPageWidget extends StatelessWidget {
     );
 
     try {
-      final response = await http.get(Uri.parse('https://api.alquran.cloud/v1/ayah/$surah:$verse/ar.muyassar')).timeout(const Duration(seconds: 10));
+      final response = await http.get(Uri.parse('https://api.alquran.cloud/v1/ayah/$surah:$verse/$edition')).timeout(const Duration(seconds: 10));
       Navigator.pop(context); 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         final tafseerText = data['data']['text'];
-        _showTafseerDialog(context, surah, verse, tafseerText);
+        _showTafseerDialog(context, surah, verse, tafseerText, title);
       } else {
         _snack(context, 'تعذر جلب التفسير. حاول مرة أخرى.');
       }
@@ -343,7 +347,7 @@ class _MushafPageWidget extends StatelessWidget {
     }
   }
 
-  void _showTafseerDialog(BuildContext context, int surah, int verse, String text) {
+  void _showTafseerDialog(BuildContext context, int surah, int verse, String text, String title) {
     final surahName = quran.getSurahNameArabic(surah);
     showModalBottomSheet(
       context: context,
@@ -359,7 +363,7 @@ class _MushafPageWidget extends StatelessWidget {
             children: [
               Container(width: 40, height: 4, decoration: BoxDecoration(color: AppColors.darkGreen.withOpacity(0.5), borderRadius: BorderRadius.circular(2))),
               const SizedBox(height: 16),
-              Text('التفسير الميسر', style: GoogleFonts.cairo(color: AppColors.lightGreen, fontSize: 18, fontWeight: FontWeight.bold)),
+              Text(title, style: GoogleFonts.cairo(color: AppColors.lightGreen, fontSize: 18, fontWeight: FontWeight.bold)),
               Text('سورة $surahName - آية $verse', style: GoogleFonts.cairo(color: Colors.white70, fontSize: 13)),
               const SizedBox(height: 16),
               Container(

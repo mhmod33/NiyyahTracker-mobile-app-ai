@@ -255,9 +255,7 @@ class _NearbyMosquesPageState extends State<NearbyMosquesPage>
           _loading = false;
         });
 
-        if (mosques.isEmpty) {
-          setState(() => _error = 'لم يتم العثور على مساجد في نطاق ${_radiusKm.toStringAsFixed(1)} كم.\nجرّب زيادة النطاق.');
-        }
+        // Don't set error when empty - let the UI show empty state with option to increase radius
         return; // success — stop trying endpoints
       } catch (e) {
         debugPrint('NearbyMosques Error: $e');
@@ -269,8 +267,8 @@ class _NearbyMosquesPageState extends State<NearbyMosquesPage>
       }
     }
     
-    // If all endpoints failed, show error
-    if (_mosques.isEmpty && _userLocation != null) {
+    // If all endpoints failed and we have no data, show error
+    if (_mosques.isEmpty && _userLocation != null && _error.isEmpty) {
       setState(() {
         _loading = false;
         _error = 'تعذر الاتصال بخادم المساجد. تأكد من اتصالك بالإنترنت وحاول مرة أخرى.';
@@ -623,29 +621,59 @@ class _NearbyMosquesPageState extends State<NearbyMosquesPage>
 
   // ── Error ─────────────────────────────────
   Widget _buildError() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isEmptyMosques = _error.contains('لم يتم العثور') || (_mosques.isEmpty && _error.isEmpty && _userLocation != null);
+    
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text('⚠️', style: TextStyle(fontSize: 60)),
+            Icon(
+              isEmptyMosques ? Icons.mosque_outlined : Icons.warning_amber_rounded,
+              size: 60,
+              color: isEmptyMosques ? AppColors.midGreen : Colors.orange,
+            ),
             const SizedBox(height: 16),
             Text(
-              _error!,
+              isEmptyMosques 
+                ? 'لم يتم العثور على مساجد في نطاق ${_radiusKm.toStringAsFixed(1)} كم'
+                : _error!,
               textAlign: TextAlign.center,
-              style: GoogleFonts.cairo(color: AppColors.gray, fontSize: 15),
+              style: GoogleFonts.cairo(color: isDark ? Colors.white70 : AppColors.gray, fontSize: 15, fontWeight: FontWeight.w600),
             ),
-            const SizedBox(height: 24),
-            ElevatedButton.icon(
-              onPressed: _initLocation,
-              icon: const Icon(Icons.refresh),
-              label: Text('إعادة المحاولة', style: GoogleFonts.cairo()),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.darkGreen,
-                foregroundColor: Colors.white,
+            const SizedBox(height: 8),
+            if (isEmptyMosques)
+              Text(
+                'جرّب زيادة نطاق البحث لاكتشاف المزيد من المساجد',
+                textAlign: TextAlign.center,
+                style: GoogleFonts.cairo(color: AppColors.gray, fontSize: 13),
               ),
-            ),
+            const SizedBox(height: 24),
+            if (isEmptyMosques && _radiusKm < 5)
+              ElevatedButton.icon(
+                onPressed: () {
+                  setState(() => _radiusKm = (_radiusKm + 1).clamp(0.5, 5.0));
+                  _fetchMosques();
+                },
+                icon: const Icon(Icons.add_location_alt),
+                label: Text('زيادة النطاق إلى ${(_radiusKm + 1).clamp(0.5, 5.0).toStringAsFixed(1)} كم', style: GoogleFonts.cairo()),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.darkGreen,
+                  foregroundColor: Colors.white,
+                ),
+              )
+            else
+              ElevatedButton.icon(
+                onPressed: _initLocation,
+                icon: const Icon(Icons.refresh),
+                label: Text('إعادة المحاولة', style: GoogleFonts.cairo()),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.darkGreen,
+                  foregroundColor: Colors.white,
+                ),
+              ),
           ],
         ),
       ),
