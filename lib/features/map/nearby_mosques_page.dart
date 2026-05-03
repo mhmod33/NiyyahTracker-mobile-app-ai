@@ -269,29 +269,11 @@ class _NearbyMosquesPageState extends State<NearbyMosquesPage>
       }
     }
     
-    // If all endpoints failed, add some fallback mosques for demonstration
+    // If all endpoints failed, show error
     if (_mosques.isEmpty && _userLocation != null) {
-      // Add some mosques near the user's location for demonstration
-      final fallbackMosques = <MosqueModel>[];
-      final lat = _userLocation!.latitude;
-      final lon = _userLocation!.longitude;
-      
-      // Generate some mock mosques near user location
-      for (int i = 0; i < 5; i++) {
-        final offsetLat = (i - 2) * 0.01; // Small latitude offset
-        final offsetLon = (i % 2 == 0 ? 0.01 : -0.01); // Small longitude offset
-        fallbackMosques.add(MosqueModel(
-          id: 2000 + i,
-          name: 'مسجد نموذجي ${i + 1}',
-          location: LatLng(lat + offsetLat, lon + offsetLon),
-          distance: Geolocator.distanceBetween(lat, lon, lat + offsetLat, lon + offsetLon),
-        ));
-      }
-      
       setState(() {
-        _mosques = fallbackMosques;
         _loading = false;
-        _error = 'تم عرض مساجد افتراضية بالقرب من موقعك';
+        _error = 'تعذر الاتصال بخادم المساجد. تأكد من اتصالك بالإنترنت وحاول مرة أخرى.';
       });
     }
   }
