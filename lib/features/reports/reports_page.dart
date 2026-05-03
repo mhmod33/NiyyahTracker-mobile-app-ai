@@ -10,6 +10,8 @@ import 'package:intl/intl.dart' hide TextDirection;
 import '../../core/app_colors.dart';
 import '../../core/app_models.dart';
 import '../../models/worship_model.dart' hide WorshipType;
+import '../../models/monthly_goal_model.dart';
+import '../../models/challenge_model.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/firebase_service.dart';
 
@@ -30,6 +32,13 @@ class _ReportsPageState extends State<ReportsPage> {
   int _totalPrayers = 0;
   int _remembranceDays = 0;
   int _maxStreak = 0;
+  
+  // Additional dynamic stats
+  List<MonthlyGoal> _monthlyGoals = [];
+  List<Challenge> _challenges = [];
+  int _completedGoals = 0;
+  int _activeChallenges = 0;
+  double _goalsCompletionRate = 0.0;
 
   @override
   void initState() {
@@ -44,7 +53,21 @@ class _ReportsPageState extends State<ReportsPage> {
     setState(() => _isLoading = true);
 
     try {
-      final worships = await _firebaseService.getMonthlyWorships(userId, _selectedDate.year, _selectedDate.month);
+      // Load all data in parallel
+      final futures = await Future.wait([
+        _firebaseService.getMonthlyWorships(userId, _selectedDate.year, _selectedDate.month),
+        _firebaseService.getAllMonthlyGoals(userId),
+        _firebaseService.getChallenges(userId),
+      ]);
+      
+      final worships = futures[0] as List<DailyWorship>;
+      final allGoals = futures[1] as List<MonthlyGoal>;
+      final challenges = futures[2] as List<Challenge>;
+      
+      // Filter goals for the selected month
+      final goals = allGoals.where((goal) {
+        return goal.startDate.year == _selectedDate.year && goal.startDate.month == _selectedDate.month;
+      }).toList();
       
       int quran = 0;
       int prayers = 0;
@@ -83,6 +106,14 @@ class _ReportsPageState extends State<ReportsPage> {
         _totalPrayers = prayers;
         _remembranceDays = remembrance;
         _maxStreak = maxStreak;
+        _monthlyGoals = goals;
+        _challenges = challenges;
+        
+        // Calculate additional stats
+        _completedGoals = goals.where((g) => g.isCompleted).length;
+        _activeChallenges = challenges.where((c) => c.current > 0).length;
+        _goalsCompletionRate = goals.isNotEmpty ? (_completedGoals / goals.length) * 100 : 0.0;
+        
         _isLoading = false;
       });
     } catch (e) {
@@ -120,100 +151,155 @@ class _ReportsPageState extends State<ReportsPage> {
   }
 
   Future<void> _generatePdf(BuildContext context, AppAuthProvider authProvider) async {
+    debugPrint('Starting PDF generation...');
+    
     final pdf = pw.Document();
+    pw.Font? arabicFont;
 
-    // Load Arabic font for PDF
-    pw.Font arabicFont;
+    // Try to load Arabic font with better error handling
     try {
+      debugPrint('Attempting to load Arabic font...');
       final fontData = await rootBundle.load('assets/fonts/KFGQPC Uthmanic Script HAFS.otf');
       arabicFont = pw.Font.ttf(fontData);
+      debugPrint('Arabic font loaded successfully for PDF');
     } catch (e) {
-      debugPrint('Could not load font for PDF: $e');
-      // Fallback to default font
+      debugPrint('Could not load Arabic font for PDF: $e');
+      debugPrint('Using fallback font...');
       arabicFont = pw.Font.helvetica();
     }
 
     final monthStr = DateFormat('MMMM yyyy', 'ar').format(_selectedDate);
-    final userName = authProvider.displayName;
+    final userName = authProvider.displayName ?? 'مستخدم';
+    
+    debugPrint('User name: $userName');
+    debugPrint('Month: $monthStr');
+    debugPrint('Total Quran pages: $_totalQuranPages');
 
     pdf.addPage(
       pw.Page(
         pageFormat: PdfPageFormat.a4,
         theme: pw.ThemeData.withFont(
           base: arabicFont,
+          bold: arabicFont,
+          italic: arabicFont,
+          boldItalic: arabicFont,
         ),
         build: (pw.Context context) {
+          debugPrint('Building PDF page...');
           return pw.Directionality(
             textDirection: pw.TextDirection.rtl,
-            child: pw.Column(
-              crossAxisAlignment: pw.CrossAxisAlignment.center,
-              children: [
-                pw.SizedBox(height: 20),
-                pw.Text('النية', style: pw.TextStyle(fontSize: 40, color: PdfColors.green900, font: arabicFont)),
-                pw.SizedBox(height: 10),
-                pw.Text('تقرير العبادات الشهري', style: pw.TextStyle(fontSize: 24, color: PdfColors.green700, font: arabicFont)),
-                pw.Divider(color: PdfColors.green300, thickness: 2),
-                pw.SizedBox(height: 30),
-                pw.Row(
-                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                  children: [
-                    pw.Text('اسم المستخدم: $userName', style: pw.TextStyle(fontSize: 18, font: arabicFont)),
-                    pw.Text('عن شهر: $monthStr', style: pw.TextStyle(fontSize: 18, font: arabicFont)),
-                  ],
-                ),
-                pw.SizedBox(height: 40),
-                
-                // Stats Box
-                pw.Container(
-                  padding: const pw.EdgeInsets.all(20),
-                  decoration: pw.BoxDecoration(
-                    border: pw.Border.all(color: PdfColors.green300, width: 2),
-                    borderRadius: const pw.BorderRadius.all(pw.Radius.circular(10)),
-                    color: PdfColors.green50,
-                  ),
-                  child: pw.Column(
-                    crossAxisAlignment: pw.CrossAxisAlignment.start,
+            child: pw.Padding(
+              padding: const pw.EdgeInsets.all(20),
+              child: pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.center,
+                children: [
+                  pw.SizedBox(height: 20),
+                  pw.Text('النية', style: pw.TextStyle(fontSize: 40, color: PdfColors.green900, font: arabicFont)),
+                  pw.SizedBox(height: 10),
+                  pw.Text('تقرير العبادات الشهري', style: pw.TextStyle(fontSize: 24, color: PdfColors.green700, font: arabicFont)),
+                  pw.Divider(color: PdfColors.green300, thickness: 2),
+                  pw.SizedBox(height: 30),
+                  pw.Row(
+                    mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                     children: [
-                      _pdfStatRow('صفحات القرآن:', '$_totalQuranPages صفحة', arabicFont),
-                      pw.SizedBox(height: 10),
-                      _pdfStatRow('الصلوات المكتملة:', '$_totalPrayers صلاة', arabicFont),
-                      pw.SizedBox(height: 10),
-                      _pdfStatRow('أيام الأذكار:', '$_remembranceDays يوم', arabicFont),
-                      pw.SizedBox(height: 10),
-                      _pdfStatRow('أطول فترة استمرار (ستريك):', '$_maxStreak يوم', arabicFont),
+                      pw.Text('اسم المستخدم: $userName', style: pw.TextStyle(fontSize: 18, font: arabicFont)),
+                      pw.Text('عن شهر: $monthStr', style: pw.TextStyle(fontSize: 18, font: arabicFont)),
                     ],
                   ),
-                ),
+                  pw.SizedBox(height: 40),
+                  
+                  // Main Stats Box
+                  pw.Container(
+                    padding: const pw.EdgeInsets.all(20),
+                    decoration: pw.BoxDecoration(
+                      border: pw.Border.all(color: PdfColors.green300, width: 2),
+                      borderRadius: const pw.BorderRadius.all(pw.Radius.circular(10)),
+                      color: PdfColors.green50,
+                    ),
+                    child: pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.start,
+                      children: [
+                        _pdfStatRow('صفحات القرآن:', '$_totalQuranPages صفحة', arabicFont),
+                        pw.SizedBox(height: 10),
+                        _pdfStatRow('الصلوات المكتملة:', '$_totalPrayers صلاة', arabicFont),
+                        pw.SizedBox(height: 10),
+                        _pdfStatRow('أيام الأذكار:', '$_remembranceDays يوم', arabicFont),
+                        pw.SizedBox(height: 10),
+                        _pdfStatRow('أطول فترة استمرار (ستريك):', '$_maxStreak يوم', arabicFont),
+                      ],
+                    ),
+                  ),
+                  
+                  pw.SizedBox(height: 20),
+                  
+                  // Goals & Challenges Box
+                  pw.Container(
+                    padding: const pw.EdgeInsets.all(20),
+                    decoration: pw.BoxDecoration(
+                      border: pw.Border.all(color: PdfColors.blue300, width: 2),
+                      borderRadius: const pw.BorderRadius.all(pw.Radius.circular(10)),
+                      color: PdfColors.blue50,
+                    ),
+                    child: pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.start,
+                      children: [
+                        pw.Text('الهداف والتحديات', style: pw.TextStyle(fontSize: 20, color: PdfColors.blue800, fontWeight: pw.FontWeight.bold, font: arabicFont)),
+                        pw.SizedBox(height: 15),
+                        _pdfStatRow('إجمالي الأهداف الشهرية:', '${_monthlyGoals.length} هدف', arabicFont),
+                        pw.SizedBox(height: 10),
+                        _pdfStatRow('الأهداف المكتملة:', '$_completedGoals هدف', arabicFont),
+                        pw.SizedBox(height: 10),
+                        _pdfStatRow('نسبة إنجاز الأهداف:', '${_goalsCompletionRate.toStringAsFixed(1)}%', arabicFont),
+                        pw.SizedBox(height: 10),
+                        _pdfStatRow('التحديات النشطة:', '$_activeChallenges تحدي', arabicFont),
+                      ],
+                    ),
+                  ),
 
-                pw.Spacer(),
-                pw.Text(
-                  '"إنما الأعمال بالنيات"',
-                  style: pw.TextStyle(fontSize: 16, color: PdfColors.grey700, font: arabicFont),
-                ),
-                pw.SizedBox(height: 20),
-              ],
+                  pw.Spacer(),
+                  pw.Text(
+                    '"إنما الأعمال بالنيات"',
+                    style: pw.TextStyle(fontSize: 16, color: PdfColors.grey700, font: arabicFont),
+                  ),
+                  pw.SizedBox(height: 20),
+                ],
+              ),
             ),
           );
         },
       ),
     );
 
-    await Printing.layoutPdf(
-      onLayout: (PdfPageFormat format) async => pdf.save(),
-      name: 'Niyyah_Report_${_selectedDate.month}_${_selectedDate.year}.pdf',
-    );
+    debugPrint('PDF created, attempting to display...');
+    
+    try {
+      await Printing.layoutPdf(
+        onLayout: (PdfPageFormat format) async {
+          debugPrint('Saving PDF...');
+          return pdf.save();
+        },
+        name: 'Niyyah_Report_${_selectedDate.month}_${_selectedDate.year}.pdf',
+      );
+      debugPrint('PDF displayed successfully');
+    } catch (e) {
+      debugPrint('Error displaying PDF: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error generating PDF: $e')),
+      );
+    }
   }
 
-  pw.Widget _pdfStatRow(String label, String value, pw.Font arabicFont) {
+  pw.Widget _pdfStatRow(String label, String value) {
     return pw.Row(
       mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
       children: [
-        pw.Text(label, style: pw.TextStyle(fontSize: 18, font: arabicFont)),
-        pw.Text(value, style: pw.TextStyle(fontSize: 18, color: PdfColors.green800, font: arabicFont)),
+        pw.Text(label, style: const pw.TextStyle(fontSize: 18)),
+        pw.Text(value, style: const pw.TextStyle(fontSize: 18, color: PdfColors.green800)),
       ],
     );
   }
 
+  
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -277,6 +363,9 @@ class _ReportsPageState extends State<ReportsPage> {
             _generateButton(context, authProvider),
             const SizedBox(height: 24),
             
+            _analyticsInsights(isDark),
+            const SizedBox(height: 24),
+            
             _pastReports(isDark),
           ],
         ),
@@ -334,6 +423,10 @@ class _ReportsPageState extends State<ReportsPage> {
               _statRow('📿', 'أيام الأذكار', '$_remembranceDays يوم'),
               const Padding(padding: EdgeInsets.symmetric(vertical: 8), child: Divider(color: Colors.white12, height: 1)),
               _statRow('🔥', 'أطول ستريك', '$_maxStreak يوم متواصل'),
+              const Padding(padding: EdgeInsets.symmetric(vertical: 8), child: Divider(color: Colors.white12, height: 1)),
+              _statRow('🎯', 'الأهداف المكتملة', '$_completedGoals/${_monthlyGoals.length}'),
+              const Padding(padding: EdgeInsets.symmetric(vertical: 8), child: Divider(color: Colors.white12, height: 1)),
+              _statRow('⚡', 'التحديات النشطة', '$_activeChallenges تحدي'),
             ],
           ),
         ),
@@ -360,16 +453,160 @@ class _ReportsPageState extends State<ReportsPage> {
   }
 
   Widget _generateButton(BuildContext context, AppAuthProvider authProvider) {
-    return ElevatedButton.icon(
-      onPressed: () => _generatePdf(context, authProvider),
-      icon: const Icon(Icons.picture_as_pdf_rounded, color: Colors.white),
-      label: Text('تنزيل التقرير بصيغة PDF', style: GoogleFonts.ibmPlexSansArabic(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
-      style: ElevatedButton.styleFrom(
-        backgroundColor: AppColors.gold, 
-        minimumSize: const Size(double.infinity, 60),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        elevation: 4,
-        shadowColor: AppColors.gold.withOpacity(0.4),
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Row(
+      children: [
+        Expanded(
+          child: ElevatedButton.icon(
+            onPressed: () => _generatePdf(context, authProvider),
+            icon: const Icon(Icons.picture_as_pdf, color: Colors.white),
+            label: const Text(
+              'إنشاء تقرير PDF',
+              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+            ),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: isDark ? AppColors.lightGreen : AppColors.darkGreen,
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              elevation: 6,
+              shadowColor: isDark ? Colors.green.withOpacity(0.3) : Colors.green.withOpacity(0.2),
+            ),
+          ),
+        ),
+        const SizedBox(width: 12),
+        ElevatedButton.icon(
+          onPressed: () => _testSimplePdf(context),
+          icon: const Icon(Icons.bug_report, color: Colors.white),
+          label: const Text(
+            'Test PDF',
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          ),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.orange,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            elevation: 6,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _testSimplePdf(BuildContext context) async {
+    debugPrint('Testing simple PDF generation...');
+    
+    final pdf = pw.Document();
+    
+    pdf.addPage(
+      pw.Page(
+        pageFormat: PdfPageFormat.a4,
+        build: (pw.Context context) {
+          return pw.Center(
+            child: pw.Column(
+              mainAxisAlignment: pw.MainAxisAlignment.center,
+              children: [
+                pw.Text('Test PDF', style: const pw.TextStyle(fontSize: 40)),
+                pw.SizedBox(height: 20),
+                pw.Text('This is a test PDF to verify basic functionality'),
+                pw.SizedBox(height: 20),
+                pw.Text('Arabic Test: مرحبا بالعالم'),
+                pw.SizedBox(height: 20),
+                pw.Text('Date: ${DateTime.now()}'),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+
+    try {
+      await Printing.layoutPdf(
+        onLayout: (PdfPageFormat format) async => pdf.save(),
+        name: 'Test_PDF.pdf',
+      );
+      debugPrint('Test PDF displayed successfully');
+    } catch (e) {
+      debugPrint('Error with test PDF: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error with test PDF: $e')),
+      );
+    }
+  }
+
+  Widget _analyticsInsights(bool isDark) {
+    final cardBg = isDark ? const Color(0xFF1E1E1E) : Colors.white;
+    final textColor = isDark ? Colors.white : AppColors.textPrimary;
+    final greenColor = isDark ? AppColors.lightGreen : AppColors.darkGreen;
+    
+    // Calculate insights
+    final List<String> insights = [];
+    
+    if (_totalQuranPages > 100) {
+      insights.add('🌟 أداء ممتاز في القرآن هذا الشهر!');
+    }
+    if (_goalsCompletionRate > 75) {
+      insights.add('🎯 نسبة إنجاز أهدافك رائعة!');
+    }
+    if (_maxStreak > 7) {
+      insights.add('🔥 استمرارية مميزة في العبادات!');
+    }
+    if (_activeChallenges > 2) {
+      insights.add('⚡ نشاط ملهم في التحديات!');
+    }
+    if (_totalPrayers > 100) {
+      insights.add('🕌 مواظبة على الصلوات!');
+    }
+    
+    if (insights.isEmpty) {
+      insights.add('🌱 استمر في التقدم، كل بداية لها قوة!');
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: cardBg, 
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: isDark ? Colors.white.withOpacity(0.06) : AppColors.paleGreen),
+        boxShadow: [
+          if (!isDark) BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10, offset: const Offset(0, 4)),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.insights_rounded, color: greenColor, size: 24),
+              const SizedBox(width: 12),
+              Text('رؤى تحليلية', style: GoogleFonts.ibmPlexSansArabic(fontWeight: FontWeight.bold, fontSize: 16, color: greenColor)),
+            ],
+          ),
+          const SizedBox(height: 16),
+          ...insights.map((insight) => Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: isDark ? Colors.white.withOpacity(0.05) : AppColors.paleGreen.withOpacity(0.3),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      insight,
+                      style: GoogleFonts.ibmPlexSansArabic(
+                        fontSize: 14, 
+                        color: textColor,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          )),
+        ],
       ),
     );
   }

@@ -26,48 +26,29 @@ class PhoneAuthService {
     '18', // Orange
   ];
 
-  /// Validate Egyptian phone number
-  /// Phone should be: +20 followed by 10 digits starting with valid operator code
-  static bool isValidEgyptianPhone(String phoneNumber) {
-    // Remove spaces and dashes
-    String cleanNumber = phoneNumber.replaceAll(RegExp(r'[\s\-]'), '');
-
-    // Check if starts with +20 or just the 10-digit number
-    if (cleanNumber.startsWith('+20')) {
-      cleanNumber = cleanNumber.substring(3);
-    } else if (cleanNumber.startsWith('0')) {
-      cleanNumber = cleanNumber.substring(1);
-    }
-
-    // Check length and format
-    if (cleanNumber.length != 10) {
-      return false;
-    }
-
-    // Check if first 2 digits are valid operator code
-    String firstTwoDigits = cleanNumber.substring(0, 2);
-    return egyptMobileOperators.contains(firstTwoDigits);
+  /// Validate phone number format
+  static bool isValidPhone(String phoneNumber) {
+    // Remove spaces, dashes, and plus
+    String cleanNumber = phoneNumber.replaceAll(RegExp(r'[\s\-\+]'), '');
+    
+    // Basic validation: should be at least 7 digits (international minimum)
+    return cleanNumber.length >= 7;
   }
 
-  /// Format Egyptian phone number to international format (+20...)
-  static String formatEgyptianPhone(String phoneNumber) {
-    String cleanNumber = phoneNumber.replaceAll(RegExp(r'[\s\-]'), '');
-
-    // Remove leading 0 if present
-    if (cleanNumber.startsWith('0')) {
-      cleanNumber = cleanNumber.substring(1);
+  /// Format phone number to international format
+  static String formatPhone(String phoneNumber) {
+    // If it already starts with +, just clean internal spaces/dashes
+    if (phoneNumber.startsWith('+')) {
+      return '+' + phoneNumber.replaceAll(RegExp(r'[\s\-\+]'), '');
     }
-
-    // Remove +20 if present and add back properly
-    if (cleanNumber.startsWith('20')) {
-      cleanNumber = cleanNumber.substring(2);
-    }
-
-    return '+20$cleanNumber';
+    
+    // Otherwise, ensure it has a + (caller should provide country code)
+    String clean = phoneNumber.replaceAll(RegExp(r'[\s\-\+]'), '');
+    return '+$clean';
   }
 
-  /// Send OTP to Egyptian phone number
-  Future<String?> sendOtpToEgyptianPhone(
+  /// Send OTP to any phone number
+  Future<String?> sendOtp(
     String phoneNumber, {
     required Function(PhoneAuthCredential) verificationCompleted,
     required Function(FirebaseAuthException) verificationFailed,
@@ -75,14 +56,7 @@ class PhoneAuthService {
     required Function(String) codeAutoRetrievalTimeout,
   }) async {
     try {
-      if (!isValidEgyptianPhone(phoneNumber)) {
-        throw FirebaseAuthException(
-          code: 'invalid-phone-number',
-          message: 'رقم الهاتف المصري غير صحيح. يجب أن يكون في الصيغة: +20XXXXXXXXXX',
-        );
-      }
-
-      String formattedPhone = formatEgyptianPhone(phoneNumber);
+      String formattedPhone = formatPhone(phoneNumber);
 
       await _auth.verifyPhoneNumber(
         phoneNumber: formattedPhone,
@@ -132,7 +106,7 @@ class PhoneAuthService {
     required Function(String) codeAutoRetrievalTimeout,
   }) async {
     try {
-      String formattedPhone = formatEgyptianPhone(phoneNumber);
+      String formattedPhone = formatPhone(phoneNumber);
 
       await _auth.verifyPhoneNumber(
         phoneNumber: formattedPhone,
@@ -147,6 +121,12 @@ class PhoneAuthService {
       rethrow;
     }
   }
+
+  // Keep compatibility for Egypt if needed elsewhere
+  static bool isValidEgyptianPhone(String phoneNumber) => isValidPhone(phoneNumber);
+  static String formatEgyptianPhone(String phoneNumber) => formatPhone(phoneNumber);
+  Future<String?> sendOtpToEgyptianPhone(String p, {required dynamic verificationCompleted, required dynamic verificationFailed, required dynamic codeSent, required dynamic codeAutoRetrievalTimeout}) => 
+    sendOtp(p, verificationCompleted: verificationCompleted, verificationFailed: verificationFailed, codeSent: codeSent, codeAutoRetrievalTimeout: codeAutoRetrievalTimeout);
 
   /// Get current user
   User? getCurrentUser() {

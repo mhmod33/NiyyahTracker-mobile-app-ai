@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:country_picker/country_picker.dart';
 import '../../core/app_colors.dart';
 import '../../services/phone_auth_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -21,6 +22,7 @@ class _PhoneLoginPageState extends State<PhoneLoginPage> {
   bool _isLoading = false;
   String? _errorMessage;
   int _resendCountdown = 0;
+  Country _selectedCountry = Country.egypt;
 
   @override
   void dispose() {
@@ -35,6 +37,13 @@ class _PhoneLoginPageState extends State<PhoneLoginPage> {
       return;
     }
 
+    // Combine country code with phone number (trim leading zero if present)
+    String phoneText = _phoneController.text.trim();
+    if (phoneText.startsWith('0')) {
+      phoneText = phoneText.substring(1);
+    }
+    final fullPhoneNumber = '+${_selectedCountry.phoneCode}$phoneText';
+
     setState(() {
       _isLoading = true;
       _errorMessage = null;
@@ -42,7 +51,7 @@ class _PhoneLoginPageState extends State<PhoneLoginPage> {
 
     try {
       await _phoneAuthService.sendOtpToEgyptianPhone(
-        _phoneController.text,
+        fullPhoneNumber,
         verificationCompleted: (PhoneAuthCredential credential) async {
           await FirebaseAuth.instance.signInWithCredential(credential);
           if (mounted) {
@@ -128,7 +137,7 @@ class _PhoneLoginPageState extends State<PhoneLoginPage> {
 
     try {
       await _phoneAuthService.resendOtp(
-        _phoneController.text,
+        '+${_selectedCountry.phoneCode}${_phoneController.text.trim()}',
         verificationCompleted: (PhoneAuthCredential credential) async {
           await FirebaseAuth.instance.signInWithCredential(credential);
           if (mounted) {
@@ -199,7 +208,7 @@ class _PhoneLoginPageState extends State<PhoneLoginPage> {
                 if (!_isOtpSent) ...[
                   // Phone Number Input
                   Text(
-                    'أدخل رقم هاتفك المصري',
+                    'أدخل رقم هاتفك',
                     style: GoogleFonts.cairo(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
@@ -208,8 +217,10 @@ class _PhoneLoginPageState extends State<PhoneLoginPage> {
                   ),
                   const SizedBox(height: 16),
 
+                  // Integrated Phone Input
                   Container(
                     decoration: BoxDecoration(
+                      color: Colors.white,
                       borderRadius: BorderRadius.circular(16),
                       boxShadow: [
                         BoxShadow(
@@ -224,19 +235,65 @@ class _PhoneLoginPageState extends State<PhoneLoginPage> {
                       keyboardType: TextInputType.phone,
                       textDirection: TextDirection.ltr,
                       enabled: !_isLoading,
+                      style: GoogleFonts.cairo(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 1.2,
+                      ),
                       decoration: InputDecoration(
-                        hintText: '+201001234567',
+                        hintText: '1X XXXX XXXX',
                         hintTextDirection: TextDirection.ltr,
-                        prefixIcon: Padding(
-                          padding: const EdgeInsets.all(12),
-                          child: Text(
-                            '🇪🇬',
-                            style: GoogleFonts.cairo(fontSize: 24),
+                        prefixIcon: GestureDetector(
+                          onTap: () {
+                            showCountryPicker(
+                              context: context,
+                              showPhoneCode: true,
+                              onSelect: (Country country) {
+                                setState(() {
+                                  _selectedCountry = country;
+                                });
+                              },
+                            );
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                            margin: const EdgeInsets.only(left: 8),
+                            decoration: BoxDecoration(
+                              border: Border(
+                                left: BorderSide(
+                                  color: Colors.grey.withOpacity(0.3),
+                                  width: 1,
+                                ),
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  _selectedCountry.flagEmoji,
+                                  style: const TextStyle(fontSize: 20),
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  '+${_selectedCountry.phoneCode}',
+                                  style: GoogleFonts.cairo(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppColors.darkGreen,
+                                  ),
+                                ),
+                                const Icon(Icons.arrow_drop_down, color: AppColors.midGreen, size: 20),
+                              ],
+                            ),
                           ),
                         ),
                         filled: true,
                         fillColor: Colors.white,
                         border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          borderSide: const BorderSide(color: AppColors.paleGreen),
+                        ),
+                        enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(16),
                           borderSide: const BorderSide(color: AppColors.paleGreen),
                         ),
@@ -251,38 +308,6 @@ class _PhoneLoginPageState extends State<PhoneLoginPage> {
                     ),
                   ),
                   const SizedBox(height: 24),
-
-                  // Helper text
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: AppColors.paleGreen,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'أرقام مصرية صحيحة:',
-                          style: GoogleFonts.cairo(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.darkGreen,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        ...PhoneAuthCountries.egypt.mobileOperators.map(
-                          (op) => Text(
-                            '• $op',
-                            style: GoogleFonts.cairo(
-                              fontSize: 11,
-                              color: AppColors.darkGreen,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
                 ] else ...[
                   // OTP Input
                   Text(
@@ -295,7 +320,7 @@ class _PhoneLoginPageState extends State<PhoneLoginPage> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'تم إرسال رمز التحقق إلى ${_phoneController.text}',
+                    'تم إرسال رمز التحقق إلى ${_selectedCountry.phoneCode}${_phoneController.text}',
                     style: GoogleFonts.cairo(
                       fontSize: 12,
                       color: Colors.grey[600],

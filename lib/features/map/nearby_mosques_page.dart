@@ -14,7 +14,7 @@ import '../../core/app_colors.dart';
 // Data model
 // ─────────────────────────────────────────
 class MosqueModel {
-  final int id;
+  final String id;
   final String name;
   final LatLng location;
   final double? distance; // metres
@@ -49,9 +49,23 @@ class MosqueModel {
     }
 
     return MosqueModel(
-      id: element['id'] as int,
+      id: element['id'].toString(),
       name: name,
       location: LatLng(lat, lon),
+      distance: dist,
+    );
+  }
+
+  factory MosqueModel.fromFoursquare(Map<String, dynamic> venue) {
+    final location = venue['location'] as Map<String, dynamic>? ?? {};
+    final lat = (location['lat'] as num?)?.toDouble() ?? 0.0;
+    final lng = (location['lng'] as num?)?.toDouble() ?? 0.0;
+    final dist = (location['distance'] as num?)?.toDouble();
+
+    return MosqueModel(
+      id: venue['id']?.toString() ?? DateTime.now().millisecondsSinceEpoch.toString(),
+      name: venue['name'] as String? ?? 'مسجد',
+      location: LatLng(lat, lng),
       distance: dist,
     );
   }
@@ -194,11 +208,10 @@ class _NearbyMosquesPageState extends State<NearbyMosquesPage>
     final lon = _userLocation!.longitude;
     final rad = (_radiusKm * 1000).toInt();
 
-    debugPrint('🕌 Starting mosque search: lat=$lat, lon=$lon, radius=${_radiusKm.toStringAsFixed(1)}km');
+    debugPrint('🕌 Starting mosque search (Foursquare): lat=$lat, lon=$lon, radius=${_radiusKm.toStringAsFixed(1)}km');
 
-    // Try OpenStreetMap Overpass API first (free, no API key needed)
-    final osmSuccess = await _tryOverpassAPI(lat, lon, rad);
-    if (osmSuccess) return;
+    final fsSuccess = await _tryFoursquareAPI(lat, lon, rad);
+    if (fsSuccess) return;
 
     // If all fails, show a clean error state instead of fake data
     if (mounted) {
@@ -209,123 +222,82 @@ class _NearbyMosquesPageState extends State<NearbyMosquesPage>
     }
   }
 
-  Future<bool> _tryOverpassAPI(double lat, double lon, int rad) async {
-    // Complete query for mosques (including common OSM tags in Arab countries)
-    final query =
-        '[out:json][timeout:15];'
-        '('
-        'nwr["amenity"="place_of_worship"]["religion"="muslim"](around:$rad,$lat,$lon);'
-        'nwr["amenity"="mosque"](around:$rad,$lat,$lon);'
-        'nwr["building"="mosque"](around:$rad,$lat,$lon);'
-        ');out center;';
+  Future<bool> _tryFoursquareAPI(double lat, double lon, int rad) async {
+    try {
+      debugPrint('🕌 Trying Foursquare API...');
+      final clientId = '2HEE4UX1Q3EMR4KJAR4FILQ0DTEW40STQOPJ4WMQMDWPHTWD';
+      final clientSecret = 'TWILPFX4L35SDKJPLNNISCF5FTZTR5AWXN4DHSJ4MWMMZ2PS';
+      final categoryId = '4bf58dd8d48988d138941735'; // Mosque
 
-    // The most reliable OSM Overpass instances
-    final endpoints = [
-      'https://maps.mail.ru/osm/tools/overpass/api/interpreter', // Fastest, no strict CORS
-      'https://overpass.kumi.systems/api/interpreter', // Reliable
-      'https://overpass-api.de/api/interpreter', // Official, heavily rate-limited
-      'https://lz4.overpass-api.de/api/interpreter',
-    ];
+      final uri = Uri.parse(
+          'https://api.foursquare.com/v2/venues/search?ll=$lat,$lon&categoryId=$categoryId&client_id=$clientId&client_secret=$clientSecret&v=20231010&limit=50&radius=$rad');
+      
+      final resp = await http.get(uri).timeout(const Duration(seconds: 15));
 
-    for (int i = 0; i < endpoints.length; i++) {
-      final endpoint = endpoints[i];
-      try {
-        debugPrint('🕌 Trying Overpass endpoint ${i + 1}/${endpoints.length}: $endpoint');
+      if (resp.statusCode != 200) {
+        debugPrint('🕌 Foursquare Bad response: ${resp.statusCode} - ${resp.body}');
+        return false;
+      }
 
-        final uri = Uri.parse('${endpoint}?data=${Uri.encodeQueryComponent(query)}');
-        final resp = await http.get(
-          uri,
-          headers: {
-            'Accept': 'application/json',
-            'User-Agent': 'NiyyahTrackerApp/1.0',
-          },
-        ).timeout(const Duration(seconds: 10));
+      final json = jsonDecode(resp.body) as Map<String, dynamic>;
+      final venues = json['response']?['venues'] as List<dynamic>? ?? [];
 
-        debugPrint('🕌 Response status: ${resp.statusCode}');
+      debugPrint('🕌 Found ${venues.length} raw Foursquare venues');
 
-        if (resp.statusCode != 200) {
-          final bodySnippet = resp.body.length > 100 ? resp.body.substring(0, 100) : resp.body;
-          debugPrint('🕌 Bad response: ${resp.statusCode} - $bodySnippet');
-          continue;
+      final mosques = venues
+          .map((v) => MosqueModel.fromFoursquare(v as Map<String, dynamic>))
+          .where((m) => m.location.latitude != 0.0 && m.location.longitude != 0.0)
+          .toList()
+        ..sort((a, b) => (a.distance ?? 0).compareTo(b.distance ?? 0));
+
+      final seen = <String>{};
+      mosques.retainWhere((m) => seen.add(m.id));
+
+      // Add fallback test mosques if no real mosques are found
+      if (mosques.isEmpty) {
+        debugPrint('🕌 No mosques found via API. Adding test mosques for demonstration.');
+        mosques.addAll([
+          MosqueModel(
+            id: 'test_1',
+            name: 'مسجد النور (للتجربة)',
+            location: LatLng(lat + 0.0015, lon + 0.002),
+            distance: 250.0,
+          ),
+          MosqueModel(
+            id: 'test_2',
+            name: 'مسجد الرحمن (للتجربة)',
+            location: LatLng(lat - 0.002, lon + 0.001),
+            distance: 450.0,
+          ),
+          MosqueModel(
+            id: 'test_3',
+            name: 'جامع الهدى (للتجربة)',
+            location: LatLng(lat + 0.002, lon - 0.003),
+            distance: 600.0,
+          ),
+        ]);
+        mosques.sort((a, b) => (a.distance ?? 0).compareTo(b.distance ?? 0));
+      }
+
+      setState(() {
+        _mosques = mosques;
+        _loading = false;
+        if (venues.isEmpty) {
+          _error = 'عذراً، لا توجد بيانات في منطقتك حالياً. نعرض مساجد تجريبية.';
         }
+      });
 
-        final json = jsonDecode(resp.body) as Map<String, dynamic>;
-        
-        // Check for Overpass API errors
-        if (json['remark'] != null) {
-          debugPrint('🕌 Overpass remark: ${json['remark']}');
-        }
-        
-        if (json['elements'] == null) {
-          debugPrint('🕌 No elements in response');
-          continue;
-        }
-
-        final elements = json['elements'] as List<dynamic>? ?? [];
-        debugPrint('🕌 Found ${elements.length} raw elements');
-
-        final mosques = elements
-            .map((e) => MosqueModel.fromOverpass(e as Map<String, dynamic>, _userLocation))
-            .where((m) => m.location.latitude != 0.0 && m.location.longitude != 0.0)
-            .toList()
-          ..sort((a, b) => (a.distance ?? 0).compareTo(b.distance ?? 0));
-
-        // Remove duplicates by ID
-        final seen = <int>{};
-        mosques.retainWhere((m) => seen.add(m.id));
-
-        debugPrint('🕌 After processing: ${mosques.length} mosques');
-
+      return true;
+    } catch (e) {
+      debugPrint('🕌 Foursquare API failed: $e');
+      if (mounted) {
         setState(() {
-          _mosques = mosques;
+          _error = 'تعذر الاتصال بخوادم المساجد. قد تكون المشكلة في اتصال الإنترنت.';
           _loading = false;
         });
-
-        return true; // Success
-      } catch (e) {
-        debugPrint('🕌 Overpass endpoint $i failed: $e');
-        if (i == endpoints.length - 1) {
-          setState(() {
-            _error = 'تعذر الاتصال بخوادم المساجد. قد تكون المشكلة في اتصال الإنترنت.';
-            _loading = false;
-          });
-        }
       }
+      return false;
     }
-    
-    return false; // All endpoints failed
-  }
-
-  void _addSampleMosques(double lat, double lon) {
-    // Add some sample mosques for demonstration when API fails
-    debugPrint('🕌 Adding sample mosques for demonstration');
-    
-    final sampleMosques = [
-      MosqueModel(
-        id: 1001,
-        name: 'المسجد الرئيسي',
-        location: LatLng(lat + 0.001, lon + 0.001),
-        distance: 150.0,
-      ),
-      MosqueModel(
-        id: 1002,
-        name: 'مسجد الرحمة',
-        location: LatLng(lat - 0.002, lon + 0.003),
-        distance: 350.0,
-      ),
-      MosqueModel(
-        id: 1003,
-        name: 'جامع الفاتح',
-        location: LatLng(lat + 0.003, lon - 0.001),
-        distance: 420.0,
-      ),
-    ];
-
-    setState(() {
-      _mosques = sampleMosques;
-      _loading = false;
-      _error = 'يتم عرض مساجد نموذجية للتجربة. قد تحتاج إلى اتصال بالإنترنت للبيانات الحقيقية.';
-    });
   }
 
 
@@ -567,9 +539,9 @@ class _NearbyMosquesPageState extends State<NearbyMosquesPage>
       children: [
         // Tile layer — OpenStreetMap or Satellite
         TileLayer(
-          urlTemplate: _isSatelliteView 
-            ? 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
-            : 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+              urlTemplate: _isSatelliteView 
+                ? 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
+                : 'https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png',
           userAgentPackageName: 'com.niyyahtracker.app',
           maxZoom: _isSatelliteView ? 18 : 19,
         ),
