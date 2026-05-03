@@ -85,10 +85,13 @@ class _AnalyticsPageState extends State<AnalyticsPage> with SingleTickerProvider
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bgColor = isDark ? const Color(0xFF121212) : AppColors.background;
+
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
-        backgroundColor: AppColors.background,
+        backgroundColor: bgColor,
         appBar: AppBar(
           backgroundColor: AppColors.darkGreen,
           title: Text('لوحة التحليلات', style: GoogleFonts.cairo(color: Colors.white, fontWeight: FontWeight.bold)),
@@ -108,25 +111,26 @@ class _AnalyticsPageState extends State<AnalyticsPage> with SingleTickerProvider
           : TabBarView(
           controller: _tabController,
           children: [
-            _weeklyView(),
-            _monthlyView(),
+            _weeklyView(isDark),
+            _monthlyView(isDark),
           ],
         ),
       ),
     );
   }
 
-  Widget _weeklyView() {
+  Widget _weeklyView(bool isDark) {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        _summaryCards(),
+        _summaryCards(isDark),
         const SizedBox(height: 20),
         _chartCard(
           title: '🕌 الصلوات اليومية (من ٥)',
           data: _prayerData,
           maxY: 5,
           color: AppColors.lightGreen,
+          isDark: isDark,
         ),
         const SizedBox(height: 16),
         _chartCard(
@@ -134,6 +138,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> with SingleTickerProvider
           data: _quranData,
           maxY: 25,
           color: AppColors.gold,
+          isDark: isDark,
         ),
         const SizedBox(height: 16),
         _chartCard(
@@ -141,66 +146,77 @@ class _AnalyticsPageState extends State<AnalyticsPage> with SingleTickerProvider
           data: _dhikrData,
           maxY: 1,
           color: AppColors.midGreen,
+          isDark: isDark,
         ),
       ],
     );
   }
 
-  Widget _monthlyView() {
+  Widget _monthlyView(bool isDark) {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        _pieCard(),
+        _pieCard(isDark),
         const SizedBox(height: 16),
-        _bestDaysCard(),
+        _bestDaysCard(isDark),
       ],
     );
   }
 
-  Widget _summaryCards() {
+  Widget _summaryCards(bool isDark) {
     return Row(
       children: [
-        Expanded(child: _miniStat(label: 'إجمالي الصلوات', value: '$_completedPrayers', icon: '🕌')),
+        Expanded(child: _miniStat(label: 'إجمالي الصلوات', value: '$_completedPrayers', icon: '🕌', isDark: isDark)),
         const SizedBox(width: 10),
-        Expanded(child: _miniStat(label: 'صفحات القرآن', value: '$_totalQuranPages', icon: '📖')),
+        Expanded(child: _miniStat(label: 'صفحات القرآن', value: '$_totalQuranPages', icon: '📖', isDark: isDark)),
         const SizedBox(width: 10),
-        Expanded(child: _miniStat(label: 'أيام النشاط', value: '$_streak يوم', icon: '🔥')),
+        Expanded(child: _miniStat(label: 'أيام النشاط', value: '$_streak يوم', icon: '🔥', isDark: isDark)),
       ],
     );
   }
 
-  Widget _miniStat({required String label, required String value, required String icon}) {
+  Widget _miniStat({required String label, required String value, required String icon, required bool isDark}) {
+    final cardBg = isDark ? const Color(0xFF1E1E1E) : Colors.white;
+    final borderColor = isDark ? Colors.white12 : AppColors.paleGreen;
+    final valueColor = isDark ? Colors.white : AppColors.darkGreen;
+    final labelColor = isDark ? Colors.white70 : AppColors.gray;
+
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: cardBg,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.paleGreen),
+        border: Border.all(color: borderColor),
       ),
       child: Column(
         children: [
           Text(icon, style: const TextStyle(fontSize: 20)),
           const SizedBox(height: 4),
-          Text(value, style: GoogleFonts.cairo(fontWeight: FontWeight.bold, fontSize: 14, color: AppColors.darkGreen)),
-          Text(label, style: GoogleFonts.cairo(fontSize: 10, color: AppColors.gray), textAlign: TextAlign.center),
+          Text(value, style: GoogleFonts.cairo(fontWeight: FontWeight.bold, fontSize: 14, color: valueColor)),
+          Text(label, style: GoogleFonts.cairo(fontSize: 10, color: labelColor), textAlign: TextAlign.center),
         ],
       ),
     );
   }
 
-  Widget _chartCard({required String title, required List<double> data, required double maxY, required Color color}) {
+  Widget _chartCard({required String title, required List<double> data, required double maxY, required Color color, required bool isDark}) {
     const days = ['إث', 'ثل', 'أر', 'خم', 'جم', 'سب', 'أح'];
+    final cardBg = isDark ? const Color(0xFF1E1E1E) : Colors.white;
+    final borderColor = isDark ? Colors.white12 : AppColors.paleGreen;
+    final titleColor = isDark ? Colors.white : AppColors.darkGreen;
+    final gridColor = isDark ? Colors.white10 : Colors.grey[200]!;
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: cardBg,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.paleGreen),
+        border: Border.all(color: borderColor),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: GoogleFonts.cairo(fontWeight: FontWeight.bold, color: AppColors.darkGreen)),
+          Text(title, style: GoogleFonts.cairo(fontWeight: FontWeight.bold, color: titleColor)),
           const SizedBox(height: 16),
           SizedBox(
             height: 150,
@@ -210,7 +226,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> with SingleTickerProvider
                 gridData: FlGridData(
                   show: true,
                   drawVerticalLine: false,
-                  getDrawingHorizontalLine: (_) => FlLine(color: Colors.grey[200]!, strokeWidth: 1),
+                  getDrawingHorizontalLine: (_) => FlLine(color: gridColor, strokeWidth: 1),
                 ),
                 borderData: FlBorderData(show: false),
                 titlesData: FlTitlesData(
@@ -221,7 +237,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> with SingleTickerProvider
                     sideTitles: SideTitles(
                       showTitles: true,
                       getTitlesWidget: (v, _) => Text(days[v.toInt()],
-                          style: GoogleFonts.cairo(fontSize: 11, color: AppColors.gray)),
+                          style: GoogleFonts.cairo(fontSize: 11, color: isDark ? Colors.white70 : AppColors.gray)),
                     ),
                   ),
                 ),
@@ -229,7 +245,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> with SingleTickerProvider
                   return BarChartGroupData(x: i, barRods: [
                     BarChartRodData(
                       toY: data[i],
-                      color: data[i] >= maxY ? color : color.withOpacity(0.5),
+                      color: data[i] >= maxY ? color : color.withOpacity(isDark ? 0.3 : 0.5),
                       borderRadius: BorderRadius.circular(6),
                       width: 18,
                     ),
@@ -243,19 +259,23 @@ class _AnalyticsPageState extends State<AnalyticsPage> with SingleTickerProvider
     );
   }
 
-  Widget _pieCard() {
+  Widget _pieCard(bool isDark) {
+    final cardBg = isDark ? const Color(0xFF1E1E1E) : Colors.white;
+    final borderColor = isDark ? Colors.white12 : AppColors.paleGreen;
+    final titleColor = isDark ? Colors.white : AppColors.darkGreen;
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: cardBg,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.paleGreen),
+        border: Border.all(color: borderColor),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text('توزيع العبادات هذا الشهر',
-              style: GoogleFonts.cairo(fontWeight: FontWeight.bold, color: AppColors.darkGreen)),
+              style: GoogleFonts.cairo(fontWeight: FontWeight.bold, color: titleColor)),
           const SizedBox(height: 16),
           SizedBox(
             height: 200,
@@ -273,19 +293,24 @@ class _AnalyticsPageState extends State<AnalyticsPage> with SingleTickerProvider
     );
   }
 
-  Widget _bestDaysCard() {
+  Widget _bestDaysCard(bool isDark) {
+    final cardBg = isDark ? const Color(0xFF1E1E1E) : Colors.white;
+    final borderColor = isDark ? Colors.white12 : AppColors.paleGreen;
+    final titleColor = isDark ? Colors.white : AppColors.darkGreen;
+    final textColor = isDark ? Colors.white70 : Colors.black87;
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: cardBg,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.paleGreen),
+        border: Border.all(color: borderColor),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text('🏆 أفضل أيامك هذا الشهر',
-              style: GoogleFonts.cairo(fontWeight: FontWeight.bold, color: AppColors.darkGreen)),
+              style: GoogleFonts.cairo(fontWeight: FontWeight.bold, color: titleColor)),
           const SizedBox(height: 12),
           ...(_totalQuranPages > 0 ? ['إنجاز متميز في القرآن 📖', 'مواظبة على الصلوات 🕌'] : ['ابدأ تسجيل عباداتك لتظهر هنا 🌟']).map(
             (d) => Padding(
@@ -294,7 +319,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> with SingleTickerProvider
                 children: [
                   const Icon(Icons.star, color: AppColors.gold, size: 18),
                   const SizedBox(width: 8),
-                  Expanded(child: Text(d, style: GoogleFonts.cairo(fontSize: 13))),
+                  Expanded(child: Text(d, style: GoogleFonts.cairo(fontSize: 13, color: textColor))),
                 ],
               ),
             ),

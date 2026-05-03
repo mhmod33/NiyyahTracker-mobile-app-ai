@@ -218,12 +218,12 @@ class _NearbyMosquesPageState extends State<NearbyMosquesPage>
         debugPrint('🕌 Overpass request: lat=$lat, lon=$lon, radius=${rad}m');
         debugPrint('🕌 Trying: $endpoint');
 
-        final resp = await http.post(
-          url,
-          body: 'data=${Uri.encodeQueryComponent(query)}',
+        final uri = Uri.parse('${url.toString()}?data=${Uri.encodeQueryComponent(query)}');
+        final resp = await http.get(
+          uri,
           headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
             'Accept': 'application/json',
+            'User-Agent': 'NiyyahTrackerApp/1.0 (Contact: admin@niyyahtracker.com)',
           },
         ).timeout(const Duration(seconds: 15));
 

@@ -1,0 +1,1 @@
+import 'package:http/http.dart' as http; void main() async { var url = Uri.parse('https://overpass-api.de/api/interpreter?data=[out:json];node(around:2000,24.7136,46.6753)[%22amenity%22=%22place_of_worship%22];out;'); var resp = await http.get(url, headers: {'User-Agent': 'NiyyahTrackerApp/1.0'}); print('Status: \'); print('Body: \'); }

@@ -1,5 +1,7 @@
 import 'dart:io';
+import 'dart:convert';
 import 'dart:ui' as ui;
+import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/services.dart';
@@ -288,6 +290,7 @@ class _MushafPageWidget extends StatelessWidget {
             Text('سورة $surahName - آية $verse', style: GoogleFonts.cairo(color: AppColors.darkGreen, fontSize: 13, fontWeight: FontWeight.w600)),
             const SizedBox(height: 16),
             _actionTile(Icons.copy_rounded, 'نسخ الآية', () { Navigator.pop(ctx); Clipboard.setData(ClipboardData(text: verseText)); _snack(context, 'تم نسخ الآية'); }),
+            _actionTile(Icons.menu_book_rounded, 'تفسير الآية', () { Navigator.pop(ctx); _showTafseer(context, surah, verse); }),
             _actionTile(Icons.share_rounded, 'مشاركة نص', () { Navigator.pop(ctx); Share.share('﴿$verse﴾ $verseText\n\n- سورة $surahName -\n\nNiyyah Tracker'); }),
             _actionTile(Icons.image_rounded, 'مشاركة كصورة', () { Navigator.pop(ctx); _shareAsImage(context, surah, verse); }),
             _actionTile(Icons.bookmark_border_rounded, 'إضافة علامة', () { Navigator.pop(ctx); _snack(context, 'تم إضافة العلامة'); }),
@@ -315,6 +318,62 @@ class _MushafPageWidget extends StatelessWidget {
 
   void _snack(BuildContext context, String msg) {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg, style: GoogleFonts.cairo()), backgroundColor: AppColors.darkGreen));
+  }
+
+  Future<void> _showTafseer(BuildContext context, int surah, int verse) async {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (c) => const Center(child: CircularProgressIndicator(color: AppColors.darkGreen)),
+    );
+
+    try {
+      final response = await http.get(Uri.parse('https://api.alquran.cloud/v1/ayah/$surah:$verse/ar.muyassar')).timeout(const Duration(seconds: 10));
+      Navigator.pop(context); 
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final tafseerText = data['data']['text'];
+        _showTafseerDialog(context, surah, verse, tafseerText);
+      } else {
+        _snack(context, 'تعذر جلب التفسير. حاول مرة أخرى.');
+      }
+    } catch (e) {
+      Navigator.pop(context);
+      _snack(context, 'لا يوجد اتصال بالإنترنت أو الخادم لا يستجيب.');
+    }
+  }
+
+  void _showTafseerDialog(BuildContext context, int surah, int verse, String text) {
+    final surahName = quran.getSurahNameArabic(surah);
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF111611),
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (ctx) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: Padding(
+          padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom, left: 20, right: 20, top: 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(width: 40, height: 4, decoration: BoxDecoration(color: AppColors.darkGreen.withOpacity(0.5), borderRadius: BorderRadius.circular(2))),
+              const SizedBox(height: 16),
+              Text('التفسير الميسر', style: GoogleFonts.cairo(color: AppColors.lightGreen, fontSize: 18, fontWeight: FontWeight.bold)),
+              Text('سورة $surahName - آية $verse', style: GoogleFonts.cairo(color: Colors.white70, fontSize: 13)),
+              const SizedBox(height: 16),
+              Container(
+                constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.5),
+                child: SingleChildScrollView(
+                  child: Text(text, style: const TextStyle(fontFamily: 'KFGQPC Uthmanic Script Hafs', color: Colors.white, fontSize: 20, height: 1.8), textAlign: TextAlign.justify),
+                ),
+              ),
+              const SizedBox(height: 24),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   Future<void> _shareAsImage(BuildContext context, int surah, int verse) async {
