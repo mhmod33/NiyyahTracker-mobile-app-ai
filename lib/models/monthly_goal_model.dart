@@ -11,6 +11,7 @@ class MonthlyGoal {
   final DateTime endDate;
   final bool isCompleted;
   final String category;
+  final String? customCategoryLabel;
 
   MonthlyGoal({
     required this.id,
@@ -23,6 +24,7 @@ class MonthlyGoal {
     required this.endDate,
     this.isCompleted = false,
     this.category = 'quran',
+    this.customCategoryLabel,
   });
 
   double get progress => targetValue > 0 ? currentValue / targetValue : 0;
@@ -39,6 +41,7 @@ class MonthlyGoal {
       'endDate': Timestamp.fromDate(endDate),
       'isCompleted': isCompleted,
       'category': category,
+      'customCategoryLabel': customCategoryLabel,
     };
   }
 
@@ -54,6 +57,7 @@ class MonthlyGoal {
       endDate: (map['endDate'] as Timestamp?)?.toDate() ?? DateTime.now().add(const Duration(days: 30)),
       isCompleted: map['isCompleted'] ?? false,
       category: map['category'] ?? 'quran',
+      customCategoryLabel: map['customCategoryLabel'],
     );
   }
 
@@ -62,6 +66,7 @@ class MonthlyGoal {
     String? goalDescription,
     int? currentValue,
     bool? isCompleted,
+    String? customCategoryLabel,
   }) {
     return MonthlyGoal(
       id: id,
@@ -74,6 +79,7 @@ class MonthlyGoal {
       endDate: endDate,
       isCompleted: isCompleted ?? this.isCompleted,
       category: category,
+      customCategoryLabel: customCategoryLabel ?? this.customCategoryLabel,
     );
   }
 }
@@ -85,6 +91,7 @@ class GoalCategory {
   static const String fastingDays = 'fastingDays';
   static const String nightPrayer = 'nightPrayer';
   static const String memorization = 'memorization';
+  static const String custom = 'custom';
 
   static Map<String, String> categoryLabels = {
     quran: 'ختم القرآن الكريم',
@@ -93,6 +100,7 @@ class GoalCategory {
     fastingDays: 'أيام الصيام',
     nightPrayer: 'قيام الليل',
     memorization: 'حفظ آيات',
+    custom: 'مخصص',
   };
 
   static Map<String, String> categoryIcons = {
@@ -102,5 +110,26 @@ class GoalCategory {
     fastingDays: '🌙',
     nightPrayer: '⭐',
     memorization: '💭',
+    custom: '🎯',
   };
+
+  static List<String> get allCategories => [
+    quran,
+    fajr,
+    charity,
+    fastingDays,
+    nightPrayer,
+    memorization,
+  ];
+
+  static String getCategoryLabel(String category, {String? customLabel}) {
+    if (category == custom && customLabel != null) {
+      return customLabel;
+    }
+    return categoryLabels[category] ?? category;
+  }
+
+  static String getCategoryIcon(String category) {
+    return categoryIcons[category] ?? '🎯';
+  }
 }

@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/rendering.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -129,6 +130,7 @@ class _MushafPageWidget extends StatelessWidget {
                     return Column(
                       children: [
                         if (start == 1) _buildSurahHeader(context, surah),
+                        if (start == 1 && surah != 1 && surah != 9) _buildBasmala(),
                         const SizedBox(height: 8),
                         _buildVersesBlock(context, surah, start, end),
                         const SizedBox(height: 8),
@@ -176,6 +178,46 @@ class _MushafPageWidget extends StatelessWidget {
     );
   }
 
+  Widget _buildBasmala() {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12, top: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            Colors.transparent,
+            AppColors.darkGreen.withOpacity(0.15),
+            Colors.transparent,
+          ],
+        ),
+        border: Border(
+          bottom: BorderSide(color: AppColors.darkGreen.withOpacity(0.3), width: 1),
+          top: BorderSide(color: AppColors.darkGreen.withOpacity(0.3), width: 1),
+        ),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.auto_awesome_outlined, color: AppColors.darkGreen.withOpacity(0.8), size: 18),
+          const SizedBox(width: 12),
+          Text(
+            quran.basmala,
+            style: const TextStyle(
+              fontFamily: 'KFGQPC Uthmanic Script Hafs', 
+              fontSize: 24,
+              color: Colors.white, 
+              shadows: [Shadow(color: Colors.black45, blurRadius: 4, offset: Offset(0, 2))],
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(width: 12),
+          Icon(Icons.auto_awesome_outlined, color: AppColors.darkGreen.withOpacity(0.8), size: 18),
+        ],
+      ),
+    );
+  }
+
   Widget _buildVersesBlock(BuildContext context, int surah, int start, int end) {
     return RichText(
       textAlign: TextAlign.justify,
@@ -185,12 +227,16 @@ class _MushafPageWidget extends StatelessWidget {
           String verseText = quran.getVerse(surah, v, verseEndSymbol: false);
           // Remove Basmala from first verse (except Fatiha & Tawbah)
           if (v == 1 && surah != 1 && surah != 9) {
+            verseText = verseText.replaceFirst('${quran.basmala} ', '');
+            verseText = verseText.replaceFirst(quran.basmala, '');
             verseText = verseText
+                .replaceFirst(RegExp(r'^بِسْمِ اللَّهِ الرَّحْمَـٰنِ الرَّحِيمِ\s*'), '')
                 .replaceFirst(RegExp(r'^بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ\s*'), '')
                 .replaceFirst(RegExp(r'^بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيمِ\s*'), '')
                 .replaceFirst(RegExp(r'^بسم الله الرحمن الرحيم\s*'), '')
                 .trim();
           }
+          final tapHandler = TapGestureRecognizer()..onTap = () => _showVerseActions(context, surah, v);
           return [
             TextSpan(
               text: verseText,
@@ -199,6 +245,7 @@ class _MushafPageWidget extends StatelessWidget {
                 fontSize: pageNumber <= 2 ? 26 : 20,
                 height: 1.85, color: const Color(0xFFF5F0E8),
               ),
+              recognizer: tapHandler,
             ),
             WidgetSpan(
               alignment: PlaceholderAlignment.middle,

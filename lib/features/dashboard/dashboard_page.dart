@@ -22,6 +22,7 @@ import '../quran/quran_page.dart';
 import '../azkar/azkar_library_page.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/firebase_service.dart';
+import '../../services/daily_summary_service.dart';
 import '../../models/worship_model.dart' as db_model;
 
 TextStyle _f({double sz = 14, FontWeight fw = FontWeight.w400, Color? c, double? h}) =>
@@ -40,12 +41,35 @@ class _DashboardPageState extends State<DashboardPage> {
   bool _charityChecked = false;
   bool _isLoadingAccountability = true;
   bool _isAccountabilityDone = false;
+  bool _isLoadingSummary = true;
+  Map<String, dynamic> _todaySummary = {};
   final FirebaseService _firebaseService = FirebaseService();
+  final DailySummaryService _dailySummaryService = DailySummaryService();
 
   @override
   void initState() {
     super.initState();
     _checkTodayAccountability();
+    _loadTodaySummary();
+  }
+
+  Future<void> _loadTodaySummary() async {
+    final userId = context.read<AppAuthProvider>().userId;
+    if (userId.isEmpty) {
+      setState(() => _isLoadingSummary = false);
+      return;
+    }
+
+    try {
+      final summary = await _dailySummaryService.getTodaySummary(userId);
+      setState(() {
+        _todaySummary = summary;
+        _isLoadingSummary = false;
+      });
+    } catch (e) {
+      debugPrint('Error loading today summary: $e');
+      setState(() => _isLoadingSummary = false);
+    }
   }
 
   Future<void> _checkTodayAccountability() async {
@@ -97,6 +121,8 @@ class _DashboardPageState extends State<DashboardPage> {
         _isAccountabilityDone = true;
         _isLoadingAccountability = false;
       });
+      // Reload summary after saving accountability
+      _loadTodaySummary();
     } catch (e) {
       debugPrint('Error saving accountability: $e');
       setState(() => _isLoadingAccountability = false);
@@ -171,6 +197,12 @@ class _DashboardPageState extends State<DashboardPage> {
             SliverToBoxAdapter(child: _SectionTitle(title: 'محاسبة اليوم', icon: Icons.auto_awesome_rounded)),
             SliverToBoxAdapter(child: _buildDailyAccountability(isDark)),
 
+            // ── Daily Summary Section ──
+            if (_todaySummary['hasData'] == true)
+              SliverToBoxAdapter(child: _SectionTitle(title: 'ملخص عبادات اليوم', icon: Icons.summarize_rounded)),
+            if (_todaySummary['hasData'] == true)
+              SliverToBoxAdapter(child: _buildDailySummaryCard(isDark)),
+
             // ── Quick Access Section ──
             SliverToBoxAdapter(child: _SectionTitle(title: 'الوصول السريع', icon: Icons.grid_view_rounded)),
             SliverToBoxAdapter(
@@ -235,6 +267,159 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 
   void _to(Widget page) => Navigator.push(context, MaterialPageRoute(builder: (_) => page));
+
+  Widget _buildDailySummaryCard(bool isDark) {
+    if (_isLoadingSummary) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(horizontal: 20),
+        child: Center(child: Padding(padding: EdgeInsets.all(20), child: CircularProgressIndicator(strokeWidth: 2))),
+      );
+    }
+
+    final prayerCount = _todaySummary['prayerCount'] ?? 0;
+    final quranPages = _todaySummary['quranPages'] ?? 0;
+    final completedWorships = _todaySummary['completedWorships'] as List<String> ?? [];
+    final totalWorships = _todaySummary['totalWorships'] ?? 0;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: isDark 
+                ? [const Color(0xFF1A4D2E), const Color(0xFF0D2818)]
+                : [AppColors.paleGreen, AppColors.lightGreen.withOpacity(0.3)],
+          ),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: AppColors.gold.withOpacity(0.3)),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.darkGreen.withOpacity(0.1),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppColors.gold.withOpacity(0.2),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.summarize_rounded, color: AppColors.gold, size: 24),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('ملخص عبادات اليوم', style: _f(sz: 16, fw: FontWeight.w800, c: isDark ? Colors.white : AppColors.darkGreen)),
+                      Text('إنجازاتك الروحية لهذا اليوم 🤍', style: _f(sz: 12, c: isDark ? Colors.white70 : AppColors.gray)),
+                    ],
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: AppColors.gold,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text('$totalWorships', style: _f(sz: 14, fw: FontWeight.bold, c: Colors.white)),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: _summaryItem('الصلوات', '$prayerCount/5', Icons.mosque_rounded, isDark),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _summaryItem('صفحات القرآن', '$quranPages', Icons.menu_book_rounded, isDark),
+                ),
+              ],
+            ),
+            if (completedWorships.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Text('العبادات الأخرى:', style: _f(sz: 12, fw: FontWeight.w600, c: isDark ? Colors.white70 : AppColors.gray)),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 4,
+                children: completedWorships.take(4).map((worship) {
+                  final displayName = _getWorshipDisplayName(worship);
+                  return Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      displayName,
+                      style: _f(sz: 10, fw: FontWeight.w600, c: Colors.white),
+                    ),
+                  );
+                }).toList(),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _summaryItem(String title, String value, IconData icon, bool isDark) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: AppColors.gold, size: 20),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: _f(sz: 11, c: isDark ? Colors.white70 : AppColors.gray)),
+                Text(value, style: _f(sz: 14, fw: FontWeight.bold, c: Colors.white)),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _getWorshipDisplayName(String key) {
+    switch (key) {
+      case 'morningRemembrance':
+        return 'أذكار الصباح';
+      case 'eveningRemembrance':
+        return 'أذكار المساء';
+      case 'quranRecitation':
+        return 'قراءة القرآن';
+      case 'charity':
+        return 'الصدقة';
+      case 'nightPrayer':
+        return 'قيام الليل';
+      case 'fasting':
+        return 'الصيام';
+      case 'taraweeh':
+        return 'التراويح';
+      default:
+        return key;
+    }
+  }
 
   Widget _buildDailyAccountability(bool isDark) {
     if (_isLoadingAccountability) return const Center(child: Padding(padding: EdgeInsets.all(20), child: CircularProgressIndicator(strokeWidth: 2)));

@@ -26,9 +26,9 @@ class DailyWorship {
     };
   }
 
-  factory DailyWorship.fromMap(Map<String, dynamic> map) {
+  factory DailyWorship.fromMap(Map<String, dynamic> map, [String? docId]) {
     return DailyWorship(
-      id: map['id'] ?? '',
+      id: docId ?? map['id'] ?? '',
       date: DateTime.parse(map['date'] ?? DateTime.now().toIso8601String()),
       worships: Map<String, bool>.from(map['worships'] ?? {}),
       notes: map['notes'] ?? '',

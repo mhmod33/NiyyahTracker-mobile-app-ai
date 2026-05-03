@@ -220,9 +220,9 @@ class _NearbyMosquesPageState extends State<NearbyMosquesPage>
 
         final resp = await http.post(
           url,
-          body: {'data': query},
+          body: 'data=${Uri.encodeQueryComponent(query)}',
           headers: {
-            'User-Agent': 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Mobile Safari/537.36',
+            'Content-Type': 'application/x-www-form-urlencoded',
             'Accept': 'application/json',
           },
         ).timeout(const Duration(seconds: 15));

@@ -10,6 +10,7 @@ import 'core/theme_provider.dart';
 import 'providers/auth_provider.dart';
 import 'features/splash/splash_page.dart';
 import 'firebase_options.dart';
+import 'services/daily_summary_service.dart';
 
 /// App-wide font helper — IBM Plex Sans Arabic everywhere.
 TextStyle _font({
@@ -46,6 +47,13 @@ void main() async {
     await Hive.openBox('settings');
   } catch (e) {
     debugPrint('Hive init error: $e');
+  }
+
+  try {
+    await DailySummaryService().initializeNotifications();
+    await DailySummaryService().scheduleMidnightReminder();
+  } catch (e) {
+    debugPrint('Daily summary service init error: $e');
   }
 
   runApp(
