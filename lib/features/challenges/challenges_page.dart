@@ -153,22 +153,52 @@ class _ChallengesPageState extends State<ChallengesPage> {
 
   Future<void> _addNewChallenge(String title, String targetStr) async {
     final target = int.tryParse(targetStr) ?? 30;
-    if (title.isEmpty) return;
+    if (title.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('يرجى إدخال اسم التحدي', style: GoogleFonts.cairo()), backgroundColor: Colors.red),
+      );
+      return;
+    }
+
+    if (target <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('يرجى إدخال هدف صحيح', style: GoogleFonts.cairo()), backgroundColor: Colors.red),
+      );
+      return;
+    }
 
     final userId = context.read<AppAuthProvider>().userId;
-    final newChallenge = Challenge(
-      id: const Uuid().v4(),
-      title: title,
-      desc: 'تحدي مخصص',
-      icon: 'star',
-      target: target,
-      current: 0,
-      gradient: ['#1B5E20', '#388E3C'],
-    );
+    if (userId.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('يرجى تسجيل الدخول أولاً', style: GoogleFonts.cairo()), backgroundColor: Colors.red),
+      );
+      return;
+    }
 
-    await _firebaseService.saveChallenge(userId, newChallenge);
-    Navigator.pop(context);
-    _loadChallenges();
+    try {
+      final newChallenge = Challenge(
+        id: const Uuid().v4(),
+        title: title.trim(),
+        desc: 'تحدي مخصص',
+        icon: 'star',
+        target: target,
+        current: 0,
+        gradient: ['#1B5E20', '#388E3C'],
+      );
+
+      await _firebaseService.saveChallenge(userId, newChallenge);
+      Navigator.pop(context);
+      _loadChallenges();
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('تم إضافة التحدي بنجاح 🎯', style: GoogleFonts.cairo(color: Colors.white)), backgroundColor: AppColors.darkGreen),
+      );
+    } catch (e) {
+      debugPrint('Error adding challenge: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('حدث خطأ أثناء إضافة التحدي', style: GoogleFonts.cairo()), backgroundColor: Colors.red),
+      );
+    }
   }
 
   Future<void> _updateProgress(Challenge c) async {

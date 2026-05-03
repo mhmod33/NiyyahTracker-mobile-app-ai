@@ -66,7 +66,12 @@ class _WorshipPageState extends State<WorshipPage> {
 
   Future<void> _saveWorship() async {
     final userId = context.read<AppAuthProvider>().userId;
-    if (userId.isEmpty) return;
+    if (userId.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('يرجى تسجيل الدخول أولاً', style: GoogleFonts.cairo()), backgroundColor: Colors.red),
+      );
+      return;
+    }
 
     setState(() => _isSaving = true);
 
@@ -85,16 +90,28 @@ class _WorshipPageState extends State<WorshipPage> {
 
     try {
       await _firebaseService.saveDailyWorship(userId, worshipData);
-      setState(() { _isSaving = false; _hasSavedToday = true; _isEditing = false; });
+      setState(() { 
+        _isSaving = false; 
+        _hasSavedToday = true; 
+        _isEditing = false; 
+      });
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text('تم حفظ عبادات اليوم بفضل الله 🤍', style: GoogleFonts.cairo(color: Colors.white)),
           backgroundColor: AppColors.darkGreen,
+          duration: const Duration(seconds: 3),
         ));
       }
     } catch (e) {
       setState(() => _isSaving = false);
       debugPrint('Error saving worship: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('حدث خطأ أثناء حفظ العبادات', style: GoogleFonts.cairo()),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 3),
+        ));
+      }
     }
   }
 

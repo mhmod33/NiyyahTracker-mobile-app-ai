@@ -167,16 +167,37 @@ class _AddGoalSheetState extends State<_AddGoalSheet> {
   Future<void> _saveGoal() async {
     final title = _titleController.text.trim();
     final targetStr = _targetController.text.trim();
-    if (title.isEmpty || targetStr.isEmpty) return;
+    
+    if (title.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('يرجى إدخال عنوان الهدف', style: GoogleFonts.cairo()), backgroundColor: Colors.red),
+      );
+      return;
+    }
+
+    if (targetStr.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('يرجى إدخال القيمة المستهدفة', style: GoogleFonts.cairo()), backgroundColor: Colors.red),
+      );
+      return;
+    }
 
     final target = int.tryParse(targetStr) ?? 0;
-    if (target <= 0) return;
+    if (target <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('يرجى إدخال قيمة مستهدفة صحيحة', style: GoogleFonts.cairo()), backgroundColor: Colors.red),
+      );
+      return;
+    }
 
     setState(() => _isLoading = true);
 
     final userId = context.read<AppAuthProvider>().userId;
     if (userId.isEmpty) {
       setState(() => _isLoading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('يرجى تسجيل الدخول أولاً', style: GoogleFonts.cairo()), backgroundColor: Colors.red),
+      );
       return;
     }
 
@@ -195,10 +216,18 @@ class _AddGoalSheetState extends State<_AddGoalSheet> {
     try {
       await FirebaseService().saveMonthlyGoal(userId, newGoal);
       widget.onGoalAdded();
-      if (mounted) Navigator.pop(context);
+      if (mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('تم إضافة الهدف بنجاح 🎯', style: GoogleFonts.cairo(color: Colors.white)), backgroundColor: AppColors.darkGreen),
+        );
+      }
     } catch (e) {
       debugPrint('Error saving goal: $e');
       setState(() => _isLoading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('حدث خطأ أثناء حفظ الهدف', style: GoogleFonts.cairo()), backgroundColor: Colors.red),
+      );
     }
   }
 
