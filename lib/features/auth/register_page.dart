@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../core/app_colors.dart';
+import '../../core/directional_icon.dart';
 import '../../providers/auth_provider.dart';
 import '../dashboard/dashboard_page.dart';
 
@@ -66,12 +67,12 @@ class _RegisterPageState extends State<RegisterPage> {
             padding: const EdgeInsets.all(8.0),
             child: GestureDetector(
               onTap: () => Navigator.pop(context),
-              child: Container(
+                child: Container(
                 decoration: BoxDecoration(
                   color: (isDark ? Colors.white : AppColors.darkGreen).withOpacity(0.1),
                   shape: BoxShape.circle,
                 ),
-                child: Icon(Icons.arrow_forward_ios_rounded, color: isDark ? Colors.white : AppColors.darkGreen, size: 18),
+                child: DirectionalIcon(isBack: true, size: 18, color: isDark ? Colors.white : AppColors.darkGreen),
               ),
             ),
           ),

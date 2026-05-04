@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:country_picker/country_picker.dart';
 import '../../core/app_colors.dart';
+import '../../core/directional_icon.dart';
 import '../dashboard/dashboard_page.dart';
 import '../../services/auth_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -101,7 +102,7 @@ class _PhoneAuthPageState extends State<PhoneAuthPage> {
         appBar: AppBar(
           backgroundColor: Colors.transparent,
           elevation: 0,
-          leading: Padding(
+            leading: Padding(
             padding: const EdgeInsets.all(8.0),
             child: GestureDetector(
               onTap: () => Navigator.pop(context),
@@ -110,7 +111,7 @@ class _PhoneAuthPageState extends State<PhoneAuthPage> {
                   color: AppColors.darkGreen.withOpacity(0.1),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.arrow_forward_ios_rounded, color: AppColors.darkGreen, size: 18),
+                child: DirectionalIcon(isBack: true, size: 18, color: AppColors.darkGreen),
               ),
             ),
           ),

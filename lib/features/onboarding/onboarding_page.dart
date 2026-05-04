@@ -2,6 +2,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/app_colors.dart';
+import '../../core/directional_icon.dart';
 import '../auth/login_page.dart';
 
 class OnboardingPage extends StatefulWidget {
@@ -251,14 +252,10 @@ class _OnboardingPageState extends State<OnboardingPage> {
                                           ),
                                         ),
                                         const SizedBox(width: 8),
-                                        const Icon(Icons.arrow_forward_rounded, color: Colors.white, size: 20),
+                                        const DirectionalIcon(isBack: false, size: 20, color: Colors.white),
                                       ],
                                     )
-                                  : const Icon(
-                                      Icons.arrow_forward_rounded,
-                                      color: Colors.white,
-                                      size: 28,
-                                    ),
+                                  : const DirectionalIcon(isBack: false, size: 28, color: Colors.white),
                             ),
                           ),
                         ),

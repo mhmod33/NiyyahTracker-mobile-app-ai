@@ -9,6 +9,7 @@ import 'package:printing/printing.dart';
 import 'package:intl/intl.dart' hide TextDirection;
 import '../../core/app_colors.dart';
 import '../../core/app_models.dart';
+import '../../core/directional_icon.dart';
 import '../../models/worship_model.dart' hide WorshipType;
 import '../../models/monthly_goal_model.dart';
 import '../../models/challenge_model.dart';
@@ -650,7 +651,7 @@ class _ReportsPageState extends State<ReportsPage> {
                           ],
                         ),
                       ),
-                      Icon(Icons.arrow_forward_ios_rounded, color: AppColors.gray, size: 14),
+                      DirectionalIcon(isBack: false, size: 14, color: AppColors.gray),
                     ],
                   ),
                 ),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/app_colors.dart';
+import '../../core/directional_icon.dart';
 
 class FridayTipsPage extends StatelessWidget {
   const FridayTipsPage({super.key});
@@ -39,7 +40,7 @@ class FridayTipsPage extends StatelessWidget {
                 onTap: () => Navigator.pop(context),
                 child: Container(
                   decoration: BoxDecoration(color: Colors.white.withOpacity(0.15), shape: BoxShape.circle),
-                  child: const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white, size: 18),
+                  child: const DirectionalIcon(isBack: true, size: 18, color: Colors.white),
                 ),
               ),
             ),

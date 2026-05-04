@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/app_colors.dart';
+import '../../core/directional_icon.dart';
 
 TextStyle _f({double sz = 14, FontWeight fw = FontWeight.w400, Color? c, double? h}) =>
     GoogleFonts.ibmPlexSansArabic(fontSize: sz, fontWeight: fw, color: c, height: h);
@@ -182,6 +183,7 @@ class _AzkarCounterPageState extends State<AzkarCounterPage> with SingleTickerPr
   late String _title;
   late AnimationController _pulseController;
   late Animation<double> _pulseAnim;
+  late ScrollController _selectorController;
 
   @override
   void initState() {
@@ -192,10 +194,11 @@ class _AzkarCounterPageState extends State<AzkarCounterPage> with SingleTickerPr
     _counts = List.filled(_azkar.length, 0);
     _pulseController = AnimationController(vsync: this, duration: const Duration(milliseconds: 150));
     _pulseAnim = Tween<double>(begin: 1.0, end: 0.92).animate(CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut));
+    _selectorController = ScrollController();
   }
 
   @override
-  void dispose() { _pulseController.dispose(); super.dispose(); }
+  void dispose() { _pulseController.dispose(); _selectorController.dispose(); super.dispose(); }
 
   Dhikr get _current => _azkar[_selectedIndex];
   int get _currentCount => _counts[_selectedIndex];
@@ -207,7 +210,17 @@ class _AzkarCounterPageState extends State<AzkarCounterPage> with SingleTickerPr
     HapticFeedback.lightImpact();
     _pulseController.forward().then((_) => _pulseController.reverse());
     setState(() { _counts[_selectedIndex]++; });
-    if (_counts[_selectedIndex] >= _current.targetCount) HapticFeedback.heavyImpact();
+    if (_counts[_selectedIndex] >= _current.targetCount) {
+      HapticFeedback.heavyImpact();
+      Future.delayed(const Duration(milliseconds: 350), () {
+        if (!mounted) return;
+        final next = (_selectedIndex < _azkar.length - 1) ? _selectedIndex + 1 : _selectedIndex;
+        setState(() { _selectedIndex = next; });
+        try {
+          _selectorController.animateTo((next * 80).toDouble(), duration: const Duration(milliseconds: 300), curve: Curves.easeOut);
+        } catch (_) {}
+      });
+    }
   }
 
   void _reset() => setState(() => _counts[_selectedIndex] = 0);
@@ -232,9 +245,9 @@ class _AzkarCounterPageState extends State<AzkarCounterPage> with SingleTickerPr
             padding: const EdgeInsets.all(8.0),
             child: GestureDetector(
               onTap: () => Navigator.pop(context),
-              child: Container(
+                child: Container(
                 decoration: BoxDecoration(color: textColor.withOpacity(0.1), shape: BoxShape.circle),
-                child: Icon(Icons.arrow_forward_ios_rounded, color: textColor, size: 18),
+                child: DirectionalIcon(isBack: true, size: 18, color: textColor),
               ),
             ),
           ),
@@ -245,6 +258,7 @@ class _AzkarCounterPageState extends State<AzkarCounterPage> with SingleTickerPr
           // ── Azkar selector ──
           SizedBox(height: 52, child: ListView.builder(
             scrollDirection: Axis.horizontal, padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            controller: _selectorController,
             itemCount: _azkar.length,
             itemBuilder: (_, i) {
               final selected = i == _selectedIndex;
@@ -320,7 +334,7 @@ class _AzkarCounterPageState extends State<AzkarCounterPage> with SingleTickerPr
               const SizedBox(width: 12),
               Expanded(child: ElevatedButton.icon(
                 onPressed: _selectedIndex > 0 ? () => setState(() => _selectedIndex--) : null,
-                icon: const Icon(Icons.arrow_forward, size: 18),
+                icon: DirectionalIcon(isBack: true, size: 18),
                 label: Text('السابق', style: _f(fw: FontWeight.w700)),
                 style: ElevatedButton.styleFrom(backgroundColor: isDark ? Colors.white10 : AppColors.surfaceLight, foregroundColor: greenColor,
                   disabledForegroundColor: subColor, elevation: 0, padding: const EdgeInsets.symmetric(vertical: 14),
@@ -329,7 +343,7 @@ class _AzkarCounterPageState extends State<AzkarCounterPage> with SingleTickerPr
               const SizedBox(width: 12),
               Expanded(child: ElevatedButton.icon(
                 onPressed: _selectedIndex < _azkar.length - 1 ? () => setState(() => _selectedIndex++) : null,
-                icon: const Icon(Icons.arrow_back, size: 18),
+                icon: DirectionalIcon(isBack: false, size: 18),
                 label: Text('التالي', style: _f(fw: FontWeight.w700)),
                 style: ElevatedButton.styleFrom(backgroundColor: AppColors.darkGreen, foregroundColor: Colors.white,
                   elevation: 0, padding: const EdgeInsets.symmetric(vertical: 14),

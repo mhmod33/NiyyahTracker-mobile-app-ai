@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:quran/quran.dart' as quran;
 import '../../core/app_colors.dart';
+import '../../core/directional_icon.dart';
 import 'surah_reader_page.dart';
 
 class QuranPage extends StatefulWidget {
@@ -144,7 +145,7 @@ class _QuranIndexTile extends StatelessWidget {
         ),
         title: Text(title, style: GoogleFonts.amiri(fontSize: 20, fontWeight: FontWeight.bold, color: textColor)),
         subtitle: Text(subtitle, style: GoogleFonts.cairo(fontSize: 12, color: subtitleColor)),
-        trailing: Icon(Icons.arrow_forward_ios_rounded, size: 14, color: isDark ? Colors.white60 : Colors.black38),
+        trailing: DirectionalIcon(isBack: false, size: 14, color: isDark ? Colors.white60 : Colors.black38),
       ),
     );
   }
@@ -189,7 +190,7 @@ class _QuranSearchSheetState extends State<_QuranSearchSheet> {
       padding: const EdgeInsets.all(16),
       child: Column(children: [
         TextField(
-          controller: _ctrl, onChanged: _search,
+          controller: _ctrl, onChanged: _search, autofocus: true,
           style: const TextStyle(color: Colors.white),
           decoration: InputDecoration(
             hintText: 'ابحث عن آية...', hintStyle: const TextStyle(color: Colors.white38),

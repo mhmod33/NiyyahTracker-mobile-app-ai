@@ -11,6 +11,7 @@ import 'package:quran/quran.dart' as quran;
 import 'package:share_plus/share_plus.dart';
 import 'package:path_provider/path_provider.dart';
 import '../../core/app_colors.dart';
+import '../../core/directional_icon.dart';
 
 class SurahReaderPage extends StatefulWidget {
   final int surahNumber;
@@ -50,7 +51,11 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
                   controller: _pageController,
                   itemCount: 604,
                   onPageChanged: (i) => setState(() => _currentPage = i),
-                  itemBuilder: (ctx, index) => _MushafPageWidget(pageNumber: index + 1),
+                  itemBuilder: (ctx, index) => _MushafPageWidget(
+                    pageNumber: index + 1,
+                    highlightSurah: widget.surahNumber,
+                    highlightVerse: widget.initialVerse,
+                  ),
                 ),
               ),
               _buildFooter(),
@@ -74,7 +79,7 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
         children: [
           GestureDetector(
             onTap: () => Navigator.pop(context),
-            child: const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white70, size: 18),
+            child: DirectionalIcon(isBack: true, size: 18, color: Colors.white70),
           ),
           Text(quran.getSurahNameArabic(s), style: GoogleFonts.amiri(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
           Text('Juz $j', style: GoogleFonts.inter(color: Colors.white70, fontSize: 12)),
@@ -98,7 +103,9 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
 // ─── Mushaf Page Widget ───
 class _MushafPageWidget extends StatelessWidget {
   final int pageNumber;
-  const _MushafPageWidget({required this.pageNumber});
+  final int? highlightSurah;
+  final int? highlightVerse;
+  const _MushafPageWidget({required this.pageNumber, this.highlightSurah, this.highlightVerse});
 
   @override
   Widget build(BuildContext context) {
@@ -225,7 +232,7 @@ class _MushafPageWidget extends StatelessWidget {
       textAlign: TextAlign.justify,
       textDirection: TextDirection.rtl,
       text: TextSpan(
-        children: List.generate(end - start + 1, (i) => start + i).expand((v) {
+          children: List.generate(end - start + 1, (i) => start + i).expand((v) {
           String verseText = quran.getVerse(surah, v, verseEndSymbol: false);
           // Remove Basmala from first verse (except Fatiha & Tawbah)
           if (v == 1 && surah != 1 && surah != 9) {
@@ -239,13 +246,16 @@ class _MushafPageWidget extends StatelessWidget {
                 .trim();
           }
           final tapHandler = TapGestureRecognizer()..onTap = () => _showVerseActions(context, surah, v);
-          return [
+            final bool isHighlighted = (highlightSurah != null && highlightVerse != null && highlightSurah == surah && highlightVerse == v);
+            return [
             TextSpan(
               text: verseText,
               style: TextStyle(
                 fontFamily: 'KFGQPC Uthmanic Script Hafs',
                 fontSize: pageNumber <= 2 ? 26 : 20,
-                height: 1.85, color: const Color(0xFFF5F0E8),
+                height: 1.85,
+                color: isHighlighted ? Colors.black : const Color(0xFFF5F0E8),
+                backgroundColor: isHighlighted ? Colors.yellow.withOpacity(0.18) : null,
               ),
               recognizer: tapHandler,
             ),
@@ -315,7 +325,7 @@ class _MushafPageWidget extends StatelessWidget {
         child: Icon(icon, color: AppColors.darkGreen, size: 18),
       ),
       title: Text(label, style: GoogleFonts.cairo(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600)),
-      trailing: const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white24, size: 12),
+      trailing: DirectionalIcon(isBack: false, size: 12, color: Colors.white24),
       onTap: onTap,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
     );

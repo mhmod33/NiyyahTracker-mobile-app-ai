@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../core/app_colors.dart';
+import '../../core/directional_icon.dart';
 import '../../core/theme_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../ramadan/ramadan_page.dart';
@@ -41,7 +42,7 @@ class ProfilePage extends StatelessWidget {
               stretch: true,
               backgroundColor: isDark ? const Color(0xFF0D2818) : AppColors.darkGreen,
               elevation: 0,
-              leading: Padding(
+                  leading: Padding(
                 padding: const EdgeInsets.all(10.0),
                 child: GestureDetector(
                   onTap: () => Navigator.pop(context),
@@ -51,7 +52,7 @@ class ProfilePage extends StatelessWidget {
                       filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
                       child: Container(
                         decoration: BoxDecoration(color: Colors.white.withOpacity(0.15)),
-                        child: const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white, size: 16),
+                        child: const DirectionalIcon(isBack: true, size: 16, color: Colors.white),
                       ),
                     ),
                   ),
@@ -323,7 +324,7 @@ class _ModernSettingsTile extends StatelessWidget {
       ),
       title: Text(title, style: _f(fw: FontWeight.w700, sz: 14)),
       subtitle: Text(subtitle, style: _f(sz: 11, c: AppColors.textSecondary)),
-      trailing: trailing ?? const Icon(Icons.arrow_forward_ios_rounded, size: 12, color: AppColors.gray),
+      trailing: trailing ?? const DirectionalIcon(isBack: false, size: 12, color: AppColors.gray),
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
     );
   }

@@ -9,6 +9,7 @@ import 'package:http/http.dart' as http;
 import 'package:latlong2/latlong.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../core/app_colors.dart';
+import '../../core/directional_icon.dart';
 
 // ─────────────────────────────────────────
 // Data model
@@ -379,7 +380,7 @@ class _NearbyMosquesPageState extends State<NearbyMosquesPage>
                 child: Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(color: Colors.white.withOpacity(0.15), shape: BoxShape.circle),
-                  child: const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white, size: 18),
+                  child: const DirectionalIcon(isBack: true, size: 18, color: Colors.white),
                 ),
               ),
               Flexible(

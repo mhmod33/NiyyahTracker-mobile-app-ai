@@ -4,6 +4,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:adhan/adhan.dart';
 import '../../core/app_colors.dart';
+import '../../core/directional_icon.dart';
 
 TextStyle _f({double sz = 14, FontWeight fw = FontWeight.w400, Color? c, double? h}) =>
     GoogleFonts.ibmPlexSansArabic(fontSize: sz, fontWeight: fw, color: c, height: h);
@@ -123,7 +124,7 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> with SingleTickerProv
                             child: Container(
                               padding: const EdgeInsets.all(8),
                               decoration: BoxDecoration(color: Colors.white.withOpacity(0.15), shape: BoxShape.circle),
-                              child: const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white, size: 18),
+                              child: const DirectionalIcon(isBack: true, size: 18, color: Colors.white),
                             ),
                           ),
                           Expanded(child: Text('أوقات الصلاة', textAlign: TextAlign.center, style: _f(sz: 20, fw: FontWeight.w800, c: Colors.white))),

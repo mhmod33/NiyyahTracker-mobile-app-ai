@@ -7,6 +7,7 @@ import '../../core/app_models.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/firebase_service.dart';
 import '../../models/challenge_model.dart';
+import '../../core/directional_icon.dart';
 
 TextStyle _f({double sz = 14, FontWeight fw = FontWeight.w400, Color? c, double? h}) =>
     GoogleFonts.ibmPlexSansArabic(fontSize: sz, fontWeight: fw, color: c, height: h);
@@ -214,7 +215,7 @@ class _BackButton extends StatelessWidget {
     child: Container(
       padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(color: Colors.white.withOpacity(0.15), shape: BoxShape.circle),
-      child: const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white, size: 18),
+      child: const DirectionalIcon(isBack: true, size: 18, color: Colors.white),
     ),
   );
 }
