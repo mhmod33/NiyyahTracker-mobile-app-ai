@@ -38,14 +38,20 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bgColor = isDark ? const Color(0xFF0D0D0D) : AppColors.background;
+    final headerFooterColor = isDark ? Colors.black : AppColors.cardBg;
+    final textColor = isDark ? Colors.white : AppColors.textPrimary;
+    final subtextColor = isDark ? Colors.white70 : AppColors.textSecondary;
+    
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
-        backgroundColor: const Color(0xFF0D0D0D),
+        backgroundColor: bgColor,
         body: SafeArea(
           child: Column(
             children: [
-              _buildHeader(_currentPage + 1),
+              _buildHeader(_currentPage + 1, isDark, headerFooterColor, textColor, subtextColor),
               Expanded(
                 child: PageView.builder(
                   controller: _pageController,
@@ -55,10 +61,11 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
                     pageNumber: index + 1,
                     highlightSurah: widget.surahNumber,
                     highlightVerse: widget.initialVerse,
+                    isDark: isDark,
                   ),
                 ),
               ),
-              _buildFooter(),
+              _buildFooter(isDark, headerFooterColor, subtextColor),
             ],
           ),
         ),
@@ -66,35 +73,35 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
     );
   }
 
-  Widget _buildHeader(int page) {
+  Widget _buildHeader(int page, bool isDark, Color bgColor, Color textColor, Color subtextColor) {
     final data = quran.getPageData(page).first;
     final s = data['surah'] as int;
     final j = quran.getJuzNumber(s, data['start']);
     final h = ((j - 1) * 2 + 1);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-      color: Colors.black,
+      color: bgColor,
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           GestureDetector(
             onTap: () => Navigator.pop(context),
-            child: DirectionalIcon(isBack: true, size: 18, color: Colors.white70),
+            child: DirectionalIcon(isBack: true, size: 18, color: isDark ? Colors.white70 : AppColors.textSecondary),
           ),
-          Text(quran.getSurahNameArabic(s), style: GoogleFonts.amiri(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
-          Text('Juz $j', style: GoogleFonts.inter(color: Colors.white70, fontSize: 12)),
-          Text('Hizb $h', style: GoogleFonts.inter(color: Colors.white70, fontSize: 12)),
+          Text(quran.getSurahNameArabic(s), style: GoogleFonts.amiri(color: textColor, fontWeight: FontWeight.bold, fontSize: 14)),
+          Text('Juz $j', style: GoogleFonts.inter(color: subtextColor, fontSize: 12)),
+          Text('Hizb $h', style: GoogleFonts.inter(color: subtextColor, fontSize: 12)),
         ],
       ),
     );
   }
 
-  Widget _buildFooter() {
+  Widget _buildFooter(bool isDark, Color bgColor, Color subtextColor) {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 4),
-      color: Colors.black,
+      color: bgColor,
       child: Center(
-        child: Text('${_currentPage + 1}', style: GoogleFonts.inter(fontSize: 14, color: Colors.white70, fontWeight: FontWeight.bold)),
+        child: Text('${_currentPage + 1}', style: GoogleFonts.inter(fontSize: 14, color: subtextColor, fontWeight: FontWeight.bold)),
       ),
     );
   }
@@ -105,7 +112,8 @@ class _MushafPageWidget extends StatelessWidget {
   final int pageNumber;
   final int? highlightSurah;
   final int? highlightVerse;
-  const _MushafPageWidget({required this.pageNumber, this.highlightSurah, this.highlightVerse});
+  final bool isDark;
+  const _MushafPageWidget({required this.pageNumber, this.highlightSurah, this.highlightVerse, required this.isDark});
 
   @override
   Widget build(BuildContext context) {
@@ -173,12 +181,12 @@ class _MushafPageWidget extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text('$place • $verseCount آية', style: GoogleFonts.cairo(color: Colors.white60, fontSize: 11)),
+          Text('$place • $verseCount آية', style: GoogleFonts.cairo(color: isDark ? Colors.white60 : AppColors.textSecondary, fontSize: 11)),
           Text(
             'سورة ${quran.getSurahNameArabic(surah)}',
-            style: const TextStyle(
+            style: TextStyle(
               fontFamily: 'KFGQPC Uthmanic Script Hafs', fontSize: 22,
-              color: Colors.white, fontWeight: FontWeight.bold,
+              color: isDark ? Colors.white : AppColors.textPrimary, fontWeight: FontWeight.bold,
             ),
           ),
           const SizedBox(width: 60),
@@ -212,11 +220,11 @@ class _MushafPageWidget extends StatelessWidget {
           const SizedBox(width: 12),
           Text(
             quran.basmala,
-            style: const TextStyle(
+            style: TextStyle(
               fontFamily: 'KFGQPC Uthmanic Script Hafs', 
               fontSize: 24,
-              color: Colors.white, 
-              shadows: [Shadow(color: Colors.black45, blurRadius: 4, offset: Offset(0, 2))],
+              color: isDark ? Colors.white : AppColors.textPrimary, 
+              shadows: isDark ? [const Shadow(color: Colors.black45, blurRadius: 4, offset: Offset(0, 2))] : null,
             ),
             textAlign: TextAlign.center,
           ),
@@ -239,7 +247,7 @@ class _MushafPageWidget extends StatelessWidget {
             verseText = verseText.replaceFirst('${quran.basmala} ', '');
             verseText = verseText.replaceFirst(quran.basmala, '');
             verseText = verseText
-                .replaceFirst(RegExp(r'^بِسْمِ اللَّهِ الرَّحْمَـٰنِ الرَّحِيمِ\s*'), '')
+                .replaceFirst(RegExp(r'^بِسْمِ اللَّهِ الرَّحْمَـٰنِ الرَّحِيمِ\s*'), '')
                 .replaceFirst(RegExp(r'^بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ\s*'), '')
                 .replaceFirst(RegExp(r'^بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيمِ\s*'), '')
                 .replaceFirst(RegExp(r'^بسم الله الرحمن الرحيم\s*'), '')
@@ -254,7 +262,7 @@ class _MushafPageWidget extends StatelessWidget {
                 fontFamily: 'KFGQPC Uthmanic Script Hafs',
                 fontSize: pageNumber <= 2 ? 26 : 20,
                 height: 1.85,
-                color: isHighlighted ? Colors.black : const Color(0xFFF5F0E8),
+                color: isHighlighted ? Colors.black : (isDark ? const Color(0xFFF5F0E8) : AppColors.textPrimary),
                 backgroundColor: isHighlighted ? Colors.yellow.withOpacity(0.18) : null,
               ),
               recognizer: tapHandler,
@@ -263,7 +271,7 @@ class _MushafPageWidget extends StatelessWidget {
               alignment: PlaceholderAlignment.middle,
               child: GestureDetector(
                 onTap: () => _showVerseActions(context, surah, v),
-                child: _AyahEndMark(number: v),
+                child: _AyahEndMark(number: v, isDark: isDark),
               ),
             ),
             const TextSpan(text: ' '),
@@ -278,7 +286,7 @@ class _MushafPageWidget extends StatelessWidget {
     final surahName = quran.getSurahNameArabic(surah);
     showModalBottomSheet(
       context: context,
-      backgroundColor: const Color(0xFF111611),
+      backgroundColor: isDark ? const Color(0xFF111611) : AppColors.cardBg,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
       builder: (ctx) => Directionality(
@@ -296,7 +304,7 @@ class _MushafPageWidget extends StatelessWidget {
                 borderRadius: BorderRadius.circular(14),
                 border: Border.all(color: AppColors.darkGreen.withOpacity(0.2)),
               ),
-              child: Text(verseText, style: const TextStyle(fontFamily: 'KFGQPC Uthmanic Script Hafs', color: Colors.white, fontSize: 18, height: 1.8), textAlign: TextAlign.center, maxLines: 3, overflow: TextOverflow.ellipsis),
+              child: Text(verseText, style: TextStyle(fontFamily: 'KFGQPC Uthmanic Script Hafs', color: isDark ? Colors.white : AppColors.textPrimary, fontSize: 18, height: 1.8), textAlign: TextAlign.center, maxLines: 3, overflow: TextOverflow.ellipsis),
             ),
             const SizedBox(height: 6),
             Text('سورة $surahName - آية $verse', style: GoogleFonts.cairo(color: AppColors.darkGreen, fontSize: 13, fontWeight: FontWeight.w600)),
@@ -324,8 +332,8 @@ class _MushafPageWidget extends StatelessWidget {
         decoration: BoxDecoration(color: AppColors.darkGreen.withOpacity(0.12), borderRadius: BorderRadius.circular(8)),
         child: Icon(icon, color: AppColors.darkGreen, size: 18),
       ),
-      title: Text(label, style: GoogleFonts.cairo(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600)),
-      trailing: DirectionalIcon(isBack: false, size: 12, color: Colors.white24),
+      title: Text(label, style: GoogleFonts.cairo(color: isDark ? Colors.white : AppColors.textPrimary, fontSize: 14, fontWeight: FontWeight.w600)),
+      trailing: DirectionalIcon(isBack: false, size: 12, color: isDark ? Colors.white24 : AppColors.gray),
       onTap: onTap,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
     );
@@ -362,7 +370,7 @@ class _MushafPageWidget extends StatelessWidget {
     final surahName = quran.getSurahNameArabic(surah);
     showModalBottomSheet(
       context: context,
-      backgroundColor: const Color(0xFF111611),
+      backgroundColor: isDark ? const Color(0xFF111611) : AppColors.cardBg,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
       builder: (ctx) => Directionality(
@@ -375,12 +383,12 @@ class _MushafPageWidget extends StatelessWidget {
               Container(width: 40, height: 4, decoration: BoxDecoration(color: AppColors.darkGreen.withOpacity(0.5), borderRadius: BorderRadius.circular(2))),
               const SizedBox(height: 16),
               Text(title, style: GoogleFonts.cairo(color: AppColors.lightGreen, fontSize: 18, fontWeight: FontWeight.bold)),
-              Text('سورة $surahName - آية $verse', style: GoogleFonts.cairo(color: Colors.white70, fontSize: 13)),
+              Text('سورة $surahName - آية $verse', style: GoogleFonts.cairo(color: isDark ? Colors.white70 : AppColors.textSecondary, fontSize: 13)),
               const SizedBox(height: 16),
               Container(
                 constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.5),
                 child: SingleChildScrollView(
-                  child: Text(text, style: const TextStyle(fontFamily: 'KFGQPC Uthmanic Script Hafs', color: Colors.white, fontSize: 20, height: 1.8), textAlign: TextAlign.justify),
+                  child: Text(text, style: TextStyle(fontFamily: 'KFGQPC Uthmanic Script Hafs', color: isDark ? Colors.white : AppColors.textPrimary, fontSize: 20, height: 1.8), textAlign: TextAlign.justify),
                 ),
               ),
               const SizedBox(height: 24),
@@ -401,7 +409,7 @@ class _MushafPageWidget extends StatelessWidget {
       builder: (ctx) => Directionality(
         textDirection: TextDirection.rtl,
         child: AlertDialog(
-          backgroundColor: const Color(0xFF111611),
+          backgroundColor: isDark ? const Color(0xFF111611) : AppColors.cardBg,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           contentPadding: EdgeInsets.zero,
           content: Column(mainAxisSize: MainAxisSize.min, children: [
@@ -438,7 +446,7 @@ class _MushafPageWidget extends StatelessWidget {
               padding: const EdgeInsets.all(16),
               child: Row(children: [
                 Expanded(
-                  child: TextButton(onPressed: () => Navigator.pop(ctx), child: Text('إلغاء', style: GoogleFonts.cairo(color: Colors.white60))),
+                  child: TextButton(onPressed: () => Navigator.pop(ctx), child: Text('إلغاء', style: GoogleFonts.cairo(color: isDark ? Colors.white60 : AppColors.textSecondary))),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -475,7 +483,8 @@ class _MushafPageWidget extends StatelessWidget {
 // ─── Ayah End Mark ───
 class _AyahEndMark extends StatelessWidget {
   final int number;
-  const _AyahEndMark({required this.number});
+  final bool isDark;
+  const _AyahEndMark({required this.number, required this.isDark});
   String _toArabic(int n) {
     const ar = ['٠','١','٢','٣','٤','٥','٦','٧','٨','٩'];
     return n.toString().split('').map((e) => ar[int.parse(e)]).join('');
@@ -487,7 +496,7 @@ class _AyahEndMark extends StatelessWidget {
       width: 28, height: 28,
       child: Stack(alignment: Alignment.center, children: [
         Icon(Icons.circle_outlined, size: 26, color: AppColors.darkGreen.withOpacity(0.7)),
-        Text(_toArabic(number), style: const TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Colors.white)),
+        Text(_toArabic(number), style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: isDark ? Colors.white : AppColors.textPrimary)),
       ]),
     );
   }

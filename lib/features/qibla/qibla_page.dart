@@ -2,6 +2,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_qiblah/flutter_qiblah.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/app_colors.dart';
 import '../../core/directional_icon.dart';
@@ -9,8 +10,44 @@ import '../../core/directional_icon.dart';
 TextStyle _f({double sz = 14, FontWeight fw = FontWeight.w400, Color? c, double? h}) =>
     GoogleFonts.ibmPlexSansArabic(fontSize: sz, fontWeight: fw, color: c, height: h);
 
-class QiblaPage extends StatelessWidget {
+class QiblaPage extends StatefulWidget {
   const QiblaPage({super.key});
+
+  @override
+  State<QiblaPage> createState() => _QiblaPageState();
+}
+
+class _QiblaPageState extends State<QiblaPage> {
+  Future<bool>? _permissionFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _permissionFuture = _checkLocationPermission();
+  }
+
+  Future<bool> _checkLocationPermission() async {
+    if (kIsWeb) return false;
+
+    bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      return false;
+    }
+
+    LocationPermission permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) {
+        return false;
+      }
+    }
+
+    if (permission == LocationPermission.deniedForever) {
+      return false;
+    }
+
+    return true;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -48,7 +85,22 @@ class QiblaPage extends StatelessWidget {
           Expanded(
             child: kIsWeb
                 ? _buildUnsupported(isDark, textColor, true)
-                : _buildCompass(isDark, textColor),
+                : FutureBuilder<bool>(
+                    future: _permissionFuture,
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
+                          const CircularProgressIndicator(color: AppColors.darkGreen),
+                          const SizedBox(height: 16),
+                          Text('جاري فحص الأذونات...', style: _f(sz: 14, c: isDark ? Colors.white60 : AppColors.gray)),
+                        ]));
+                      }
+                      if (snapshot.hasError || !snapshot.hasData || snapshot.data == false) {
+                        return _buildUnsupported(isDark, textColor, false);
+                      }
+                      return _buildCompass(isDark, textColor);
+                    },
+                  ),
           ),
         ]),
       ),
