@@ -48,26 +48,25 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
       textDirection: TextDirection.rtl,
       child: Scaffold(
         backgroundColor: bgColor,
-        body: SafeArea(
-          child: Column(
-            children: [
-              _buildHeader(_currentPage + 1, isDark, headerFooterColor, textColor, subtextColor),
-              Expanded(
-                child: PageView.builder(
-                  controller: _pageController,
-                  itemCount: 604,
-                  onPageChanged: (i) => setState(() => _currentPage = i),
-                  itemBuilder: (ctx, index) => _MushafPageWidget(
-                    pageNumber: index + 1,
-                    highlightSurah: widget.surahNumber,
-                    highlightVerse: widget.initialVerse,
-                    isDark: isDark,
-                  ),
+        body: Column(
+          children: [
+            SizedBox(height: MediaQuery.of(context).padding.top),
+            _buildHeader(_currentPage + 1, isDark, headerFooterColor, textColor, subtextColor),
+            Expanded(
+              child: PageView.builder(
+                controller: _pageController,
+                itemCount: 604,
+                onPageChanged: (i) => setState(() => _currentPage = i),
+                itemBuilder: (ctx, index) => _MushafPageWidget(
+                  pageNumber: index + 1,
+                  highlightSurah: widget.surahNumber,
+                  highlightVerse: widget.initialVerse,
+                  isDark: isDark,
                 ),
               ),
-              _buildFooter(isDark, headerFooterColor, subtextColor),
-            ],
-          ),
+            ),
+            _buildFooter(isDark, headerFooterColor, subtextColor),
+          ],
         ),
       ),
     );
@@ -79,7 +78,7 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
     final j = quran.getJuzNumber(s, data['start']);
     final h = ((j - 1) * 2 + 1);
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       color: bgColor,
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -125,7 +124,7 @@ class _MushafPageWidget extends StatelessWidget {
     return Container(
       width: double.infinity,
       height: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       child: LayoutBuilder(
         builder: (context, constraints) {
           return ConstrainedBox(
@@ -139,7 +138,7 @@ class _MushafPageWidget extends StatelessWidget {
               child: SizedBox(
                 width: constraints.maxWidth,
                 child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisAlignment: MainAxisAlignment.start,
                   children: pageData.map((data) {
                     final surah = data['surah'] as int;
                     final start = data['start'] as int;
@@ -148,9 +147,9 @@ class _MushafPageWidget extends StatelessWidget {
                       children: [
                         if (start == 1) _buildSurahHeader(context, surah),
                         if (start == 1 && surah != 1 && surah != 9) _buildBasmala(),
-                        const SizedBox(height: 8),
+                        const SizedBox(height: 2),
                         _buildVersesBlock(context, surah, start, end),
-                        const SizedBox(height: 8),
+                        const SizedBox(height: 2),
                       ],
                     );
                   }).toList(),
@@ -168,8 +167,8 @@ class _MushafPageWidget extends StatelessWidget {
     final place = quran.getPlaceOfRevelation(surah) == "Makkah" ? "مكية" : "مدنية";
     return Container(
       width: double.infinity,
-      margin: const EdgeInsets.symmetric(vertical: 6),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      margin: const EdgeInsets.symmetric(vertical: 3),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [AppColors.darkGreen.withOpacity(0.25), AppColors.darkGreen.withOpacity(0.10)],
@@ -185,7 +184,7 @@ class _MushafPageWidget extends StatelessWidget {
           Text(
             'سورة ${quran.getSurahNameArabic(surah)}',
             style: TextStyle(
-              fontFamily: 'KFGQPC Uthmanic Script Hafs', fontSize: 22,
+              fontFamily: 'KFGQPC Uthmanic Script Hafs', fontSize: 26,
               color: isDark ? Colors.white : AppColors.textPrimary, fontWeight: FontWeight.bold,
             ),
           ),
@@ -197,8 +196,8 @@ class _MushafPageWidget extends StatelessWidget {
 
   Widget _buildBasmala() {
     return Container(
-      margin: const EdgeInsets.only(bottom: 12, top: 4),
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+      margin: const EdgeInsets.only(bottom: 6, top: 2),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
@@ -222,7 +221,7 @@ class _MushafPageWidget extends StatelessWidget {
             quran.basmala,
             style: TextStyle(
               fontFamily: 'KFGQPC Uthmanic Script Hafs', 
-              fontSize: 24,
+              fontSize: 28,
               color: isDark ? Colors.white : AppColors.textPrimary, 
               shadows: isDark ? [const Shadow(color: Colors.black45, blurRadius: 4, offset: Offset(0, 2))] : null,
             ),
@@ -260,8 +259,8 @@ class _MushafPageWidget extends StatelessWidget {
               text: verseText,
               style: TextStyle(
                 fontFamily: 'KFGQPC Uthmanic Script Hafs',
-                fontSize: pageNumber <= 2 ? 26 : 20,
-                height: 1.85,
+                fontSize: pageNumber <= 2 ? 30 : 24,
+                height: 1.7,
                 color: isHighlighted ? Colors.black : (isDark ? const Color(0xFFF5F0E8) : AppColors.textPrimary),
                 backgroundColor: isHighlighted ? Colors.yellow.withOpacity(0.18) : null,
               ),
@@ -492,11 +491,11 @@ class _AyahEndMark extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 2),
-      width: 28, height: 28,
+      margin: const EdgeInsets.symmetric(horizontal: 3),
+      width: 34, height: 34,
       child: Stack(alignment: Alignment.center, children: [
-        Icon(Icons.circle_outlined, size: 26, color: AppColors.darkGreen.withOpacity(0.7)),
-        Text(_toArabic(number), style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: isDark ? Colors.white : AppColors.textPrimary)),
+        Icon(Icons.circle_outlined, size: 32, color: AppColors.darkGreen.withOpacity(0.7)),
+        Text(_toArabic(number), style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: isDark ? Colors.white : AppColors.textPrimary)),
       ]),
     );
   }

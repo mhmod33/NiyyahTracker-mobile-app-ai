@@ -152,107 +152,94 @@ class _ReportsPageState extends State<ReportsPage> {
 
   Future<void> _generatePdf(BuildContext context, AppAuthProvider authProvider) async {
     final pdf = pw.Document();
-    pw.Font? arabicFont;
+    final font = pw.Font.helvetica();
 
-    // Try to load Arabic font with better error handling
-    try {
-      final fontData = await rootBundle.load('assets/fonts/KFGQPC Uthmanic Script HAFS.otf');
-      arabicFont = pw.Font.ttf(fontData);
-    } catch (e) {
-      arabicFont = pw.Font.helvetica();
-    }
-
-    final monthStr = DateFormat('MMMM yyyy', 'ar').format(_selectedDate);
-    final userName = authProvider.displayName ?? 'مستخدم';
+    final monthStr = DateFormat('MMMM yyyy', 'en').format(_selectedDate);
+    final userName = authProvider.displayName ?? 'User';
 
     pdf.addPage(
       pw.Page(
         pageFormat: PdfPageFormat.a4,
         theme: pw.ThemeData.withFont(
-          base: arabicFont,
-          bold: arabicFont,
-          italic: arabicFont,
-          boldItalic: arabicFont,
+          base: font,
+          bold: font,
+          italic: font,
+          boldItalic: font,
         ),
         build: (pw.Context context) {
-          return pw.Directionality(
-            textDirection: pw.TextDirection.rtl,
-            child: pw.Padding(
-              padding: const pw.EdgeInsets.all(20),
-              child: pw.Column(
-                crossAxisAlignment: pw.CrossAxisAlignment.center,
-                children: [
-                  pw.SizedBox(height: 20),
-                  pw.Text('النية', style: pw.TextStyle(fontSize: 40, color: PdfColors.green900, font: arabicFont)),
-                  pw.SizedBox(height: 10),
-                  pw.Text('تقرير العبادات الشهري', style: pw.TextStyle(fontSize: 24, color: PdfColors.green700, font: arabicFont)),
-                  pw.Divider(color: PdfColors.green300, thickness: 2),
-                  pw.SizedBox(height: 30),
-                  pw.Row(
-                    mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+          return pw.Padding(
+            padding: const pw.EdgeInsets.all(20),
+            child: pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                pw.SizedBox(height: 20),
+                pw.Text('Niyyah', style: pw.TextStyle(fontSize: 40, color: PdfColors.green900)),
+                pw.SizedBox(height: 10),
+                pw.Text('Monthly Worship Report', style: pw.TextStyle(fontSize: 24, color: PdfColors.green700)),
+                pw.Divider(color: PdfColors.green300, thickness: 2),
+                pw.SizedBox(height: 30),
+                pw.Row(
+                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                  children: [
+                    pw.Text('User Name: $userName', style: const pw.TextStyle(fontSize: 18)),
+                    pw.Text('For Month: $monthStr', style: const pw.TextStyle(fontSize: 18)),
+                  ],
+                ),
+                pw.SizedBox(height: 40),
+                
+                pw.Container(
+                  padding: const pw.EdgeInsets.all(20),
+                  decoration: pw.BoxDecoration(
+                    border: pw.Border.all(color: PdfColors.green300, width: 2),
+                    borderRadius: const pw.BorderRadius.all(pw.Radius.circular(10)),
+                    color: PdfColors.green50,
+                  ),
+                  child: pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.start,
                     children: [
-                      pw.Text('اسم المستخدم: $userName', style: pw.TextStyle(fontSize: 18, font: arabicFont)),
-                      pw.Text('عن شهر: $monthStr', style: pw.TextStyle(fontSize: 18, font: arabicFont)),
+                      _pdfStatRowEnglish('Quran Pages:', '$_totalQuranPages pages', font),
+                      pw.SizedBox(height: 10),
+                      _pdfStatRowEnglish('Completed Prayers:', '$_totalPrayers prayers', font),
+                      pw.SizedBox(height: 10),
+                      _pdfStatRowEnglish('Dhikr Days:', '$_remembranceDays days', font),
+                      pw.SizedBox(height: 10),
+                      _pdfStatRowEnglish('Longest Streak:', '$_maxStreak days', font),
                     ],
                   ),
-                  pw.SizedBox(height: 40),
-                  
-                  // Main Stats Box
-                  pw.Container(
-                    padding: const pw.EdgeInsets.all(20),
-                    decoration: pw.BoxDecoration(
-                      border: pw.Border.all(color: PdfColors.green300, width: 2),
-                      borderRadius: const pw.BorderRadius.all(pw.Radius.circular(10)),
-                      color: PdfColors.green50,
-                    ),
-                    child: pw.Column(
-                      crossAxisAlignment: pw.CrossAxisAlignment.start,
-                      children: [
-                        _pdfStatRow('صفحات القرآن:', '$_totalQuranPages صفحة', arabicFont!),
-                        pw.SizedBox(height: 10),
-                        _pdfStatRow('الصلوات المكتملة:', '$_totalPrayers صلاة', arabicFont!),
-                        pw.SizedBox(height: 10),
-                        _pdfStatRow('أيام الأذكار:', '$_remembranceDays يوم', arabicFont!),
-                        pw.SizedBox(height: 10),
-                        _pdfStatRow('أطول فترة استمرار (ستريك):', '$_maxStreak يوم', arabicFont!),
-                      ],
-                    ),
+                ),
+                
+                pw.SizedBox(height: 20),
+                
+                pw.Container(
+                  padding: const pw.EdgeInsets.all(20),
+                  decoration: pw.BoxDecoration(
+                    border: pw.Border.all(color: PdfColors.blue300, width: 2),
+                    borderRadius: const pw.BorderRadius.all(pw.Radius.circular(10)),
+                    color: PdfColors.blue50,
                   ),
-                  
-                  pw.SizedBox(height: 20),
-                  
-                  // Goals & Challenges Box
-                  pw.Container(
-                    padding: const pw.EdgeInsets.all(20),
-                    decoration: pw.BoxDecoration(
-                      border: pw.Border.all(color: PdfColors.blue300, width: 2),
-                      borderRadius: const pw.BorderRadius.all(pw.Radius.circular(10)),
-                      color: PdfColors.blue50,
-                    ),
-                    child: pw.Column(
-                      crossAxisAlignment: pw.CrossAxisAlignment.start,
-                      children: [
-                        pw.Text('الهداف والتحديات', style: pw.TextStyle(fontSize: 20, color: PdfColors.blue800, fontWeight: pw.FontWeight.bold, font: arabicFont)),
-                        pw.SizedBox(height: 15),
-                        _pdfStatRow('إجمالي الأهداف الشهرية:', '${_monthlyGoals.length} هدف', arabicFont!),
-                        pw.SizedBox(height: 10),
-                        _pdfStatRow('الأهداف المكتملة:', '$_completedGoals هدف', arabicFont!),
-                        pw.SizedBox(height: 10),
-                        _pdfStatRow('نسبة إنجاز الأهداف:', '${_goalsCompletionRate.toStringAsFixed(1)}%', arabicFont!),
-                        pw.SizedBox(height: 10),
-                        _pdfStatRow('التحديات النشطة:', '$_activeChallenges تحدي', arabicFont!),
-                      ],
-                    ),
+                  child: pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.start,
+                    children: [
+                      pw.Text('Goals & Challenges', style: pw.TextStyle(fontSize: 20, color: PdfColors.blue800, fontWeight: pw.FontWeight.bold)),
+                      pw.SizedBox(height: 15),
+                      _pdfStatRowEnglish('Total Monthly Goals:', '${_monthlyGoals.length} goals', font),
+                      pw.SizedBox(height: 10),
+                      _pdfStatRowEnglish('Completed Goals:', '$_completedGoals goals', font),
+                      pw.SizedBox(height: 10),
+                      _pdfStatRowEnglish('Goals Completion Rate:', '${_goalsCompletionRate.toStringAsFixed(1)}%', font),
+                      pw.SizedBox(height: 10),
+                      _pdfStatRowEnglish('Active Challenges:', '$_activeChallenges challenges', font),
+                    ],
                   ),
+                ),
 
-                  pw.Spacer(),
-                  pw.Text(
-                    '"إنما الأعمال بالنيات"',
-                    style: pw.TextStyle(fontSize: 16, color: PdfColors.grey700, font: arabicFont),
-                  ),
-                  pw.SizedBox(height: 20),
-                ],
-              ),
+                pw.Spacer(),
+                pw.Text(
+                  '"Actions are judged by intentions"',
+                  style: const pw.TextStyle(fontSize: 16, color: PdfColors.grey700),
+                ),
+                pw.SizedBox(height: 20),
+              ],
             ),
           );
         },
@@ -273,12 +260,12 @@ class _ReportsPageState extends State<ReportsPage> {
     }
   }
 
-  pw.Widget _pdfStatRow(String label, String value, pw.Font arabicFont) {
+  pw.Widget _pdfStatRowEnglish(String label, String value, pw.Font font) {
     return pw.Row(
       mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
       children: [
-        pw.Text(label, style: pw.TextStyle(fontSize: 18, font: arabicFont)),
-        pw.Text(value, style: pw.TextStyle(fontSize: 18, color: PdfColors.green800, font: arabicFont)),
+        pw.Text(label, style: pw.TextStyle(fontSize: 18, font: font)),
+        pw.Text(value, style: pw.TextStyle(fontSize: 18, color: PdfColors.green800, font: font)),
       ],
     );
   }
@@ -419,7 +406,7 @@ class _ReportsPageState extends State<ReportsPage> {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             decoration: BoxDecoration(color: Colors.white.withOpacity(0.1), borderRadius: BorderRadius.circular(12)),
-            child: Text('"رحلتك الروحية هذا الشهر مميزة يا ${userName.split(' ').first} — استمر 🤍"',
+            child: Text('"رحلتك الروحية هذا الشهر مميزة يا ${userName?.split(' ').first} — استمر 🤍"',
               style: GoogleFonts.ibmPlexSansArabic(color: AppColors.goldLight, fontSize: 13, fontStyle: FontStyle.italic), textAlign: TextAlign.center),
           ),
         ),
