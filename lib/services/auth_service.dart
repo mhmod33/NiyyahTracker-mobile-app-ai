@@ -25,7 +25,6 @@ class AuthService {
       // Once signed in, return the UserCredential
       return await _auth.signInWithCredential(credential);
     } catch (e) {
-      print("Error signing in with Google: $e");
       return null;
     }
   }
@@ -79,7 +78,6 @@ class AuthService {
         return await _auth.signInWithCredential(credential);
       }
     } catch (e) {
-      print("Error verifying OTP: $e");
       return null;
     }
   }

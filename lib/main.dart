@@ -40,7 +40,7 @@ void main() async {
       options: DefaultFirebaseOptions.currentPlatform,
     );
   } catch (e) {
-    debugPrint('Firebase init error: $e');
+    // Silently fail
   }
 
   try {
@@ -48,21 +48,21 @@ void main() async {
     await Hive.openBox('settings');
     await Hive.openBox('notification_settings');
   } catch (e) {
-    debugPrint('Hive init error: $e');
+    // Silently fail
   }
 
   try {
     await DailySummaryService().initializeNotifications();
     await DailySummaryService().scheduleMidnightReminder();
   } catch (e) {
-    debugPrint('Daily summary service init error: $e');
+    // Silently fail
   }
 
   try {
     await NotificationService().init();
     await NotificationService().initializeAllSchedules();
   } catch (e) {
-    debugPrint('Notification service init error: $e');
+    // Silently fail
   }
 
   runApp(

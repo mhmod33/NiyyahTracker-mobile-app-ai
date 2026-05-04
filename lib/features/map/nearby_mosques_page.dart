@@ -208,8 +208,6 @@ class _NearbyMosquesPageState extends State<NearbyMosquesPage>
     final lon = _userLocation!.longitude;
     final rad = (_radiusKm * 1000).toInt();
 
-    debugPrint('🕌 Starting mosque search (Foursquare): lat=$lat, lon=$lon, radius=${_radiusKm.toStringAsFixed(1)}km');
-
     final fsSuccess = await _tryFoursquareAPI(lat, lon, rad);
     if (fsSuccess) return;
 
@@ -224,7 +222,6 @@ class _NearbyMosquesPageState extends State<NearbyMosquesPage>
 
   Future<bool> _tryFoursquareAPI(double lat, double lon, int rad) async {
     try {
-      debugPrint('🕌 Trying Foursquare API...');
       final clientId = '2HEE4UX1Q3EMR4KJAR4FILQ0DTEW40STQOPJ4WMQMDWPHTWD';
       final clientSecret = 'TWILPFX4L35SDKJPLNNISCF5FTZTR5AWXN4DHSJ4MWMMZ2PS';
       final categoryId = '4bf58dd8d48988d138941735'; // Mosque
@@ -235,14 +232,11 @@ class _NearbyMosquesPageState extends State<NearbyMosquesPage>
       final resp = await http.get(uri).timeout(const Duration(seconds: 15));
 
       if (resp.statusCode != 200) {
-        debugPrint('🕌 Foursquare Bad response: ${resp.statusCode} - ${resp.body}');
         return false;
       }
 
       final json = jsonDecode(resp.body) as Map<String, dynamic>;
       final venues = json['response']?['venues'] as List<dynamic>? ?? [];
-
-      debugPrint('🕌 Found ${venues.length} raw Foursquare venues');
 
       final mosques = venues
           .map((v) => MosqueModel.fromFoursquare(v as Map<String, dynamic>))
@@ -253,43 +247,13 @@ class _NearbyMosquesPageState extends State<NearbyMosquesPage>
       final seen = <String>{};
       mosques.retainWhere((m) => seen.add(m.id));
 
-      // Add fallback test mosques if no real mosques are found
-      if (mosques.isEmpty) {
-        debugPrint('🕌 No mosques found via API. Adding test mosques for demonstration.');
-        mosques.addAll([
-          MosqueModel(
-            id: 'test_1',
-            name: 'مسجد النور (للتجربة)',
-            location: LatLng(lat + 0.0015, lon + 0.002),
-            distance: 250.0,
-          ),
-          MosqueModel(
-            id: 'test_2',
-            name: 'مسجد الرحمن (للتجربة)',
-            location: LatLng(lat - 0.002, lon + 0.001),
-            distance: 450.0,
-          ),
-          MosqueModel(
-            id: 'test_3',
-            name: 'جامع الهدى (للتجربة)',
-            location: LatLng(lat + 0.002, lon - 0.003),
-            distance: 600.0,
-          ),
-        ]);
-        mosques.sort((a, b) => (a.distance ?? 0).compareTo(b.distance ?? 0));
-      }
-
       setState(() {
         _mosques = mosques;
         _loading = false;
-        if (venues.isEmpty) {
-          _error = 'عذراً، لا توجد بيانات في منطقتك حالياً. نعرض مساجد تجريبية.';
-        }
       });
 
       return true;
     } catch (e) {
-      debugPrint('🕌 Foursquare API failed: $e');
       if (mounted) {
         setState(() {
           _error = 'تعذر الاتصال بخوادم المساجد. قد تكون المشكلة في اتصال الإنترنت.';

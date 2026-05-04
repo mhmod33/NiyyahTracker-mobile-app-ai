@@ -72,7 +72,6 @@ class _AnalyticsPageState extends State<AnalyticsPage> with SingleTickerProvider
         _isLoading = false;
       });
     } catch (e) {
-      debugPrint('Error loading analytics: $e');
       setState(() => _isLoading = false);
     }
   }

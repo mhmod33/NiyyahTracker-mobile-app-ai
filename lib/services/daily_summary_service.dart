@@ -30,7 +30,7 @@ class DailySummaryService {
   }
 
   void _onNotificationTapped(NotificationResponse response) {
-    debugPrint('Daily summary notification tapped');
+    // Handle notification tap
   }
 
   Future<void> scheduleMidnightReminder() async {
@@ -100,7 +100,7 @@ class DailySummaryService {
         notificationDetails,
       );
     } catch (e) {
-      debugPrint('Error showing daily summary: $e');
+      // Silently fail
     }
   }
 
@@ -178,7 +178,6 @@ class DailySummaryService {
         'data': todayWorship,
       };
     } catch (e) {
-      debugPrint('Error getting today summary: $e');
       return {
         'hasData': false,
         'prayerCount': 0,

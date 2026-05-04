@@ -7,9 +7,7 @@ class FirebaseInitializationService {
       await Firebase.initializeApp(
         options: DefaultFirebaseOptions.currentPlatform,
       );
-      print('✅ Firebase initialized successfully');
     } catch (e) {
-      print('❌ Firebase initialization failed: $e');
       throw Exception('Failed to initialize Firebase: $e');
     }
   }
@@ -17,6 +15,5 @@ class FirebaseInitializationService {
   static Future<void> setupFirestoreRules() async {
     // Note: Firestore security rules should be set up in Firebase Console
     // This is just a placeholder for reference
-    print('⚙️ Firestore rules should be configured in Firebase Console');
   }
 }

@@ -117,7 +117,6 @@ class _ReportsPageState extends State<ReportsPage> {
         _isLoading = false;
       });
     } catch (e) {
-      debugPrint('Error loading stats: $e');
       setState(() => _isLoading = false);
     }
   }
@@ -151,29 +150,19 @@ class _ReportsPageState extends State<ReportsPage> {
   }
 
   Future<void> _generatePdf(BuildContext context, AppAuthProvider authProvider) async {
-    debugPrint('Starting PDF generation...');
-    
     final pdf = pw.Document();
     pw.Font? arabicFont;
 
     // Try to load Arabic font with better error handling
     try {
-      debugPrint('Attempting to load Arabic font...');
       final fontData = await rootBundle.load('assets/fonts/KFGQPC Uthmanic Script HAFS.otf');
       arabicFont = pw.Font.ttf(fontData);
-      debugPrint('Arabic font loaded successfully for PDF');
     } catch (e) {
-      debugPrint('Could not load Arabic font for PDF: $e');
-      debugPrint('Using fallback font...');
       arabicFont = pw.Font.helvetica();
     }
 
     final monthStr = DateFormat('MMMM yyyy', 'ar').format(_selectedDate);
     final userName = authProvider.displayName ?? 'مستخدم';
-    
-    debugPrint('User name: $userName');
-    debugPrint('Month: $monthStr');
-    debugPrint('Total Quran pages: $_totalQuranPages');
 
     pdf.addPage(
       pw.Page(
@@ -185,7 +174,6 @@ class _ReportsPageState extends State<ReportsPage> {
           boldItalic: arabicFont,
         ),
         build: (pw.Context context) {
-          debugPrint('Building PDF page...');
           return pw.Directionality(
             textDirection: pw.TextDirection.rtl,
             child: pw.Padding(
@@ -270,19 +258,14 @@ class _ReportsPageState extends State<ReportsPage> {
       ),
     );
 
-    debugPrint('PDF created, attempting to display...');
-    
     try {
       await Printing.layoutPdf(
         onLayout: (PdfPageFormat format) async {
-          debugPrint('Saving PDF...');
           return pdf.save();
         },
         name: 'Niyyah_Report_${_selectedDate.month}_${_selectedDate.year}.pdf',
       );
-      debugPrint('PDF displayed successfully');
     } catch (e) {
-      debugPrint('Error displaying PDF: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error generating PDF: $e')),
       );
@@ -493,8 +476,6 @@ class _ReportsPageState extends State<ReportsPage> {
   }
 
   Future<void> _testSimplePdf(BuildContext context) async {
-    debugPrint('Testing simple PDF generation...');
-    
     final pdf = pw.Document();
     
     pdf.addPage(
@@ -524,9 +505,7 @@ class _ReportsPageState extends State<ReportsPage> {
         onLayout: (PdfPageFormat format) async => pdf.save(),
         name: 'Test_PDF.pdf',
       );
-      debugPrint('Test PDF displayed successfully');
     } catch (e) {
-      debugPrint('Error with test PDF: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error with test PDF: $e')),
       );

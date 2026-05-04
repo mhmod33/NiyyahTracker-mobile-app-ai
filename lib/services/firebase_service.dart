@@ -19,7 +19,6 @@ class FirebaseService {
 
   // ===== Daily Worship Methods =====
   Future<void> saveDailyWorship(String userId, DailyWorship worship) async {
-    debugPrint('Firebase: Saving Worship for $userId, ID: ${worship.id}');
     try {
       await _db
           .collection('users')
@@ -27,9 +26,7 @@ class FirebaseService {
           .collection('daily_worship')
           .doc(worship.id)
           .set(worship.toMap());
-      debugPrint('Firebase: Save Worship SUCCESS');
     } catch (e) {
-      debugPrint('Firebase: Save Worship ERROR: $e');
       throw Exception('فشل حفظ العبادة اليومية: $e');
     }
   }
@@ -96,7 +93,6 @@ class FirebaseService {
 
   // ===== Monthly Goal Methods =====
   Future<void> saveMonthlyGoal(String userId, MonthlyGoal goal) async {
-    debugPrint('Firebase: Saving Monthly Goal for $userId, Title: ${goal.goalTitle}');
     try {
       await _db
           .collection('users')
@@ -104,9 +100,7 @@ class FirebaseService {
           .collection('monthly_goals')
           .doc(goal.id)
           .set(goal.toMap());
-      debugPrint('Firebase: Save Goal SUCCESS');
     } catch (e) {
-      debugPrint('Firebase: Save Goal ERROR: $e');
       throw Exception('فشل حفظ الهدف الشهري: $e');
     }
   }
@@ -220,7 +214,7 @@ class FirebaseService {
         await doc.reference.delete();
       }
     } catch (e) {
-      debugPrint('Error deleting weekly plan: $e');
+      // Silently fail
     }
   }
 
@@ -388,7 +382,6 @@ class FirebaseService {
   }
   // ===== Challenge Methods =====
   Future<void> saveChallenge(String userId, Challenge challenge) async {
-    debugPrint('Firebase: Saving Challenge for $userId, ID: ${challenge.id}');
     try {
       await _db
           .collection('users')
@@ -396,9 +389,7 @@ class FirebaseService {
           .collection('challenges')
           .doc(challenge.id)
           .set(challenge.toMap());
-      debugPrint('Firebase: Save Challenge SUCCESS');
     } catch (e) {
-      debugPrint('Firebase: Save Challenge ERROR: $e');
       throw Exception('فشل حفظ التحدي: $e');
     }
   }

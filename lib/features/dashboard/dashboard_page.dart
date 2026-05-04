@@ -68,7 +68,6 @@ class _DashboardPageState extends State<DashboardPage> {
         _isLoadingSummary = false;
       });
     } catch (e) {
-      debugPrint('Error loading today summary: $e');
       setState(() => _isLoadingSummary = false);
     }
   }
@@ -91,7 +90,6 @@ class _DashboardPageState extends State<DashboardPage> {
         setState(() => _isLoadingAccountability = false);
       }
     } catch (e) {
-      debugPrint('Error checking accountability: $e');
       setState(() => _isLoadingAccountability = false);
     }
   }
@@ -125,7 +123,6 @@ class _DashboardPageState extends State<DashboardPage> {
       // Reload summary after saving accountability
       _loadTodaySummary();
     } catch (e) {
-      debugPrint('Error saving accountability: $e');
       setState(() => _isLoadingAccountability = false);
     }
   }

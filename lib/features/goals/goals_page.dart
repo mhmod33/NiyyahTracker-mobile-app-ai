@@ -45,7 +45,6 @@ class _GoalsPageState extends State<GoalsPage> {
       });
     } catch (e) {
       setState(() => _isLoading = false);
-      debugPrint('Error loading goals: $e');
     }
   }
 
@@ -439,7 +438,6 @@ class _GoalCardState extends State<_GoalCard> {
         );
       }
     } catch (e) {
-      debugPrint('Error updating progress: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -723,7 +721,6 @@ class _AddGoalSheetState extends State<_AddGoalSheet> {
         );
       }
     } catch (e) {
-      debugPrint('Error saving goal: $e');
       setState(() => _isLoading = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('حدث خطأ أثناء حفظ الهدف', style: GoogleFonts.cairo()), backgroundColor: Colors.red),

@@ -53,7 +53,6 @@ class _ChallengesPageState extends State<ChallengesPage> {
       }
       setState(() => _isLoading = false);
     } catch (e) {
-      debugPrint('Error loading challenges: $e');
       setState(() => _isLoading = false);
     }
   }
@@ -194,7 +193,6 @@ class _ChallengesPageState extends State<ChallengesPage> {
         SnackBar(content: Text('تم إضافة التحدي بنجاح 🎯', style: GoogleFonts.cairo(color: Colors.white)), backgroundColor: AppColors.darkGreen),
       );
     } catch (e) {
-      debugPrint('Error adding challenge: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('حدث خطأ أثناء إضافة التحدي', style: GoogleFonts.cairo()), backgroundColor: Colors.red),
       );

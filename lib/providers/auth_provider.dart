@@ -52,7 +52,7 @@ class AppAuthProvider extends ChangeNotifier {
         _userProfile = doc.data();
       }
     } catch (e) {
-      debugPrint('Error loading user profile: $e');
+      // Silently fail
     }
   }
 

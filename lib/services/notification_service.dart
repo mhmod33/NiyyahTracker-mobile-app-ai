@@ -97,7 +97,6 @@ class NotificationService {
 
   void _onNotificationTapped(NotificationResponse response) {
     // Handle notification tap
-    print('Notification tapped: ${response.payload}');
   }
 
   // Settings methods
@@ -105,7 +104,6 @@ class NotificationService {
     try {
       return _settingsBox.get(_morningAzkarKey, defaultValue: true);
     } catch (e) {
-      debugPrint('Error getting morning azkar setting: $e');
       return true;
     }
   }
@@ -114,7 +112,6 @@ class NotificationService {
     try {
       return _settingsBox.get(_eveningAzkarKey, defaultValue: true);
     } catch (e) {
-      debugPrint('Error getting evening azkar setting: $e');
       return true;
     }
   }
@@ -123,7 +120,6 @@ class NotificationService {
     try {
       return _settingsBox.get(_prayerTimesKey, defaultValue: true);
     } catch (e) {
-      debugPrint('Error getting prayer times setting: $e');
       return true;
     }
   }
@@ -132,7 +128,6 @@ class NotificationService {
     try {
       return _settingsBox.get(_azkarReminderKey, defaultValue: true);
     } catch (e) {
-      debugPrint('Error getting azkar reminder setting: $e');
       return true;
     }
   }
@@ -146,7 +141,7 @@ class NotificationService {
         await cancelMorningAzkar();
       }
     } catch (e) {
-      debugPrint('Error setting morning azkar enabled: $e');
+      // Silently fail
     }
   }
 
@@ -159,7 +154,7 @@ class NotificationService {
         await cancelEveningAzkar();
       }
     } catch (e) {
-      debugPrint('Error setting evening azkar enabled: $e');
+      // Silently fail
     }
   }
 
@@ -172,7 +167,7 @@ class NotificationService {
         await cancelPrayerTimes();
       }
     } catch (e) {
-      debugPrint('Error setting prayer times enabled: $e');
+      // Silently fail
     }
   }
 
@@ -185,7 +180,7 @@ class NotificationService {
         await cancelAzkarReminders();
       }
     } catch (e) {
-      debugPrint('Error setting azkar reminder enabled: $e');
+      // Silently fail
     }
   }
 

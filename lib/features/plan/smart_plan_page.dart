@@ -72,7 +72,6 @@ class _SmartPlanPageState extends State<SmartPlanPage> {
         _isLoading = false;
       });
     } catch (e) {
-      debugPrint('Error loading weekly plan: $e');
       setState(() => _isLoading = false);
     }
   }

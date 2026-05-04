@@ -62,7 +62,6 @@ class _WorshipPageState extends State<WorshipPage> {
       setState(() => _isLoading = false);
     } catch (e) {
       setState(() => _isLoading = false);
-      debugPrint('Error loading worship: $e');
     }
   }
 
@@ -87,9 +86,8 @@ class _WorshipPageState extends State<WorshipPage> {
 
     try {
       await _firebaseService.saveDailyWorship(userId, worshipData);
-      debugPrint('Auto-saved worship data successfully');
     } catch (e) {
-      debugPrint('Auto-save error: $e');
+      // Silently fail
     }
   }
 
@@ -133,7 +131,6 @@ class _WorshipPageState extends State<WorshipPage> {
       }
     } catch (e) {
       setState(() => _isSaving = false);
-      debugPrint('Error saving worship: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text('حدث خطأ أثناء حفظ العبادات', style: GoogleFonts.cairo()),
