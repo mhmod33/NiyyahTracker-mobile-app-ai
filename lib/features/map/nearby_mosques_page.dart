@@ -280,10 +280,28 @@ class _NearbyMosquesPageState extends State<NearbyMosquesPage>
 
   // ── Open in Maps ──────────────────────────
   Future<void> _openInMaps(MosqueModel m) async {
-    final uri = Uri.parse(
-      'https://www.openstreetmap.org/?mlat=${m.location.latitude}&mlon=${m.location.longitude}#map=17/${m.location.latitude}/${m.location.longitude}',
+    // Try Google Maps first (works on most Android devices)
+    final googleMapsUri = Uri.parse(
+      'https://www.google.com/maps/dir/?api=1&destination=${m.location.latitude},${m.location.longitude}&travelmode=walking',
     );
-    if (await canLaunchUrl(uri)) launchUrl(uri, mode: LaunchMode.externalApplication);
+    
+    try {
+      await launchUrl(googleMapsUri, mode: LaunchMode.externalApplication);
+    } catch (_) {
+      // Fallback to geo: intent
+      final geoUri = Uri.parse(
+        'geo:${m.location.latitude},${m.location.longitude}?q=${m.location.latitude},${m.location.longitude}(${Uri.encodeComponent(m.name)})',
+      );
+      try {
+        await launchUrl(geoUri, mode: LaunchMode.externalApplication);
+      } catch (_) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('لا يوجد تطبيق خرائط مثبت')),
+          );
+        }
+      }
+    }
   }
 
   // ─────────────────────────────────────────
@@ -387,7 +405,7 @@ class _NearbyMosquesPageState extends State<NearbyMosquesPage>
                 child: Text(
                   '🕌 المساجد القريبة',
                   overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.cairo(
+                  style: GoogleFonts.ibmPlexSansArabic(
                     color: Colors.white,
                     fontSize: 18,
                     fontWeight: FontWeight.w800,
@@ -431,7 +449,7 @@ class _NearbyMosquesPageState extends State<NearbyMosquesPage>
         children: [
           Text(
             'نطاق البحث:',
-            style: GoogleFonts.cairo(
+            style: GoogleFonts.ibmPlexSansArabic(
               fontWeight: FontWeight.w600,
               color: AppColors.darkGreen,
               fontSize: 13,
@@ -466,7 +484,7 @@ class _NearbyMosquesPageState extends State<NearbyMosquesPage>
             ),
             child: Text(
               '${_radiusKm.toStringAsFixed(1)} كم',
-              style: GoogleFonts.cairo(
+              style: GoogleFonts.ibmPlexSansArabic(
                 color: Colors.white,
                 fontWeight: FontWeight.bold,
                 fontSize: 12,
@@ -541,8 +559,8 @@ class _NearbyMosquesPageState extends State<NearbyMosquesPage>
             ..._mosques.map(
               (m) => Marker(
                 point: m.location,
-                width: 52,
-                height: 52,
+                width: 80,
+                height: 80,
                 child: GestureDetector(
                   onTap: () => _selectMosque(m),
                   child: _MosquePin(
@@ -569,7 +587,7 @@ class _NearbyMosquesPageState extends State<NearbyMosquesPage>
             const SizedBox(height: 16),
             Text(
               'لا توجد مساجد في هذا النطاق',
-              style: GoogleFonts.cairo(color: AppColors.gray, fontSize: 16),
+              style: GoogleFonts.ibmPlexSansArabic(color: AppColors.gray, fontSize: 16),
             ),
           ],
         ),
@@ -604,7 +622,7 @@ class _NearbyMosquesPageState extends State<NearbyMosquesPage>
           const SizedBox(height: 16),
           Text(
             'جارٍ البحث عن المساجد...',
-            style: GoogleFonts.cairo(color: AppColors.gray, fontSize: 16),
+            style: GoogleFonts.ibmPlexSansArabic(color: AppColors.gray, fontSize: 16),
           ),
         ],
       ),
@@ -633,14 +651,14 @@ class _NearbyMosquesPageState extends State<NearbyMosquesPage>
                 ? 'لم يتم العثور على مساجد في نطاق ${_radiusKm.toStringAsFixed(1)} كم'
                 : _error!,
               textAlign: TextAlign.center,
-              style: GoogleFonts.cairo(color: isDark ? Colors.white70 : AppColors.gray, fontSize: 15, fontWeight: FontWeight.w600),
+              style: GoogleFonts.ibmPlexSansArabic(color: isDark ? Colors.white70 : AppColors.gray, fontSize: 15, fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 8),
             if (isEmptyMosques)
               Text(
                 'جرّب زيادة نطاق البحث لاكتشاف المزيد من المساجد',
                 textAlign: TextAlign.center,
-                style: GoogleFonts.cairo(color: AppColors.gray, fontSize: 13),
+                style: GoogleFonts.ibmPlexSansArabic(color: AppColors.gray, fontSize: 13),
               ),
             const SizedBox(height: 24),
             if (isEmptyMosques && _radiusKm < 5)
@@ -650,7 +668,7 @@ class _NearbyMosquesPageState extends State<NearbyMosquesPage>
                   _fetchMosques();
                 },
                 icon: const Icon(Icons.add_location_alt),
-                label: Text('زيادة النطاق إلى ${(_radiusKm + 1).clamp(0.5, 5.0).toStringAsFixed(1)} كم', style: GoogleFonts.cairo()),
+                label: Text('زيادة النطاق إلى ${(_radiusKm + 1).clamp(0.5, 5.0).toStringAsFixed(1)} كم', style: GoogleFonts.ibmPlexSansArabic()),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.darkGreen,
                   foregroundColor: Colors.white,
@@ -660,7 +678,7 @@ class _NearbyMosquesPageState extends State<NearbyMosquesPage>
               ElevatedButton.icon(
                 onPressed: _initLocation,
                 icon: const Icon(Icons.refresh),
-                label: Text('إعادة المحاولة', style: GoogleFonts.cairo()),
+                label: Text('إعادة المحاولة', style: GoogleFonts.ibmPlexSansArabic()),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.darkGreen,
                   foregroundColor: Colors.white,
@@ -719,7 +737,7 @@ class _NearbyMosquesPageState extends State<NearbyMosquesPage>
                   children: [
                     Text(
                       m.name,
-                      style: GoogleFonts.cairo(
+                      style: GoogleFonts.ibmPlexSansArabic(
                         fontWeight: FontWeight.w800,
                         fontSize: 18,
                         color: AppColors.dark,
@@ -728,7 +746,7 @@ class _NearbyMosquesPageState extends State<NearbyMosquesPage>
                     if (m.distanceLabel.isNotEmpty)
                       Text(
                         '📍 ${m.distanceLabel}',
-                        style: GoogleFonts.cairo(
+                        style: GoogleFonts.ibmPlexSansArabic(
                           color: AppColors.midGreen,
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
@@ -849,7 +867,7 @@ class _MosquePin extends StatelessWidget {
             ),
             child: Text(
               label,
-              style: GoogleFonts.cairo(
+              style: GoogleFonts.ibmPlexSansArabic(
                 fontSize: 8,
                 fontWeight: FontWeight.bold,
                 color: AppColors.darkGreen,
@@ -899,7 +917,7 @@ class _MosqueListTile extends StatelessWidget {
                 child: Center(
                   child: Text(
                     '$index',
-                    style: GoogleFonts.cairo(
+                    style: GoogleFonts.ibmPlexSansArabic(
                       fontWeight: FontWeight.w800,
                       color: AppColors.darkGreen,
                       fontSize: 14,
@@ -915,7 +933,7 @@ class _MosqueListTile extends StatelessWidget {
                   children: [
                     Text(
                       mosque.name,
-                      style: GoogleFonts.cairo(
+                      style: GoogleFonts.ibmPlexSansArabic(
                         fontWeight: FontWeight.w700,
                         fontSize: 15,
                         color: AppColors.dark,
@@ -924,7 +942,7 @@ class _MosqueListTile extends StatelessWidget {
                     if (mosque.distanceLabel.isNotEmpty)
                       Text(
                         '📍 ${mosque.distanceLabel}',
-                        style: GoogleFonts.cairo(
+                        style: GoogleFonts.ibmPlexSansArabic(
                           color: AppColors.midGreen,
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
@@ -965,7 +983,7 @@ class _ActionButton extends StatelessWidget {
     return ElevatedButton.icon(
       onPressed: onTap,
       icon: Icon(icon, size: 18),
-      label: Text(label, style: GoogleFonts.cairo(fontWeight: FontWeight.w600)),
+      label: Text(label, style: GoogleFonts.ibmPlexSansArabic(fontWeight: FontWeight.w600)),
       style: ElevatedButton.styleFrom(
         backgroundColor: color,
         foregroundColor: Colors.white,
@@ -1008,7 +1026,7 @@ class _ToggleChip extends StatelessWidget {
             const SizedBox(width: 4),
             Text(
               label,
-              style: GoogleFonts.cairo(
+              style: GoogleFonts.ibmPlexSansArabic(
                 fontSize: 11,
                 fontWeight: FontWeight.w700,
                 color: active ? AppColors.darkGreen : Colors.white,

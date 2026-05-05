@@ -285,40 +285,51 @@ class _AzkarCounterPageState extends State<AzkarCounterPage> with SingleTickerPr
           // ── Main counter ──
           Expanded(child: GestureDetector(
             onTap: _increment, behavior: HitTestBehavior.opaque,
-            child: Padding(padding: const EdgeInsets.symmetric(horizontal: 24), child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(_current.text, textAlign: TextAlign.center, style: _f(sz: 26, fw: FontWeight.w900, c: greenColor, h: 1.7)),
-                const SizedBox(height: 12),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  decoration: BoxDecoration(color: isDark ? AppColors.gold.withOpacity(0.15) : AppColors.goldLight, borderRadius: BorderRadius.circular(12)),
-                  child: Text(_current.reward, textAlign: TextAlign.center, style: _f(sz: 13, fw: FontWeight.w600, c: isDark ? AppColors.goldLight : AppColors.dark)),
-                ),
-                const SizedBox(height: 36),
-                ScaleTransition(scale: _pulseAnim, child: Container(
-                  width: 180, height: 180,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle, color: cardBg,
-                    boxShadow: [BoxShadow(color: (_completed ? AppColors.lightGreen : AppColors.darkGreen).withOpacity(0.15), blurRadius: 30, spreadRadius: 5)],
+            child: LayoutBuilder(
+              builder: (ctx, constraints) => SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(_current.text, textAlign: TextAlign.center, style: _f(sz: _current.text.length > 150 ? 20 : 24, fw: FontWeight.w900, c: greenColor, h: 1.7)),
+                        const SizedBox(height: 12),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          decoration: BoxDecoration(color: isDark ? AppColors.gold.withOpacity(0.15) : AppColors.goldLight, borderRadius: BorderRadius.circular(12)),
+                          child: Text(_current.reward, textAlign: TextAlign.center, style: _f(sz: 13, fw: FontWeight.w600, c: isDark ? AppColors.goldLight : AppColors.dark)),
+                        ),
+                        const SizedBox(height: 36),
+                        ScaleTransition(scale: _pulseAnim, child: Container(
+                          width: 180, height: 180,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle, color: cardBg,
+                            boxShadow: [BoxShadow(color: (_completed ? AppColors.lightGreen : AppColors.darkGreen).withOpacity(0.15), blurRadius: 30, spreadRadius: 5)],
+                          ),
+                          child: Stack(alignment: Alignment.center, children: [
+                            SizedBox(width: 170, height: 170, child: CircularProgressIndicator(
+                              value: _progress, strokeWidth: 6,
+                              backgroundColor: isDark ? Colors.white12 : AppColors.grayLight,
+                              color: _completed ? AppColors.lightGreen : AppColors.darkGreen, strokeCap: StrokeCap.round)),
+                            Column(mainAxisSize: MainAxisSize.min, children: [
+                              if (_completed) const Text('✅', style: TextStyle(fontSize: 28))
+                              else Text('$_currentCount', style: _f(sz: 52, fw: FontWeight.w900, c: greenColor)),
+                              Text('/ ${_current.targetCount}', style: _f(sz: 16, fw: FontWeight.w600, c: subColor)),
+                            ]),
+                          ]),
+                        )),
+                        const SizedBox(height: 24),
+                        Text(_completed ? 'أحسنت! أكملت هذا الذكر ✨' : 'اضغط في أي مكان للعدّ',
+                          style: _f(sz: 14, c: _completed ? greenColor : subColor, fw: FontWeight.w600)),
+                      ],
+                    ),
                   ),
-                  child: Stack(alignment: Alignment.center, children: [
-                    SizedBox(width: 170, height: 170, child: CircularProgressIndicator(
-                      value: _progress, strokeWidth: 6,
-                      backgroundColor: isDark ? Colors.white12 : AppColors.grayLight,
-                      color: _completed ? AppColors.lightGreen : AppColors.darkGreen, strokeCap: StrokeCap.round)),
-                    Column(mainAxisSize: MainAxisSize.min, children: [
-                      if (_completed) const Text('✅', style: TextStyle(fontSize: 28))
-                      else Text('$_currentCount', style: _f(sz: 52, fw: FontWeight.w900, c: greenColor)),
-                      Text('/ ${_current.targetCount}', style: _f(sz: 16, fw: FontWeight.w600, c: subColor)),
-                    ]),
-                  ]),
-                )),
-                const SizedBox(height: 24),
-                Text(_completed ? 'أحسنت! أكملت هذا الذكر ✨' : 'اضغط في أي مكان للعدّ',
-                  style: _f(sz: 14, c: _completed ? greenColor : subColor, fw: FontWeight.w600)),
-              ],
-            )),
+                ),
+              ),
+            ),
           )),
           // ── Bottom controls ──
           Container(

@@ -11,7 +11,7 @@ class DirectionalIcon extends StatelessWidget {
     final dir = Directionality.of(context);
     final IconData icon;
     if (dir == TextDirection.rtl) {
-      icon = isBack ? Icons.arrow_forward_ios_rounded : Icons.arrow_back_ios_new;
+      icon = isBack ? Icons.arrow_back_ios_new : Icons.arrow_forward_ios_rounded;
     } else {
       icon = isBack ? Icons.arrow_back_ios_new : Icons.arrow_forward_ios_rounded;
     }

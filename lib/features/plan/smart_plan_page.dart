@@ -43,9 +43,14 @@ class _SmartPlanPageState extends State<SmartPlanPage> {
         final allDesc = goals.isNotEmpty ? 'أهداف: ${goals.map((g) => g.category).toSet().join('، ')}' : 'قم بإضافة أهدافك الشهرية';
 
         final today = DateTime.now();
+        // Calculate days to subtract to get to the previous Saturday.
+        int daysSinceSaturday = (today.weekday == 7) ? 1 : (today.weekday + 1);
+        if (today.weekday == 6) daysSinceSaturday = 0;
+        final weekStart = today.subtract(Duration(days: daysSinceSaturday));
+
         final days = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
         final dailyPlans = List.generate(7, (i) {
-          final date = today.add(Duration(days: i));
+          final date = weekStart.add(Duration(days: i));
           return DailyPlan(
             date: date,
             task: allTasks,
@@ -154,6 +159,8 @@ class _SmartPlanPageState extends State<SmartPlanPage> {
                 ),
                 const SizedBox(height: 20),
                 Text('خطة هذا الأسبوع', style: GoogleFonts.ibmPlexSansArabic(fontSize: 17, fontWeight: FontWeight.bold, color: greenColor)),
+                const SizedBox(height: 4),
+                Text('* يبدأ الأسبوع من يوم السبت وينتهي يوم الجمعة', style: GoogleFonts.ibmPlexSansArabic(fontSize: 12, color: Colors.grey)),
                 const SizedBox(height: 12),
                 ...List.generate(_currentPlan!.dailyPlans.length, (index) {
                   final plan = _currentPlan!.dailyPlans[index];
@@ -201,8 +208,8 @@ class _DayCard extends StatelessWidget {
             backgroundColor: done ? (isDark ? AppColors.darkGreen.withOpacity(0.3) : AppColors.lightGreen) : (isDark ? Colors.white10 : Colors.grey[200]),
             child: const Text('🎯', style: TextStyle(fontSize: 18)),
           ),
-          title: Text('$dayName — ${plan.date.day}/${plan.date.month}', style: GoogleFonts.cairo(fontSize: 12, color: subColor)),
-          subtitle: Text(plan.task, style: GoogleFonts.cairo(fontWeight: FontWeight.w600, color: greenColor)),
+          title: Text('$dayName — ${plan.date.day}/${plan.date.month}', style: GoogleFonts.ibmPlexSansArabic(fontSize: 12, color: subColor)),
+          subtitle: Text(plan.task, style: GoogleFonts.ibmPlexSansArabic(fontWeight: FontWeight.w600, color: greenColor)),
           trailing: Icon(done ? Icons.check_circle : Icons.radio_button_unchecked,
               color: done ? (isDark ? AppColors.lightGreen : AppColors.lightGreen) : (isDark ? Colors.white24 : Colors.grey[300])),
         ),

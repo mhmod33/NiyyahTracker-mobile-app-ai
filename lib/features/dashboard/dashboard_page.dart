@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -21,6 +22,8 @@ import '../challenges/challenges_page.dart';
 import '../quran/quran_page.dart';
 import '../azkar/azkar_library_page.dart';
 import '../settings/notification_settings_page.dart';
+import '../auth/login_page.dart';
+import '../onboarding/onboarding_page.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/firebase_service.dart';
 import '../../services/daily_summary_service.dart';
@@ -38,6 +41,7 @@ class DashboardPage extends StatefulWidget {
 
 class _DashboardPageState extends State<DashboardPage> {
   int _currentIndex = 0;
+  bool _showAzkar = true;
   bool _fajrChecked = false;
   bool _charityChecked = false;
   bool _isLoadingAccountability = true;
@@ -139,7 +143,8 @@ class _DashboardPageState extends State<DashboardPage> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final bgColor = isDark ? const Color(0xFF0A0A0A) : const Color(0xFFF8FAF9);
     final authProvider = context.watch<AppAuthProvider>();
-    final userName = authProvider.displayName;
+    final isGuest = !authProvider.isAuthenticated;
+    final userName = isGuest ? 'ضيف' : authProvider.displayName;
 
     return Directionality(
       textDirection: TextDirection.rtl,
@@ -181,7 +186,17 @@ class _DashboardPageState extends State<DashboardPage> {
                             ],
                           ),
                         ),
-                        _IconButton(icon: Icons.notifications_none_rounded, onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const NotificationSettingsPage()))),
+                        if (isGuest)
+                          GestureDetector(
+                            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const LoginPage())),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                              decoration: BoxDecoration(color: AppColors.gold, borderRadius: BorderRadius.circular(20)),
+                              child: Text('تسجيل الدخول', style: _f(sz: 12, fw: FontWeight.bold, c: Colors.white)),
+                            ),
+                          )
+                        else
+                          _IconButton(icon: Icons.notifications_none_rounded, onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const NotificationSettingsPage()))),
                       ],
                     ),
                     const SizedBox(height: 24),
@@ -191,15 +206,23 @@ class _DashboardPageState extends State<DashboardPage> {
               ),
             ),
 
-            // ── Today's Focus Section ──
-            SliverToBoxAdapter(child: _SectionTitle(title: 'محاسبة اليوم', icon: Icons.auto_awesome_rounded)),
-            SliverToBoxAdapter(child: _buildDailyAccountability(isDark)),
+            // ── Rotating Azkar Section ──
+            if (_showAzkar) ...[
+              SliverToBoxAdapter(child: _SectionTitle(title: 'ذكر اليوم', icon: Icons.auto_awesome_rounded)),
+              SliverToBoxAdapter(child: _buildRotatingAzkar(isDark)),
+            ],
+
+            // ── Today's Focus Section (only for logged-in users) ──
+            if (!isGuest) ...[
+              SliverToBoxAdapter(child: _SectionTitle(title: 'محاسبة اليوم', icon: Icons.auto_awesome_rounded)),
+              SliverToBoxAdapter(child: _buildDailyAccountability(isDark)),
+            ],
 
             // ── Daily Summary Section ──
-            if (_todaySummary['hasData'] == true)
+            if (!isGuest && _todaySummary['hasData'] == true) ...[
               SliverToBoxAdapter(child: _SectionTitle(title: 'ملخص عبادات اليوم', icon: Icons.summarize_rounded)),
-            if (_todaySummary['hasData'] == true)
               SliverToBoxAdapter(child: _buildDailySummaryCard(isDark)),
+            ],
 
             // ── Quick Access Section ──
             SliverToBoxAdapter(child: _SectionTitle(title: 'الوصول السريع', icon: Icons.grid_view_rounded)),
@@ -221,7 +244,7 @@ class _DashboardPageState extends State<DashboardPage> {
               ),
             ),
 
-            // ── Features Sections ──
+            // ── Features Sections (protected for guests) ──
             SliverToBoxAdapter(child: _SectionTitle(title: 'أدوات العبادة', icon: Icons.stars_rounded)),
             SliverPadding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -230,12 +253,12 @@ class _DashboardPageState extends State<DashboardPage> {
                 mainAxisSpacing: 14,
                 crossAxisSpacing: 14,
                 children: [
-                  _FeatureCard(icon: Icons.wb_sunny_rounded, label: 'عباداتي', color: Colors.amber, isDark: isDark, onTap: () => _to(const WorshipPage())),
-                  _FeatureCard(icon: Icons.track_changes_rounded, label: 'الأهداف', color: Colors.pink, isDark: isDark, onTap: () => _to(const GoalsPage())),
-                  _FeatureCard(icon: Icons.calendar_today_rounded, label: 'الخطة', color: Colors.indigo, isDark: isDark, onTap: () => _to(const SmartPlanPage())),
-                  _FeatureCard(icon: Icons.analytics_rounded, label: 'التحليلات', color: Colors.deepPurple, isDark: isDark, onTap: () => _to(const AnalyticsPage())),
-                  _FeatureCard(icon: Icons.emoji_events_rounded, label: 'التحديات', color: Colors.orange, isDark: isDark, onTap: () => _to(const ChallengesPage())),
-                  _FeatureCard(icon: Icons.description_rounded, label: 'التقارير', color: Colors.blueGrey, isDark: isDark, onTap: () => _to(const ReportsPage())),
+                  _FeatureCard(icon: Icons.wb_sunny_rounded, label: 'عباداتي', color: Colors.amber, isDark: isDark, onTap: () => _toProtected(const WorshipPage())),
+                  _FeatureCard(icon: Icons.track_changes_rounded, label: 'الأهداف', color: Colors.pink, isDark: isDark, onTap: () => _toProtected(const GoalsPage())),
+                  _FeatureCard(icon: Icons.calendar_today_rounded, label: 'الخطة', color: Colors.indigo, isDark: isDark, onTap: () => _toProtected(const SmartPlanPage())),
+                  _FeatureCard(icon: Icons.analytics_rounded, label: 'التحليلات', color: Colors.deepPurple, isDark: isDark, onTap: () => _toProtected(const AnalyticsPage())),
+                  _FeatureCard(icon: Icons.emoji_events_rounded, label: 'التحديات', color: Colors.orange, isDark: isDark, onTap: () => _toProtected(const ChallengesPage())),
+                  _FeatureCard(icon: Icons.description_rounded, label: 'التقارير', color: Colors.blueGrey, isDark: isDark, onTap: () => _toProtected(const ReportsPage())),
                 ],
               ),
             ),
@@ -249,7 +272,7 @@ class _DashboardPageState extends State<DashboardPage> {
                 crossAxisSpacing: 14,
                 children: [
                   _FeatureCard(icon: Icons.today_rounded, label: 'سنن الجمعة', color: Colors.teal, isDark: isDark, onTap: () => _to(const FridayTipsPage())),
-                  _FeatureCard(icon: Icons.import_contacts_rounded, label: 'المكتبة', color: Colors.green, isDark: isDark, onTap: () => _to(const AzkarLibraryPage())),
+                  _FeatureCard(icon: Icons.import_contacts_rounded, label: 'مكتبة الأذكار', color: Colors.green, isDark: isDark, onTap: () => _to(const AzkarLibraryPage())),
                   _FeatureCard(icon: Icons.mosque_rounded, label: 'المساجد', color: Colors.blueAccent, isDark: isDark, onTap: () => _to(const NearbyMosquesPage())),
                 ],
               ),
@@ -265,6 +288,139 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 
   void _to(Widget page) => Navigator.push(context, MaterialPageRoute(builder: (_) => page));
+
+  /// Navigate with login check — guest users get a login prompt for protected pages
+  void _toProtected(Widget page) {
+    final auth = context.read<AppAuthProvider>();
+    if (auth.isAuthenticated) {
+      Navigator.push(context, MaterialPageRoute(builder: (_) => page));
+    } else {
+      _showLoginPrompt();
+    }
+  }
+
+  void _showLoginPrompt() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: isDark ? const Color(0xFF1A1F1C) : Colors.white,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (ctx) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: Padding(
+          padding: const EdgeInsets.all(28),
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2))),
+            const SizedBox(height: 24),
+            Icon(Icons.lock_outline_rounded, size: 56, color: AppColors.gold),
+            const SizedBox(height: 16),
+            Text('يجب تسجيل الدخول', style: _f(sz: 20, fw: FontWeight.w800, c: isDark ? Colors.white : AppColors.darkGreen)),
+            const SizedBox(height: 8),
+            Text('سجل دخولك للوصول إلى جميع الميزات', style: _f(sz: 14, c: AppColors.gray), textAlign: TextAlign.center),
+            const SizedBox(height: 24),
+            SizedBox(
+              width: double.infinity,
+              height: 52,
+              child: ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(ctx);
+                  Navigator.push(context, MaterialPageRoute(builder: (_) => const LoginPage()));
+                },
+                style: ElevatedButton.styleFrom(backgroundColor: AppColors.darkGreen, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
+                child: Text('تسجيل الدخول', style: _f(sz: 16, fw: FontWeight.bold, c: Colors.white)),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextButton(
+              onPressed: () {
+                Navigator.pop(ctx);
+                Navigator.push(context, MaterialPageRoute(builder: (_) => const OnboardingPage()));
+              },
+              child: Text('إنشاء حساب جديد', style: _f(sz: 14, fw: FontWeight.w700, c: AppColors.midGreen)),
+            ),
+          ]),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRotatingAzkar(bool isDark) {
+    // Pick random azkar that change on each app open
+    final allAzkar = <Dhikr>[
+      ...azkarCategories['أذكار الصباح']!.items.take(10),
+      ...azkarCategories['أذكار المساء']!.items.take(10),
+      ...azkarCategories['أدعية نبوية']!.items,
+    ];
+    final random = Random(DateTime.now().day * 100 + DateTime.now().hour ~/ 6);
+    final shuffled = List<Dhikr>.from(allAzkar)..shuffle(random);
+    final selected = shuffled.take(3).toList();
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: isDark
+                ? [const Color(0xFF1A2F23), const Color(0xFF0D2818)]
+                : [const Color(0xFFE8F5E9), const Color(0xFFC8E6C9)],
+          ),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: AppColors.gold.withOpacity(0.3)),
+        ),
+        child: Stack(
+          children: [
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 10), // spacing for the close button
+                ...selected.map((dhikr) => Padding(
+                  padding: const EdgeInsets.only(bottom: 14),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        dhikr.text.length > 120 ? '${dhikr.text.substring(0, 120)}...' : dhikr.text,
+                        style: _f(sz: 15, fw: FontWeight.w700, c: isDark ? Colors.white : AppColors.darkGreen, h: 1.8),
+                        textAlign: TextAlign.right,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(dhikr.reward, style: _f(sz: 11, c: AppColors.gold, fw: FontWeight.w600)),
+                      if (selected.last != dhikr) Divider(height: 20, color: AppColors.gold.withOpacity(0.2)),
+                    ],
+                  ),
+                )),
+                const SizedBox(height: 4),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: () => _to(const AzkarLibraryPage()),
+                    icon: const Icon(Icons.import_contacts_rounded, size: 18),
+                    label: Text('مكتبة الأذكار', style: _f(sz: 14, fw: FontWeight.bold, c: Colors.white)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.darkGreen,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            Positioned(
+              top: -10,
+              left: -10,
+              child: IconButton(
+                icon: Icon(Icons.close_rounded, size: 20, color: isDark ? Colors.white54 : AppColors.darkGreen.withOpacity(0.5)),
+                onPressed: () => setState(() => _showAzkar = false),
+                splashRadius: 20,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
   Widget _buildDailySummaryCard(bool isDark) {
     if (_isLoadingSummary) {
@@ -636,6 +792,7 @@ class _ModernNavBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isGuest = !context.watch<AppAuthProvider>().isAuthenticated;
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 0, 16, 24),
       height: 70,
@@ -652,7 +809,12 @@ class _ModernNavBar extends StatelessWidget {
             _NavButton(icon: Icons.dashboard_rounded, label: 'الرئيسية', selected: currentIndex == 0, onTap: () => onTap(0)),
             _NavButton(icon: Icons.mosque_rounded, label: 'المساجد', selected: currentIndex == 1, onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const NearbyMosquesPage()))),
             _NavButton(icon: Icons.auto_stories_rounded, label: 'المصحف', selected: currentIndex == 2, onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const QuranPage()))),
-            _NavButton(icon: Icons.person_rounded, label: 'حسابي', selected: currentIndex == 3, onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfilePage()))),
+            _NavButton(
+              icon: isGuest ? Icons.login_rounded : Icons.person_rounded,
+              label: isGuest ? 'تسجيل الدخول' : 'حسابي',
+              selected: currentIndex == 3,
+              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => isGuest ? const LoginPage() : const ProfilePage())),
+            ),
           ]),
         ),
       ),

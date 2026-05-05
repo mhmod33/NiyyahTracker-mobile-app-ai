@@ -123,7 +123,7 @@ class _PhoneAuthPageState extends State<PhoneAuthPage> {
             children: [
               Text(
                 _codeSent ? 'أدخل رمز التحقق' : 'تسجيل الدخول برقم الهاتف',
-                style: GoogleFonts.cairo(
+                style: GoogleFonts.ibmPlexSansArabic(
                   fontSize: 28,
                   fontWeight: FontWeight.bold,
                   color: AppColors.darkGreen,
@@ -134,7 +134,7 @@ class _PhoneAuthPageState extends State<PhoneAuthPage> {
                 _codeSent 
                   ? 'تم إرسال رسالة قصيرة تحتوي على الرمز إلى ${_selectedCountry.phoneCode}${_phoneController.text}'
                   : 'اختر دولتك ثم أدخل رقم هاتفك',
-                style: GoogleFonts.cairo(fontSize: 16, color: Colors.grey[600]),
+                style: GoogleFonts.ibmPlexSansArabic(fontSize: 16, color: Colors.grey[600]),
               ),
               const SizedBox(height: 40),
               if (!_codeSent) ...[
@@ -156,13 +156,13 @@ class _PhoneAuthPageState extends State<PhoneAuthPage> {
                     keyboardType: TextInputType.phone,
                     textDirection: TextDirection.ltr,
                     enabled: !_isLoading,
-                    style: GoogleFonts.cairo(
+                    style: GoogleFonts.ibmPlexSansArabic(
                       fontSize: 18,
                       fontWeight: FontWeight.w600,
                     ),
                     decoration: InputDecoration(
                       hintText: '1X XXXX XXXX',
-                      hintStyle: GoogleFonts.cairo(color: Colors.grey[400]),
+                      hintStyle: GoogleFonts.ibmPlexSansArabic(color: Colors.grey[400]),
                       prefixIcon: GestureDetector(
                         onTap: () {
                           showCountryPicker(
@@ -196,7 +196,7 @@ class _PhoneAuthPageState extends State<PhoneAuthPage> {
                               const SizedBox(width: 4),
                               Text(
                                 '+${_selectedCountry.phoneCode}',
-                                style: GoogleFonts.cairo(
+                                style: GoogleFonts.ibmPlexSansArabic(
                                   fontSize: 16,
                                   fontWeight: FontWeight.bold,
                                   color: AppColors.darkGreen,
@@ -230,12 +230,12 @@ class _PhoneAuthPageState extends State<PhoneAuthPage> {
                   controller: _otpController,
                   keyboardType: TextInputType.number,
                   textAlign: TextAlign.center,
-                  style: GoogleFonts.cairo(fontSize: 24, letterSpacing: 8, fontWeight: FontWeight.bold),
+                  style: GoogleFonts.ibmPlexSansArabic(fontSize: 24, letterSpacing: 8, fontWeight: FontWeight.bold),
                   maxLength: 6,
                   decoration: InputDecoration(
                     counterText: '',
                     hintText: '------',
-                    hintStyle: GoogleFonts.cairo(color: Colors.grey[400], letterSpacing: 8),
+                    hintStyle: GoogleFonts.ibmPlexSansArabic(color: Colors.grey[400], letterSpacing: 8),
                     filled: true,
                     fillColor: Colors.white,
                     border: OutlineInputBorder(
@@ -262,7 +262,7 @@ class _PhoneAuthPageState extends State<PhoneAuthPage> {
                     ? const CircularProgressIndicator(color: Colors.white)
                     : Text(
                         _codeSent ? 'تحقق من الرمز' : 'إرسال الرمز',
-                        style: GoogleFonts.cairo(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+                        style: GoogleFonts.ibmPlexSansArabic(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
                       ),
                 ),
               ),

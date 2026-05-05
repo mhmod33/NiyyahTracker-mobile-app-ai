@@ -152,6 +152,19 @@ class FirebaseService {
     }
   }
 
+  Future<void> deleteMonthlyGoal(String userId, String goalId) async {
+    try {
+      await _db
+          .collection('users')
+          .doc(userId)
+          .collection('monthly_goals')
+          .doc(goalId)
+          .delete();
+    } catch (e) {
+      throw Exception('فشل حذف الهدف الشهري: $e');
+    }
+  }
+
   // ===== Weekly Plan Methods =====
   Future<void> saveWeeklyPlan(String userId, WeeklyPlan plan) async {
     try {

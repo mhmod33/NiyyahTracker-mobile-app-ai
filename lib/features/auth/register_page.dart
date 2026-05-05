@@ -21,6 +21,15 @@ class _RegisterPageState extends State<RegisterPage> {
   final _formKey = GlobalKey<FormState>();
   bool _obscurePassword = true;
   bool _obscureConfirm = true;
+  bool _hasSubmitAttempt = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) context.read<AppAuthProvider>().clearError();
+    });
+  }
 
   @override
   void dispose() {
@@ -32,6 +41,7 @@ class _RegisterPageState extends State<RegisterPage> {
   }
 
   Future<void> _handleRegister() async {
+    setState(() => _hasSubmitAttempt = true);
     if (!_formKey.currentState!.validate()) return;
 
     final authProvider = context.read<AppAuthProvider>();
@@ -49,6 +59,13 @@ class _RegisterPageState extends State<RegisterPage> {
         MaterialPageRoute(builder: (_) => const DashboardPage()),
       );
     }
+  }
+
+  void _onFieldChanged(String value, AppAuthProvider authProvider) {
+    if (_hasSubmitAttempt) {
+      setState(() => _hasSubmitAttempt = false);
+    }
+    authProvider.clearError();
   }
 
   @override
@@ -84,12 +101,13 @@ class _RegisterPageState extends State<RegisterPage> {
                 padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 20.0),
                 child: Form(
                   key: _formKey,
+                  autovalidateMode: _hasSubmitAttempt ? AutovalidateMode.always : AutovalidateMode.disabled,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
                         'إنشاء حساب جديد',
-                        style: GoogleFonts.cairo(
+                        style: GoogleFonts.ibmPlexSansArabic(
                           fontSize: 28,
                           fontWeight: FontWeight.bold,
                           color: isDark ? Colors.white : AppColors.darkGreen,
@@ -98,7 +116,7 @@ class _RegisterPageState extends State<RegisterPage> {
                       const SizedBox(height: 8),
                       Text(
                         'انضم إلينا في رحلة التطوير الروحي اليومية',
-                        style: GoogleFonts.cairo(
+                        style: GoogleFonts.ibmPlexSansArabic(
                           fontSize: 16,
                           color: isDark ? Colors.white60 : Colors.grey[600],
                         ),
@@ -123,7 +141,7 @@ class _RegisterPageState extends State<RegisterPage> {
                               Expanded(
                                 child: Text(
                                   authProvider.errorMessage!,
-                                  style: GoogleFonts.cairo(fontSize: 13, color: Colors.red[700]),
+                                  style: GoogleFonts.ibmPlexSansArabic(fontSize: 13, color: Colors.red[700]),
                                 ),
                               ),
                             ],
@@ -136,7 +154,9 @@ class _RegisterPageState extends State<RegisterPage> {
                         hint: 'محمود محمد',
                         icon: Icons.person_outline,
                         isDark: isDark,
+                        onChanged: (val) => _onFieldChanged(val, authProvider),
                         validator: (value) {
+                          if (!_hasSubmitAttempt) return null;
                           if (value == null || value.trim().isEmpty) return 'يرجى إدخال الاسم';
                           if (value.trim().length < 2) return 'الاسم قصير جداً';
                           return null;
@@ -151,7 +171,9 @@ class _RegisterPageState extends State<RegisterPage> {
                         keyboardType: TextInputType.emailAddress,
                         textDirection: TextDirection.ltr,
                         isDark: isDark,
+                        onChanged: (val) => _onFieldChanged(val, authProvider),
                         validator: (value) {
+                          if (!_hasSubmitAttempt) return null;
                           if (value == null || value.isEmpty) return 'يرجى إدخال البريد الإلكتروني';
                           if (!value.contains('@') || !value.contains('.')) return 'بريد إلكتروني غير صالح';
                           return null;
@@ -167,7 +189,9 @@ class _RegisterPageState extends State<RegisterPage> {
                         obscure: _obscurePassword,
                         onToggleObscure: () => setState(() => _obscurePassword = !_obscurePassword),
                         isDark: isDark,
+                        onChanged: (val) => _onFieldChanged(val, authProvider),
                         validator: (value) {
+                          if (!_hasSubmitAttempt) return null;
                           if (value == null || value.isEmpty) return 'يرجى إدخال كلمة المرور';
                           if (value.length < 6) return 'كلمة المرور يجب أن تكون 6 أحرف على الأقل';
                           return null;
@@ -183,7 +207,9 @@ class _RegisterPageState extends State<RegisterPage> {
                         obscure: _obscureConfirm,
                         onToggleObscure: () => setState(() => _obscureConfirm = !_obscureConfirm),
                         isDark: isDark,
+                        onChanged: (val) => _onFieldChanged(val, authProvider),
                         validator: (value) {
+                          if (!_hasSubmitAttempt) return null;
                           if (value == null || value.isEmpty) return 'يرجى تأكيد كلمة المرور';
                           if (value != _passwordController.text) return 'كلمة المرور غير متطابقة';
                           return null;
@@ -209,7 +235,7 @@ class _RegisterPageState extends State<RegisterPage> {
                               )
                             : Text(
                                 'إنشاء الحساب',
-                                style: GoogleFonts.cairo(
+                                style: GoogleFonts.ibmPlexSansArabic(
                                   fontSize: 18,
                                   fontWeight: FontWeight.bold,
                                   color: Colors.white,
@@ -223,7 +249,7 @@ class _RegisterPageState extends State<RegisterPage> {
                           onPressed: () => Navigator.pop(context),
                           child: Text(
                             'لديك حساب بالفعل؟ سجل الدخول',
-                            style: GoogleFonts.cairo(
+                            style: GoogleFonts.ibmPlexSansArabic(
                               color: AppColors.midGreen,
                               fontWeight: FontWeight.bold,
                             ),
@@ -253,13 +279,14 @@ class _RegisterPageState extends State<RegisterPage> {
     TextInputType? keyboardType,
     TextDirection? textDirection,
     String? Function(String?)? validator,
+    void Function(String)? onChanged,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           label,
-          style: GoogleFonts.cairo(
+          style: GoogleFonts.ibmPlexSansArabic(
             fontWeight: FontWeight.bold,
             color: isDark ? Colors.white : AppColors.darkGreen,
           ),
@@ -271,9 +298,10 @@ class _RegisterPageState extends State<RegisterPage> {
           keyboardType: keyboardType,
           textDirection: textDirection,
           validator: validator,
+          onChanged: onChanged,
           decoration: InputDecoration(
             hintText: hint,
-            hintStyle: GoogleFonts.cairo(color: Colors.grey[400]),
+            hintStyle: GoogleFonts.ibmPlexSansArabic(color: Colors.grey[400]),
             prefixIcon: Icon(icon, color: AppColors.midGreen),
             suffixIcon: isPassword
                 ? IconButton(

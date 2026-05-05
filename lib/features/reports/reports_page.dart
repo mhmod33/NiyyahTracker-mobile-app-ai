@@ -444,61 +444,10 @@ class _ReportsPageState extends State<ReportsPage> {
             ),
           ),
         ),
-        const SizedBox(width: 12),
-        ElevatedButton.icon(
-          onPressed: () => _testSimplePdf(context),
-          icon: const Icon(Icons.bug_report, color: Colors.white),
-          label: const Text(
-            'Test PDF',
-            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-          ),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.orange,
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            elevation: 6,
-          ),
-        ),
       ],
     );
   }
 
-  Future<void> _testSimplePdf(BuildContext context) async {
-    final pdf = pw.Document();
-    
-    pdf.addPage(
-      pw.Page(
-        pageFormat: PdfPageFormat.a4,
-        build: (pw.Context context) {
-          return pw.Center(
-            child: pw.Column(
-              mainAxisAlignment: pw.MainAxisAlignment.center,
-              children: [
-                pw.Text('Test PDF', style: const pw.TextStyle(fontSize: 40)),
-                pw.SizedBox(height: 20),
-                pw.Text('This is a test PDF to verify basic functionality'),
-                pw.SizedBox(height: 20),
-                pw.Text('Arabic Test: مرحبا بالعالم'),
-                pw.SizedBox(height: 20),
-                pw.Text('Date: ${DateTime.now()}'),
-              ],
-            ),
-          );
-        },
-      ),
-    );
-
-    try {
-      await Printing.layoutPdf(
-        onLayout: (PdfPageFormat format) async => pdf.save(),
-        name: 'Test_PDF.pdf',
-      );
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error with test PDF: $e')),
-      );
-    }
-  }
 
   Widget _analyticsInsights(bool isDark) {
     final cardBg = isDark ? const Color(0xFF1E1E1E) : Colors.white;

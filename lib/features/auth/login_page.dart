@@ -22,6 +22,7 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
   final _formKey = GlobalKey<FormState>();
   bool _obscurePassword = true;
   bool _isGoogleLoading = false;
+  bool _hasSubmitAttempt = false;
 
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
@@ -30,6 +31,10 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) context.read<AppAuthProvider>().clearError();
+    });
+
     _animationController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1200),
@@ -55,6 +60,7 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
   }
 
   Future<void> _handleEmailLogin() async {
+    setState(() => _hasSubmitAttempt = true);
     if (!_formKey.currentState!.validate()) return;
 
     final authProvider = context.read<AppAuthProvider>();
@@ -167,6 +173,13 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
     );
   }
 
+  void _onFieldChanged(String value, AppAuthProvider authProvider) {
+    if (_hasSubmitAttempt) {
+      setState(() => _hasSubmitAttempt = false);
+    }
+    authProvider.clearError();
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -239,6 +252,7 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                           position: _slideAnimation,
                           child: Form(
                             key: _formKey,
+                            autovalidateMode: _hasSubmitAttempt ? AutovalidateMode.always : AutovalidateMode.disabled,
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.stretch,
                               children: [
@@ -332,8 +346,10 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                                   keyboardType: TextInputType.emailAddress,
                                   textDirection: TextDirection.ltr,
                                   isDark: isDark,
+                                  onChanged: (val) => _onFieldChanged(val, authProvider),
                                   validator: (value) {
-                                    if (value == null || value.isEmpty) return 'يرجى إدخال البريد الإلكتروني';
+                                    if (!_hasSubmitAttempt) return null;
+                                    if (value == null || value.trim().isEmpty) return 'يرجى إدخال البريد الإلكتروني';
                                     if (!value.contains('@') || !value.contains('.')) return 'بريد إلكتروني غير صالح';
                                     return null;
                                   },
@@ -346,7 +362,9 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                                   icon: Icons.lock_rounded,
                                   isPassword: true,
                                   isDark: isDark,
+                                  onChanged: (val) => _onFieldChanged(val, authProvider),
                                   validator: (value) {
+                                    if (!_hasSubmitAttempt) return null;
                                     if (value == null || value.isEmpty) return 'يرجى إدخال كلمة المرور';
                                     if (value.length < 6) return 'كلمة المرور يجب أن تكون 6 أحرف على الأقل';
                                     return null;
@@ -412,6 +430,40 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                                         ),
                                   ),
                                 ),
+                                const SizedBox(height: 16),
+
+                                // Guest Mode Button
+                                Container(
+                                  height: 56,
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(16),
+                                    border: Border.all(
+                                      color: isDark ? Colors.white24 : AppColors.darkGreen.withOpacity(0.3),
+                                      width: 1.5,
+                                    ),
+                                  ),
+                                  child: TextButton(
+                                    onPressed: () {
+                                      Navigator.pushReplacement(
+                                        context,
+                                        MaterialPageRoute(builder: (_) => const DashboardPage()),
+                                      );
+                                    },
+                                    style: TextButton.styleFrom(
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(16),
+                                      ),
+                                    ),
+                                    child: Text(
+                                      'تخطي - الدخول كضيف',
+                                      style: GoogleFonts.ibmPlexSansArabic(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                        color: isDark ? Colors.white70 : AppColors.darkGreen,
+                                      ),
+                                    ),
+                                  ),
+                                ),
                                 const SizedBox(height: 32),
 
                                 // Divider
@@ -445,25 +497,7 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                                         onTap: _isGoogleLoading ? () {} : _handleGoogleLogin,
                                       ),
                                     ),
-                                    const SizedBox(width: 16),
-                                    Expanded(
-                                      child: _SocialButton(
-                                        title: 'رقم الهاتف',
-                                        icon: Icons.phone_android_rounded,
-                                        color: isDark ? Colors.white : AppColors.darkGreen,
-                                        onTap: () {
-                                          Navigator.push(
-                                            context,
-                                            PageRouteBuilder(
-                                              pageBuilder: (context, animation, secondaryAnimation) => const PhoneAuthPage(),
-                                              transitionsBuilder: (context, animation, secondaryAnimation, child) {
-                                                return FadeTransition(opacity: animation, child: child);
-                                              },
-                                            ),
-                                          );
-                                        },
-                                      ),
-                                    ),
+                                    // Phone auth button hidden from UI (code preserved)
                                   ],
                                 ),
                                 const SizedBox(height: 40),
@@ -534,6 +568,7 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
     TextInputType? keyboardType,
     TextDirection? textDirection,
     String? Function(String?)? validator,
+    void Function(String)? onChanged,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -555,6 +590,7 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
           keyboardType: keyboardType,
           textDirection: textDirection,
           validator: validator,
+          onChanged: onChanged,
           style: GoogleFonts.ibmPlexSansArabic(
             color: isDark ? Colors.white : Colors.black87,
             fontWeight: FontWeight.w500,
