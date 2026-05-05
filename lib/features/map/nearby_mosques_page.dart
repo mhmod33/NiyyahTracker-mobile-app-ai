@@ -541,8 +541,8 @@ class _NearbyMosquesPageState extends State<NearbyMosquesPage>
             ..._mosques.map(
               (m) => Marker(
                 point: m.location,
-                width: 52,
-                height: 52,
+                width: 80,
+                height: 80,
                 child: GestureDetector(
                   onTap: () => _selectMosque(m),
                   child: _MosquePin(

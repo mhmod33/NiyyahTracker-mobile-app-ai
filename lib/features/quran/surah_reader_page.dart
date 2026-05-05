@@ -243,13 +243,9 @@ class _MushafPageWidget extends StatelessWidget {
           String verseText = quran.getVerse(surah, v, verseEndSymbol: false);
           // Remove Basmala from first verse (except Fatiha & Tawbah)
           if (v == 1 && surah != 1 && surah != 9) {
-            verseText = verseText.replaceFirst('${quran.basmala} ', '');
-            verseText = verseText.replaceFirst(quran.basmala, '');
             verseText = verseText
-                .replaceFirst(RegExp(r'^بِسْمِ اللَّهِ الرَّحْمَـٰنِ الرَّحِيمِ\s*'), '')
-                .replaceFirst(RegExp(r'^بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ\s*'), '')
-                .replaceFirst(RegExp(r'^بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيمِ\s*'), '')
-                .replaceFirst(RegExp(r'^بسم الله الرحمن الرحيم\s*'), '')
+                .replaceFirst(RegExp(r'^.*?الرَّحِيمِ\s*'), '')
+                .replaceFirst(RegExp(r'^.*?الرحيم\s*'), '')
                 .trim();
           }
           final tapHandler = TapGestureRecognizer()..onTap = () => _showVerseActions(context, surah, v);

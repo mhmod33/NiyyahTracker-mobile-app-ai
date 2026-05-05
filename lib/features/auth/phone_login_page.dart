@@ -22,7 +22,7 @@ class _PhoneLoginPageState extends State<PhoneLoginPage> {
   bool _isLoading = false;
   String? _errorMessage;
   int _resendCountdown = 0;
-  Country _selectedCountry = Country.egypt;
+  Country _selectedCountry = Country.worldWide;
 
   @override
   void dispose() {
@@ -282,7 +282,11 @@ class _PhoneLoginPageState extends State<PhoneLoginPage> {
                                     color: AppColors.darkGreen,
                                   ),
                                 ),
-                                const Icon(Icons.arrow_drop_down, color: AppColors.midGreen, size: 20),
+                                const Icon(
+                                  Icons.arrow_drop_down,
+                                  color: AppColors.midGreen,
+                                  size: 20,
+                                ),
                               ],
                             ),
                           ),
@@ -291,11 +295,15 @@ class _PhoneLoginPageState extends State<PhoneLoginPage> {
                         fillColor: Colors.white,
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(16),
-                          borderSide: const BorderSide(color: AppColors.paleGreen),
+                          borderSide: const BorderSide(
+                            color: AppColors.paleGreen,
+                          ),
                         ),
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(16),
-                          borderSide: const BorderSide(color: AppColors.paleGreen),
+                          borderSide: const BorderSide(
+                            color: AppColors.paleGreen,
+                          ),
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(16),
@@ -353,7 +361,9 @@ class _PhoneLoginPageState extends State<PhoneLoginPage> {
                         counterText: '',
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(16),
-                          borderSide: const BorderSide(color: AppColors.paleGreen),
+                          borderSide: const BorderSide(
+                            color: AppColors.paleGreen,
+                          ),
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(16),
@@ -456,10 +466,10 @@ class _PhoneLoginPageState extends State<PhoneLoginPage> {
                     onPressed: _isLoading
                         ? null
                         : () => setState(() {
-                          _isOtpSent = false;
-                          _otpController.clear();
-                          _phoneController.clear();
-                        }),
+                            _isOtpSent = false;
+                            _otpController.clear();
+                            _phoneController.clear();
+                          }),
                     child: Text(
                       'تغيير رقم الهاتف',
                       style: GoogleFonts.cairo(
