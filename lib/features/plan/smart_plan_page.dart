@@ -43,9 +43,14 @@ class _SmartPlanPageState extends State<SmartPlanPage> {
         final allDesc = goals.isNotEmpty ? 'أهداف: ${goals.map((g) => g.category).toSet().join('، ')}' : 'قم بإضافة أهدافك الشهرية';
 
         final today = DateTime.now();
+        // Calculate days to subtract to get to the previous Saturday.
+        int daysSinceSaturday = (today.weekday == 7) ? 1 : (today.weekday + 1);
+        if (today.weekday == 6) daysSinceSaturday = 0;
+        final weekStart = today.subtract(Duration(days: daysSinceSaturday));
+
         final days = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
         final dailyPlans = List.generate(7, (i) {
-          final date = today.add(Duration(days: i));
+          final date = weekStart.add(Duration(days: i));
           return DailyPlan(
             date: date,
             task: allTasks,
@@ -154,6 +159,8 @@ class _SmartPlanPageState extends State<SmartPlanPage> {
                 ),
                 const SizedBox(height: 20),
                 Text('خطة هذا الأسبوع', style: GoogleFonts.ibmPlexSansArabic(fontSize: 17, fontWeight: FontWeight.bold, color: greenColor)),
+                const SizedBox(height: 4),
+                Text('* يبدأ الأسبوع من يوم السبت وينتهي يوم الجمعة', style: GoogleFonts.ibmPlexSansArabic(fontSize: 12, color: Colors.grey)),
                 const SizedBox(height: 12),
                 ...List.generate(_currentPlan!.dailyPlans.length, (index) {
                   final plan = _currentPlan!.dailyPlans[index];

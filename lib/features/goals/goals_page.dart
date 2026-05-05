@@ -451,6 +451,59 @@ class _GoalCardState extends State<_GoalCard> {
     }
   }
 
+  Future<void> _deleteGoal() async {
+    final bool? confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Text('تأكيد الحذف', style: GoogleFonts.ibmPlexSansArabic(fontWeight: FontWeight.bold)),
+          content: Text('هل أنت متأكد من حذف هذا الهدف؟', style: GoogleFonts.ibmPlexSansArabic()),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: Text('إلغاء', style: GoogleFonts.ibmPlexSansArabic()),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.red, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
+              onPressed: () => Navigator.pop(ctx, true),
+              child: Text('حذف', style: GoogleFonts.ibmPlexSansArabic(color: Colors.white)),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (confirm == true) {
+      try {
+        final userId = context.read<AppAuthProvider>().userId;
+        if (userId.isEmpty) return;
+        
+        await FirebaseService().deleteMonthlyGoal(userId, widget.goal.id);
+        widget.onUpdate();
+        
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('تم حذف الهدف بنجاح', style: GoogleFonts.ibmPlexSansArabic(color: Colors.white)),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('حدث خطأ أثناء الحذف', style: GoogleFonts.ibmPlexSansArabic()),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final pct = (widget.goal.progress * 100).toInt();
@@ -505,6 +558,18 @@ class _GoalCardState extends State<_GoalCard> {
               color: pct >= 100 ? (widget.isDark ? AppColors.darkGreen.withOpacity(0.3) : AppColors.paleGreen) : (widget.isDark ? AppColors.gold.withOpacity(0.15) : AppColors.goldBg),
               borderRadius: BorderRadius.circular(20)),
             child: Text('$pct٪', style: GoogleFonts.ibmPlexSansArabic(fontWeight: FontWeight.bold, color: pct >= 100 ? greenColor : AppColors.gold)),
+          ),
+          const SizedBox(width: 8),
+          GestureDetector(
+            onTap: _deleteGoal,
+            child: Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: Colors.red.withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.delete_outline, size: 20, color: Colors.red),
+            ),
           ),
         ]),
         const SizedBox(height: 14),

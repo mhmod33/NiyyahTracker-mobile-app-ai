@@ -21,6 +21,7 @@ class NotificationService {
   // Notification settings keys
   static const String _morningAzkarKey = 'morning_azkar_enabled';
   static const String _eveningAzkarKey = 'evening_azkar_enabled';
+  static const String _sleepAzkarKey = 'sleep_azkar_enabled';
   static const String _prayerTimesKey = 'prayer_times_enabled';
   static const String _azkarReminderKey = 'azkar_reminder_enabled';
 
@@ -115,6 +116,14 @@ class NotificationService {
       return true;
     }
   }
+
+  bool get sleepAzkarEnabled {
+    try {
+      return _settingsBox.get(_sleepAzkarKey, defaultValue: true);
+    } catch (e) {
+      return true;
+    }
+  }
   
   bool get prayerTimesEnabled {
     try {
@@ -158,6 +167,19 @@ class NotificationService {
     }
   }
 
+  Future<void> setSleepAzkarEnabled(bool enabled) async {
+    try {
+      await _settingsBox.put(_sleepAzkarKey, enabled);
+      if (enabled) {
+        await scheduleSleepAzkar();
+      } else {
+        await cancelSleepAzkar();
+      }
+    } catch (e) {
+      // Silently fail
+    }
+  }
+
   Future<void> setPrayerTimesEnabled(bool enabled) async {
     try {
       await _settingsBox.put(_prayerTimesKey, enabled);
@@ -188,11 +210,12 @@ class NotificationService {
   Future<void> scheduleMorningAzkar() async {
     if (!morningAzkarEnabled) return;
 
+    // Time is 5:00 AM, send notification at 4:45 AM (15 mins before)
     await _notifications.zonedSchedule(
       1001,
-      'أذكار الصباح',
-      'حان وقت أذكار الصباح - ابدأ يومك بذكر الله',
-      _nextTime(5, 0), // 5:00 AM
+      'تذكير بأذكار الصباح',
+      'بقي 15 دقيقة على وقت أذكار الصباح',
+      _nextTime(4, 45), // 4:45 AM
       const NotificationDetails(
         android: AndroidNotificationDetails(
           _azkarChannelId,
@@ -204,7 +227,7 @@ class NotificationService {
           icon: '@mipmap/ic_launcher',
           largeIcon: DrawableResourceAndroidBitmap('notification_icon'),
           styleInformation: BigTextStyleInformation(
-            'حان وقت أذكار الصباح\n\n"أَصْـبَحْنا وَأَصْـبَحَ المُـلْكُ لله وَالحَمدُ لله"',
+            'بقي 15 دقيقة على وقت أذكار الصباح\n\n"أَصْـبَحْنا وَأَصْـبَحَ المُـلْكُ لله وَالحَمدُ لله"',
             htmlFormatBigText: false,
             contentTitle: 'أذكار الصباح',
             htmlFormatContentTitle: false,
@@ -227,11 +250,12 @@ class NotificationService {
   Future<void> scheduleEveningAzkar() async {
     if (!eveningAzkarEnabled) return;
 
+    // Time is 6:00 PM, send notification at 5:45 PM (15 mins before)
     await _notifications.zonedSchedule(
       1002,
-      'أذكار المساء',
-      'حان وقت أذكار المساء - اختم يومك بذكر الله',
-      _nextTime(18, 0), // 6:00 PM
+      'تذكير بأذكار المساء',
+      'بقي 15 دقيقة على وقت أذكار المساء',
+      _nextTime(17, 45), // 5:45 PM
       const NotificationDetails(
         android: AndroidNotificationDetails(
           _azkarChannelId,
@@ -243,9 +267,49 @@ class NotificationService {
           icon: '@mipmap/ic_launcher',
           largeIcon: DrawableResourceAndroidBitmap('notification_icon'),
           styleInformation: BigTextStyleInformation(
-            'حان وقت أذكار المساء\n\n"أَمْسَيْـنا وَأَمْسـى المـلكُ لله وَالحَمدُ لله"',
+            'بقي 15 دقيقة على وقت أذكار المساء\n\n"أَمْسَيْـنا وَأَمْسـى المـلكُ لله وَالحَمدُ لله"',
             htmlFormatBigText: false,
             contentTitle: 'أذكار المساء',
+            htmlFormatContentTitle: false,
+          ),
+        ),
+        iOS: DarwinNotificationDetails(
+          presentAlert: true,
+          presentBadge: true,
+          presentSound: true,
+          sound: 'notification_sound.aiff',
+        ),
+      ),
+      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      uiLocalNotificationDateInterpretation:
+          UILocalNotificationDateInterpretation.absoluteTime,
+      matchDateTimeComponents: DateTimeComponents.time,
+    );
+  }
+
+  Future<void> scheduleSleepAzkar() async {
+    if (!sleepAzkarEnabled) return;
+
+    // Time is 10:00 PM, send notification at 9:45 PM (15 mins before)
+    await _notifications.zonedSchedule(
+      1003,
+      'تذكير بأذكار النوم',
+      'بقي 15 دقيقة على وقت أذكار النوم',
+      _nextTime(21, 45), // 9:45 PM
+      const NotificationDetails(
+        android: AndroidNotificationDetails(
+          _azkarChannelId,
+          'أذكار وتذكيرات',
+          channelDescription: 'تذكيرات الأذكار اليومية',
+          importance: Importance.high,
+          priority: Priority.high,
+          sound: RawResourceAndroidNotificationSound('notification_sound'),
+          icon: '@mipmap/ic_launcher',
+          largeIcon: DrawableResourceAndroidBitmap('notification_icon'),
+          styleInformation: BigTextStyleInformation(
+            'بقي 15 دقيقة على وقت أذكار النوم\n\n"بِاسْمِكَ رَبِّي وَضَعْتُ جَنْبِي، وَبِكَ أَرْفَعُهُ"',
+            htmlFormatBigText: false,
+            contentTitle: 'أذكار النوم',
             htmlFormatContentTitle: false,
           ),
         ),
@@ -266,35 +330,38 @@ class NotificationService {
   Future<void> scheduleAzkarReminders() async {
     if (!azkarReminderEnabled) return;
 
-    // Schedule reminders every 2 hours during the day
-    for (int hour = 8; hour <= 22; hour += 2) {
-      await _notifications.zonedSchedule(
-        2000 + hour,
-        'تذكير بالذكر',
-        'لا تنسى ذكر الله في هذا الوقت',
-        _nextTime(hour, 0),
-        const NotificationDetails(
-          android: AndroidNotificationDetails(
-            _azkarChannelId,
-            'أذكار وتذكيرات',
-            channelDescription: 'تذكيرات الأذكار اليومية',
-            importance: Importance.defaultImportance,
-            priority: Priority.defaultPriority,
-            sound: RawResourceAndroidNotificationSound('notification_sound'),
-            icon: '@mipmap/ic_launcher',
+    // Schedule reminders every 15 minutes during the active day (8 AM to 10 PM)
+    int id = 2000;
+    for (int hour = 8; hour <= 22; hour++) {
+      for (int minute in [0, 15, 30, 45]) {
+        await _notifications.zonedSchedule(
+          id++,
+          'تذكير بالذكر',
+          'لا تنسى ذكر الله في هذا الوقت',
+          _nextTime(hour, minute),
+          const NotificationDetails(
+            android: AndroidNotificationDetails(
+              _azkarChannelId,
+              'أذكار وتذكيرات',
+              channelDescription: 'تذكيرات الأذكار اليومية',
+              importance: Importance.defaultImportance,
+              priority: Priority.defaultPriority,
+              sound: RawResourceAndroidNotificationSound('notification_sound'),
+              icon: '@mipmap/ic_launcher',
+            ),
+            iOS: DarwinNotificationDetails(
+              presentAlert: true,
+              presentBadge: true,
+              presentSound: true,
+              sound: 'notification_sound.aiff',
+            ),
           ),
-          iOS: DarwinNotificationDetails(
-            presentAlert: true,
-            presentBadge: true,
-            presentSound: true,
-            sound: 'notification_sound.aiff',
-          ),
-        ),
-        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-        uiLocalNotificationDateInterpretation:
-            UILocalNotificationDateInterpretation.absoluteTime,
-        matchDateTimeComponents: DateTimeComponents.time,
-      );
+          androidScheduleMode: AndroidScheduleMode.inexact,
+          uiLocalNotificationDateInterpretation:
+              UILocalNotificationDateInterpretation.absoluteTime,
+          matchDateTimeComponents: DateTimeComponents.time,
+        );
+      }
     }
   }
 
@@ -311,6 +378,7 @@ class NotificationService {
     ];
 
     for (final prayer in prayers) {
+      // Notification at prayer time
       await _notifications.zonedSchedule(
         prayer['id'] as int,
         'حان وقت صلاة ${prayer['name']}',
@@ -348,6 +416,40 @@ class NotificationService {
             UILocalNotificationDateInterpretation.absoluteTime,
         matchDateTimeComponents: DateTimeComponents.time,
       );
+
+      // Notification 15 minutes before prayer time
+      int beforeHour = (prayer['hour'] as int) - 1;
+      int beforeMinute = 45;
+      if (beforeHour < 0) beforeHour = 23;
+      
+      await _notifications.zonedSchedule(
+        (prayer['id'] as int) + 100, // offset ID for pre-prayer
+        'تذكير بصلاة ${prayer['name']}',
+        'بقي 15 دقيقة على أذان ${prayer['name']}',
+        _nextTime(beforeHour, beforeMinute),
+        NotificationDetails(
+          android: AndroidNotificationDetails(
+            _prayerChannelId,
+            'تنبيهات قبل الصلاة',
+            channelDescription: 'تنبيهات قبل أوقات الصلاة بـ 15 دقيقة',
+            importance: Importance.high,
+            priority: Priority.high,
+            sound: RawResourceAndroidNotificationSound('notification_sound'),
+            icon: '@mipmap/ic_launcher',
+            color: const Color(0xFF145A3A),
+          ),
+          iOS: DarwinNotificationDetails(
+            presentAlert: true,
+            presentBadge: true,
+            presentSound: true,
+            sound: 'notification_sound.aiff',
+          ),
+        ),
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        uiLocalNotificationDateInterpretation:
+            UILocalNotificationDateInterpretation.absoluteTime,
+        matchDateTimeComponents: DateTimeComponents.time,
+      );
     }
   }
 
@@ -360,15 +462,20 @@ class NotificationService {
     await _notifications.cancel(1002);
   }
 
+  Future<void> cancelSleepAzkar() async {
+    await _notifications.cancel(1003);
+  }
+
   Future<void> cancelAzkarReminders() async {
-    for (int hour = 8; hour <= 22; hour += 2) {
-      await _notifications.cancel(2000 + hour);
+    for (int id = 2000; id < 2060; id++) {
+      await _notifications.cancel(id);
     }
   }
 
   Future<void> cancelPrayerTimes() async {
     for (int id = 3001; id <= 3005; id++) {
       await _notifications.cancel(id);
+      await _notifications.cancel(id + 100);
     }
   }
 
@@ -450,6 +557,7 @@ class NotificationService {
   Future<void> initializeAllSchedules() async {
     if (morningAzkarEnabled) await scheduleMorningAzkar();
     if (eveningAzkarEnabled) await scheduleEveningAzkar();
+    if (sleepAzkarEnabled) await scheduleSleepAzkar();
     if (azkarReminderEnabled) await scheduleAzkarReminders();
     if (prayerTimesEnabled) await schedulePrayerTimes();
   }

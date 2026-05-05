@@ -19,6 +19,7 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
   
   bool _morningAzkarEnabled = true;
   bool _eveningAzkarEnabled = true;
+  bool _sleepAzkarEnabled = true;
   bool _prayerTimesEnabled = true;
   bool _azkarReminderEnabled = true;
   bool _isLoading = false;
@@ -33,6 +34,7 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
     setState(() {
       _morningAzkarEnabled = _notificationService.morningAzkarEnabled;
       _eveningAzkarEnabled = _notificationService.eveningAzkarEnabled;
+      _sleepAzkarEnabled = _notificationService.sleepAzkarEnabled;
       _prayerTimesEnabled = _notificationService.prayerTimesEnabled;
       _azkarReminderEnabled = _notificationService.azkarReminderEnabled;
     });
@@ -50,6 +52,10 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
         case 'evening_azkar':
           await _notificationService.setEveningAzkarEnabled(value);
           setState(() => _eveningAzkarEnabled = value);
+          break;
+        case 'sleep_azkar':
+          await _notificationService.setSleepAzkarEnabled(value);
+          setState(() => _sleepAzkarEnabled = value);
           break;
         case 'prayer_times':
           await _notificationService.setPrayerTimesEnabled(value);
@@ -204,6 +210,14 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
                               icon: Icons.nights_stay_rounded,
                               value: _eveningAzkarEnabled,
                               onChanged: (value) => _updateSetting('evening_azkar', value),
+                              isDark: isDark,
+                            ),
+                            _SettingsTile(
+                              title: 'أذكار النوم',
+                              subtitle: 'تذكير في الساعة 10:00 مساءً',
+                              icon: Icons.bedtime_rounded,
+                              value: _sleepAzkarEnabled,
+                              onChanged: (value) => _updateSetting('sleep_azkar', value),
                               isDark: isDark,
                             ),
                             _SettingsTile(

@@ -23,6 +23,7 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> with SingleTickerProv
   DateTime? _nextPrayerTime;
   Timer? _timer;
   Duration _timeLeft = Duration.zero;
+  Duration _totalDuration = const Duration(hours: 1);
   late AnimationController _glowCtrl;
   late Animation<double> _glowAnim;
 
@@ -48,21 +49,47 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> with SingleTickerProv
   Future<void> _fetchPrayerTimes() async {
     setState(() { _loading = true; _error = null; });
     try {
-      Position pos = await Geolocator.getCurrentPosition(locationSettings: const LocationSettings(accuracy: LocationAccuracy.low));
-      final coords = Coordinates(pos.latitude, pos.longitude);
+      Coordinates coords = Coordinates(30.0444, 31.2357); // Default to Cairo
+      try {
+        bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+        if (serviceEnabled) {
+          LocationPermission permission = await Geolocator.checkPermission();
+          if (permission == LocationPermission.denied) {
+            permission = await Geolocator.requestPermission();
+          }
+          if (permission != LocationPermission.denied && permission != LocationPermission.deniedForever) {
+            Position pos = await Geolocator.getCurrentPosition(locationSettings: const LocationSettings(accuracy: LocationAccuracy.low));
+            coords = Coordinates(pos.latitude, pos.longitude);
+          }
+        }
+      } catch (locErr) {
+        debugPrint('Location fetch error: $locErr');
+      }
+
       final params = CalculationMethod.egyptian.getParameters()..madhab = Madhab.shafi;
       final pt = PrayerTimes(coords, DateComponents.from(DateTime.now()), params);
       final now = DateTime.now();
       String next = 'الفجر';
       DateTime nextTime = pt.fajr.add(const Duration(days: 1));
-      if (now.isBefore(pt.fajr)) { next = 'الفجر'; nextTime = pt.fajr; }
-      else if (now.isBefore(pt.sunrise)) { next = 'الشروق'; nextTime = pt.sunrise; }
-      else if (now.isBefore(pt.dhuhr)) { next = 'الظهر'; nextTime = pt.dhuhr; }
-      else if (now.isBefore(pt.asr)) { next = 'العصر'; nextTime = pt.asr; }
-      else if (now.isBefore(pt.maghrib)) { next = 'المغرب'; nextTime = pt.maghrib; }
-      else if (now.isBefore(pt.isha)) { next = 'العشاء'; nextTime = pt.isha; }
-      setState(() { _prayerTimes = pt; _nextPrayerName = next; _nextPrayerTime = nextTime; _timeLeft = nextTime.difference(now); _loading = false; });
+      DateTime prevTime = pt.isha;
+      if (now.isBefore(pt.fajr)) { next = 'الفجر'; nextTime = pt.fajr; prevTime = pt.isha.subtract(const Duration(days: 1)); }
+      else if (now.isBefore(pt.sunrise)) { next = 'الشروق'; nextTime = pt.sunrise; prevTime = pt.fajr; }
+      else if (now.isBefore(pt.dhuhr)) { next = 'الظهر'; nextTime = pt.dhuhr; prevTime = pt.sunrise; }
+      else if (now.isBefore(pt.asr)) { next = 'العصر'; nextTime = pt.asr; prevTime = pt.dhuhr; }
+      else if (now.isBefore(pt.maghrib)) { next = 'المغرب'; nextTime = pt.maghrib; prevTime = pt.asr; }
+      else if (now.isBefore(pt.isha)) { next = 'العشاء'; nextTime = pt.isha; prevTime = pt.maghrib; }
+      
+      setState(() { 
+        _prayerTimes = pt; 
+        _nextPrayerName = next; 
+        _nextPrayerTime = nextTime; 
+        _timeLeft = nextTime.difference(now); 
+        _totalDuration = nextTime.difference(prevTime);
+        if (_totalDuration.inSeconds <= 0) _totalDuration = const Duration(hours: 1);
+        _loading = false; 
+      });
     } catch (e) {
+      debugPrint('PrayerTimes error: $e');
       setState(() { _error = 'تعذر الحصول على أوقات الصلاة'; _loading = false; });
     }
   }
@@ -137,24 +164,56 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> with SingleTickerProv
                           child: Text('الصلاة القادمة', style: _f(sz: 12, fw: FontWeight.w600, c: Colors.white70)),
                         ),
                         const SizedBox(height: 12),
-                        Text(_nextPrayerName ?? '', style: _f(sz: 34, fw: FontWeight.w900, c: Colors.white)),
-                        const SizedBox(height: 6),
+                        const SizedBox(height: 12),
                         if (_nextPrayerTime != null)
                           Text(_fmtTime(_nextPrayerTime!), style: GoogleFonts.ibmPlexMono(fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.goldLight)),
-                        const SizedBox(height: 20),
-                        AnimatedBuilder(animation: _glowAnim, builder: (ctx, _) => Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 16),
-                          decoration: BoxDecoration(
-                            color: Colors.black.withOpacity(0.2), borderRadius: BorderRadius.circular(20),
-                            border: Border.all(color: AppColors.gold.withOpacity(_glowAnim.value), width: 1.5),
-                            boxShadow: [BoxShadow(color: AppColors.gold.withOpacity(_glowAnim.value * 0.15), blurRadius: 20, spreadRadius: 2)],
-                          ),
-                          child: Row(mainAxisSize: MainAxisSize.min, children: [
-                            const Icon(Icons.timer_outlined, color: AppColors.goldLight, size: 22),
-                            const SizedBox(width: 12),
-                            Text(_fmtCountdown(_timeLeft), style: GoogleFonts.ibmPlexMono(fontSize: 30, fontWeight: FontWeight.bold, color: Colors.white, letterSpacing: 3)),
-                          ]),
-                        )),
+                        const SizedBox(height: 24),
+                        AnimatedBuilder(animation: _glowAnim, builder: (ctx, _) {
+                          double progress = (_timeLeft.inSeconds / _totalDuration.inSeconds).clamp(0.0, 1.0);
+                          return Stack(
+                            alignment: Alignment.center,
+                            children: [
+                              SizedBox(
+                                width: 220,
+                                height: 220,
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    color: Colors.black.withOpacity(0.2),
+                                    shape: BoxShape.circle,
+                                    border: Border.all(color: AppColors.gold.withOpacity(_glowAnim.value * 0.5), width: 1.5),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: AppColors.gold.withOpacity(_glowAnim.value * 0.15),
+                                        blurRadius: 20,
+                                        spreadRadius: 2,
+                                      )
+                                    ],
+                                  ),
+                                  child: CircularProgressIndicator(
+                                    value: progress,
+                                    strokeWidth: 8,
+                                    backgroundColor: Colors.transparent,
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                      AppColors.gold.withOpacity(0.8 + _glowAnim.value * 0.2),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(_nextPrayerName ?? '', style: _f(sz: 36, fw: FontWeight.w900, c: Colors.white)),
+                                  const SizedBox(height: 8),
+                                  Row(mainAxisSize: MainAxisSize.min, children: [
+                                    const Icon(Icons.timer_outlined, color: AppColors.goldLight, size: 20),
+                                    const SizedBox(width: 8),
+                                    Text(_fmtCountdown(_timeLeft), style: GoogleFonts.ibmPlexMono(fontSize: 26, fontWeight: FontWeight.bold, color: Colors.white, letterSpacing: 2)),
+                                  ]),
+                                ],
+                              ),
+                            ],
+                          );
+                        }),
                       ]),
                     )),
                     // ── Prayer List ──
