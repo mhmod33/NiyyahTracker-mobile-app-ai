@@ -22,6 +22,7 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
   final _formKey = GlobalKey<FormState>();
   bool _obscurePassword = true;
   bool _isGoogleLoading = false;
+  bool _hasSubmitAttempt = false;
 
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
@@ -30,6 +31,10 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) context.read<AppAuthProvider>().clearError();
+    });
+
     _animationController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1200),
@@ -55,6 +60,7 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
   }
 
   Future<void> _handleEmailLogin() async {
+    setState(() => _hasSubmitAttempt = true);
     if (!_formKey.currentState!.validate()) return;
 
     final authProvider = context.read<AppAuthProvider>();
@@ -167,6 +173,13 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
     );
   }
 
+  void _onFieldChanged(String value, AppAuthProvider authProvider) {
+    if (_hasSubmitAttempt) {
+      setState(() => _hasSubmitAttempt = false);
+    }
+    authProvider.clearError();
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -239,7 +252,7 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                           position: _slideAnimation,
                           child: Form(
                             key: _formKey,
-                            autovalidateMode: AutovalidateMode.onUserInteraction,
+                            autovalidateMode: _hasSubmitAttempt ? AutovalidateMode.always : AutovalidateMode.disabled,
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.stretch,
                               children: [
@@ -333,9 +346,10 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                                   keyboardType: TextInputType.emailAddress,
                                   textDirection: TextDirection.ltr,
                                   isDark: isDark,
-                                  onChanged: (_) => authProvider.clearError(),
+                                  onChanged: (val) => _onFieldChanged(val, authProvider),
                                   validator: (value) {
-                                    if (value == null || value.isEmpty) return 'يرجى إدخال البريد الإلكتروني';
+                                    if (!_hasSubmitAttempt) return null;
+                                    if (value == null || value.trim().isEmpty) return 'يرجى إدخال البريد الإلكتروني';
                                     if (!value.contains('@') || !value.contains('.')) return 'بريد إلكتروني غير صالح';
                                     return null;
                                   },
@@ -348,8 +362,9 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                                   icon: Icons.lock_rounded,
                                   isPassword: true,
                                   isDark: isDark,
-                                  onChanged: (_) => authProvider.clearError(),
+                                  onChanged: (val) => _onFieldChanged(val, authProvider),
                                   validator: (value) {
+                                    if (!_hasSubmitAttempt) return null;
                                     if (value == null || value.isEmpty) return 'يرجى إدخال كلمة المرور';
                                     if (value.length < 6) return 'كلمة المرور يجب أن تكون 6 أحرف على الأقل';
                                     return null;
