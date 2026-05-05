@@ -60,10 +60,16 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
       return;
     }
 
-    // Always go to Dashboard — guest mode allows limited access
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (_) => const DashboardPage()),
-    );
+    if (authProvider.isAuthenticated) {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => const DashboardPage()),
+      );
+    } else {
+      // Go to Onboarding (which leads to Login) if not authenticated
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => const OnboardingPage()),
+      );
+    }
   }
 
   @override

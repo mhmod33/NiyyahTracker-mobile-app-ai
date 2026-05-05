@@ -34,7 +34,7 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> with SingleTickerProv
     _glowAnim = Tween<double>(begin: 0.3, end: 0.8).animate(CurvedAnimation(parent: _glowCtrl, curve: Curves.easeInOut));
     _fetchPrayerTimes();
     _timer = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (_nextPrayerTime != null) {
+      if (_nextPrayerTime != null && !_loading) {
         setState(() {
           _timeLeft = _nextPrayerTime!.difference(DateTime.now());
           if (_timeLeft.isNegative) _fetchPrayerTimes();
@@ -90,7 +90,7 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> with SingleTickerProv
       });
     } catch (e) {
       debugPrint('PrayerTimes error: $e');
-      setState(() { _error = 'تعذر الحصول على أوقات الصلاة'; _loading = false; });
+      setState(() { _error = 'تعذر الحصول على أوقات الصلاة: $e'; _loading = false; });
     }
   }
 
