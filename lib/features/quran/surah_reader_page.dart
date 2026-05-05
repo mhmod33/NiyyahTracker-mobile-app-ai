@@ -243,14 +243,22 @@ class _MushafPageWidget extends StatelessWidget {
           String verseText = quran.getVerse(surah, v, verseEndSymbol: false);
           // Remove Basmala from first verse (except Fatiha & Tawbah)
           if (v == 1 && surah != 1 && surah != 9) {
-            verseText = verseText.replaceFirst('${quran.basmala} ', '');
-            verseText = verseText.replaceFirst(quran.basmala, '');
-            verseText = verseText
-                .replaceFirst(RegExp(r'^بِسْمِ اللَّهِ الرَّحْمَـٰنِ الرَّحِيمِ\s*'), '')
-                .replaceFirst(RegExp(r'^بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ\s*'), '')
-                .replaceFirst(RegExp(r'^بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيمِ\s*'), '')
-                .replaceFirst(RegExp(r'^بسم الله الرحمن الرحيم\s*'), '')
-                .trim();
+            // Remove all possible Basmala variations (with and without diacritics, different spellings)
+            final basmalaPatterns = [
+              quran.basmala,
+              r'بِسْمِ اللَّهِ الرَّحْمَـٰنِ الرَّحِيمِ',
+              r'بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ',
+              r'بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيمِ',
+              r'بسم الله الرحمن الرحيم',
+              r'بسم الله الرحمن الرحيم ',
+              r'بِسْمِ اللَّهِ الرَّحْمَـٰنِ الرَّحِيمِ ',
+              r'بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ ',
+            ];
+            for (final pattern in basmalaPatterns) {
+              verseText = verseText.replaceFirst(RegExp('^${RegExp.escape(pattern)}\\s*'), '');
+              verseText = verseText.replaceFirst(pattern, '');
+            }
+            verseText = verseText.trim();
           }
           final tapHandler = TapGestureRecognizer()..onTap = () => _showVerseActions(context, surah, v);
             final bool isHighlighted = (highlightSurah != null && highlightVerse != null && highlightSurah == surah && highlightVerse == v);
