@@ -180,7 +180,7 @@ class _MushafPageWidget extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text('$place • $verseCount آية', style: GoogleFonts.cairo(color: isDark ? Colors.white60 : AppColors.textSecondary, fontSize: 11)),
+          Text('$place • $verseCount آية', style: GoogleFonts.ibmPlexSansArabic(color: isDark ? Colors.white60 : AppColors.textSecondary, fontSize: 11)),
           Text(
             'سورة ${quran.getSurahNameArabic(surah)}',
             style: TextStyle(
@@ -302,7 +302,7 @@ class _MushafPageWidget extends StatelessWidget {
               child: Text(verseText, style: TextStyle(fontFamily: 'KFGQPC Uthmanic Script Hafs', color: isDark ? Colors.white : AppColors.textPrimary, fontSize: 18, height: 1.8), textAlign: TextAlign.center, maxLines: 3, overflow: TextOverflow.ellipsis),
             ),
             const SizedBox(height: 6),
-            Text('سورة $surahName - آية $verse', style: GoogleFonts.cairo(color: AppColors.darkGreen, fontSize: 13, fontWeight: FontWeight.w600)),
+            Text('سورة $surahName - آية $verse', style: GoogleFonts.ibmPlexSansArabic(color: AppColors.darkGreen, fontSize: 13, fontWeight: FontWeight.w600)),
             const SizedBox(height: 16),
             _actionTile(Icons.copy_rounded, 'نسخ الآية', () { Navigator.pop(ctx); Clipboard.setData(ClipboardData(text: verseText)); _snack(context, 'تم نسخ الآية'); }),
             _actionTile(Icons.menu_book_rounded, 'التفسير الميسر', () { Navigator.pop(ctx); _showTafseer(context, surah, verse, 'ar.muyassar', 'التفسير الميسر'); }),
@@ -327,7 +327,7 @@ class _MushafPageWidget extends StatelessWidget {
         decoration: BoxDecoration(color: AppColors.darkGreen.withOpacity(0.12), borderRadius: BorderRadius.circular(8)),
         child: Icon(icon, color: AppColors.darkGreen, size: 18),
       ),
-      title: Text(label, style: GoogleFonts.cairo(color: isDark ? Colors.white : AppColors.textPrimary, fontSize: 14, fontWeight: FontWeight.w600)),
+      title: Text(label, style: GoogleFonts.ibmPlexSansArabic(color: isDark ? Colors.white : AppColors.textPrimary, fontSize: 14, fontWeight: FontWeight.w600)),
       trailing: DirectionalIcon(isBack: false, size: 12, color: isDark ? Colors.white24 : AppColors.gray),
       onTap: onTap,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
@@ -335,7 +335,7 @@ class _MushafPageWidget extends StatelessWidget {
   }
 
   void _snack(BuildContext context, String msg) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg, style: GoogleFonts.cairo()), backgroundColor: AppColors.darkGreen));
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg, style: GoogleFonts.ibmPlexSansArabic()), backgroundColor: AppColors.darkGreen));
   }
 
   Future<void> _showTafseer(BuildContext context, int surah, int verse, String edition, String title) async {
@@ -377,8 +377,8 @@ class _MushafPageWidget extends StatelessWidget {
             children: [
               Container(width: 40, height: 4, decoration: BoxDecoration(color: AppColors.darkGreen.withOpacity(0.5), borderRadius: BorderRadius.circular(2))),
               const SizedBox(height: 16),
-              Text(title, style: GoogleFonts.cairo(color: AppColors.lightGreen, fontSize: 18, fontWeight: FontWeight.bold)),
-              Text('سورة $surahName - آية $verse', style: GoogleFonts.cairo(color: isDark ? Colors.white70 : AppColors.textSecondary, fontSize: 13)),
+              Text(title, style: GoogleFonts.ibmPlexSansArabic(color: AppColors.lightGreen, fontSize: 18, fontWeight: FontWeight.bold)),
+              Text('سورة $surahName - آية $verse', style: GoogleFonts.ibmPlexSansArabic(color: isDark ? Colors.white70 : AppColors.textSecondary, fontSize: 13)),
               const SizedBox(height: 16),
               Container(
                 constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.5),
@@ -441,7 +441,7 @@ class _MushafPageWidget extends StatelessWidget {
               padding: const EdgeInsets.all(16),
               child: Row(children: [
                 Expanded(
-                  child: TextButton(onPressed: () => Navigator.pop(ctx), child: Text('إلغاء', style: GoogleFonts.cairo(color: isDark ? Colors.white60 : AppColors.textSecondary))),
+                  child: TextButton(onPressed: () => Navigator.pop(ctx), child: Text('إلغاء', style: GoogleFonts.ibmPlexSansArabic(color: isDark ? Colors.white60 : AppColors.textSecondary))),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -463,7 +463,7 @@ class _MushafPageWidget extends StatelessWidget {
                         _snack(context, 'حدث خطأ في المشاركة');
                       }
                     },
-                    child: Text('مشاركة', style: GoogleFonts.cairo(fontWeight: FontWeight.bold)),
+                    child: Text('مشاركة', style: GoogleFonts.ibmPlexSansArabic(fontWeight: FontWeight.bold)),
                   ),
                 ),
               ]),

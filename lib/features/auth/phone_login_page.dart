@@ -187,7 +187,7 @@ class _PhoneLoginPageState extends State<PhoneLoginPage> {
                 // Logo/Title
                 Text(
                   '🤍 NiyyahTracker',
-                  style: GoogleFonts.cairo(
+                  style: GoogleFonts.ibmPlexSansArabic(
                     fontSize: 28,
                     fontWeight: FontWeight.w900,
                     color: AppColors.darkGreen,
@@ -197,7 +197,7 @@ class _PhoneLoginPageState extends State<PhoneLoginPage> {
 
                 Text(
                   'تسجيل الدخول برقم الهاتف',
-                  style: GoogleFonts.cairo(
+                  style: GoogleFonts.ibmPlexSansArabic(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
                     color: AppColors.darkGreen,
@@ -209,7 +209,7 @@ class _PhoneLoginPageState extends State<PhoneLoginPage> {
                   // Phone Number Input
                   Text(
                     'أدخل رقم هاتفك',
-                    style: GoogleFonts.cairo(
+                    style: GoogleFonts.ibmPlexSansArabic(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
                       color: AppColors.darkGreen,
@@ -235,7 +235,7 @@ class _PhoneLoginPageState extends State<PhoneLoginPage> {
                       keyboardType: TextInputType.phone,
                       textDirection: TextDirection.ltr,
                       enabled: !_isLoading,
-                      style: GoogleFonts.cairo(
+                      style: GoogleFonts.ibmPlexSansArabic(
                         fontSize: 18,
                         fontWeight: FontWeight.w600,
                         letterSpacing: 1.2,
@@ -276,7 +276,7 @@ class _PhoneLoginPageState extends State<PhoneLoginPage> {
                                 const SizedBox(width: 4),
                                 Text(
                                   '+${_selectedCountry.phoneCode}',
-                                  style: GoogleFonts.cairo(
+                                  style: GoogleFonts.ibmPlexSansArabic(
                                     fontSize: 16,
                                     fontWeight: FontWeight.bold,
                                     color: AppColors.darkGreen,
@@ -320,7 +320,7 @@ class _PhoneLoginPageState extends State<PhoneLoginPage> {
                   // OTP Input
                   Text(
                     'أدخل رمز التحقق',
-                    style: GoogleFonts.cairo(
+                    style: GoogleFonts.ibmPlexSansArabic(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
                       color: AppColors.darkGreen,
@@ -329,7 +329,7 @@ class _PhoneLoginPageState extends State<PhoneLoginPage> {
                   const SizedBox(height: 8),
                   Text(
                     'تم إرسال رمز التحقق إلى ${_selectedCountry.phoneCode}${_phoneController.text}',
-                    style: GoogleFonts.cairo(
+                    style: GoogleFonts.ibmPlexSansArabic(
                       fontSize: 12,
                       color: Colors.grey[600],
                     ),
@@ -381,7 +381,7 @@ class _PhoneLoginPageState extends State<PhoneLoginPage> {
                   if (_resendCountdown > 0)
                     Text(
                       'إعادة الإرسال في ${_resendCountdown}ث',
-                      style: GoogleFonts.cairo(
+                      style: GoogleFonts.ibmPlexSansArabic(
                         fontSize: 12,
                         color: Colors.grey[600],
                       ),
@@ -391,7 +391,7 @@ class _PhoneLoginPageState extends State<PhoneLoginPage> {
                       onPressed: _isLoading ? null : _resendOtp,
                       child: Text(
                         'لم تستقبل الرمز؟ أعد الإرسال',
-                        style: GoogleFonts.cairo(
+                        style: GoogleFonts.ibmPlexSansArabic(
                           fontSize: 12,
                           fontWeight: FontWeight.bold,
                           color: AppColors.darkGreen,
@@ -413,7 +413,7 @@ class _PhoneLoginPageState extends State<PhoneLoginPage> {
                     ),
                     child: Text(
                       _errorMessage!,
-                      style: GoogleFonts.cairo(
+                      style: GoogleFonts.ibmPlexSansArabic(
                         fontSize: 12,
                         color: Colors.red[700],
                       ),
@@ -451,7 +451,7 @@ class _PhoneLoginPageState extends State<PhoneLoginPage> {
                           )
                         : Text(
                             _isOtpSent ? 'تحقق من الرمز' : 'إرسال رمز التحقق',
-                            style: GoogleFonts.cairo(
+                            style: GoogleFonts.ibmPlexSansArabic(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
                               color: Colors.white,
@@ -472,7 +472,7 @@ class _PhoneLoginPageState extends State<PhoneLoginPage> {
                           }),
                     child: Text(
                       'تغيير رقم الهاتف',
-                      style: GoogleFonts.cairo(
+                      style: GoogleFonts.ibmPlexSansArabic(
                         fontSize: 14,
                         color: AppColors.darkGreen,
                       ),

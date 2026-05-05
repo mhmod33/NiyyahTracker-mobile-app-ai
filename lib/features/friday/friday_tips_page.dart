@@ -154,9 +154,9 @@ class _SunnahCategoryCard extends StatelessWidget {
             child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Container(width: 28, height: 28,
                 decoration: BoxDecoration(color: catColor, borderRadius: BorderRadius.circular(8)),
-                child: Center(child: Text('${entry.key + 1}', style: GoogleFonts.cairo(fontWeight: FontWeight.w800, fontSize: 12, color: isDark ? Colors.white : AppColors.darkGreen)))),
+                child: Center(child: Text('${entry.key + 1}', style: GoogleFonts.ibmPlexSansArabic(fontWeight: FontWeight.w800, fontSize: 12, color: isDark ? Colors.white : AppColors.darkGreen)))),
               const SizedBox(width: 12),
-              Expanded(child: Text(entry.value, style: GoogleFonts.cairo(fontSize: 14, color: textColor, fontWeight: FontWeight.w600, height: 1.5))),
+              Expanded(child: Text(entry.value, style: GoogleFonts.ibmPlexSansArabic(fontSize: 14, color: textColor, fontWeight: FontWeight.w600, height: 1.5))),
             ]),
           )).toList(),
         ),

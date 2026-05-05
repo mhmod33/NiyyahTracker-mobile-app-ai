@@ -155,14 +155,14 @@ class _ChallengesPageState extends State<ChallengesPage> {
     final target = int.tryParse(targetStr) ?? 30;
     if (title.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('يرجى إدخال اسم التحدي', style: GoogleFonts.cairo()), backgroundColor: Colors.red),
+        SnackBar(content: Text('يرجى إدخال اسم التحدي', style: GoogleFonts.ibmPlexSansArabic()), backgroundColor: Colors.red),
       );
       return;
     }
 
     if (target <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('يرجى إدخال هدف صحيح', style: GoogleFonts.cairo()), backgroundColor: Colors.red),
+        SnackBar(content: Text('يرجى إدخال هدف صحيح', style: GoogleFonts.ibmPlexSansArabic()), backgroundColor: Colors.red),
       );
       return;
     }
@@ -170,7 +170,7 @@ class _ChallengesPageState extends State<ChallengesPage> {
     final userId = context.read<AppAuthProvider>().userId;
     if (userId.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('يرجى تسجيل الدخول أولاً', style: GoogleFonts.cairo()), backgroundColor: Colors.red),
+        SnackBar(content: Text('يرجى تسجيل الدخول أولاً', style: GoogleFonts.ibmPlexSansArabic()), backgroundColor: Colors.red),
       );
       return;
     }
@@ -191,11 +191,11 @@ class _ChallengesPageState extends State<ChallengesPage> {
       _loadChallenges();
       
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('تم إضافة التحدي بنجاح 🎯', style: GoogleFonts.cairo(color: Colors.white)), backgroundColor: AppColors.darkGreen),
+        SnackBar(content: Text('تم إضافة التحدي بنجاح 🎯', style: GoogleFonts.ibmPlexSansArabic(color: Colors.white)), backgroundColor: AppColors.darkGreen),
       );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('حدث خطأ أثناء إضافة التحدي', style: GoogleFonts.cairo()), backgroundColor: Colors.red),
+        SnackBar(content: Text('حدث خطأ أثناء إضافة التحدي', style: GoogleFonts.ibmPlexSansArabic()), backgroundColor: Colors.red),
       );
     }
   }

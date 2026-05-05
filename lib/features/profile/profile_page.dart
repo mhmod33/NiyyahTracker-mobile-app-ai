@@ -255,8 +255,8 @@ class ProfilePage extends StatelessWidget {
         child: AlertDialog(
           backgroundColor: Theme.of(context).scaffoldBackgroundColor,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-          title: Text('تسجيل الخروج', style: GoogleFonts.cairo(fontWeight: FontWeight.bold)),
-          content: Text('هل أنت متأكد من رغبتك في مغادرة التطبيق؟', style: GoogleFonts.cairo()),
+          title: Text('تسجيل الخروج', style: GoogleFonts.ibmPlexSansArabic(fontWeight: FontWeight.bold)),
+          content: Text('هل أنت متأكد من رغبتك في مغادرة التطبيق؟', style: GoogleFonts.ibmPlexSansArabic()),
           actions: [
             TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text('إلغاء', style: _f(c: Colors.grey))),
             ElevatedButton(

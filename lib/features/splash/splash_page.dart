@@ -60,17 +60,9 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
       return;
     }
 
-    final Widget destination;
-    if (authProvider.isAuthenticated) {
-      // User is already logged in → go to Dashboard
-      destination = const DashboardPage();
-    } else {
-      // Not logged in → go to Onboarding
-      destination = const OnboardingPage();
-    }
-
+    // Always go to Dashboard — guest mode allows limited access
     Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (_) => destination),
+      MaterialPageRoute(builder: (_) => const DashboardPage()),
     );
   }
 

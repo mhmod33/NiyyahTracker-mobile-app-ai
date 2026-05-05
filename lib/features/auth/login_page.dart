@@ -239,6 +239,7 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                           position: _slideAnimation,
                           child: Form(
                             key: _formKey,
+                            autovalidateMode: AutovalidateMode.onUserInteraction,
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.stretch,
                               children: [
@@ -332,6 +333,7 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                                   keyboardType: TextInputType.emailAddress,
                                   textDirection: TextDirection.ltr,
                                   isDark: isDark,
+                                  onChanged: (_) => authProvider.clearError(),
                                   validator: (value) {
                                     if (value == null || value.isEmpty) return 'يرجى إدخال البريد الإلكتروني';
                                     if (!value.contains('@') || !value.contains('.')) return 'بريد إلكتروني غير صالح';
@@ -346,6 +348,7 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                                   icon: Icons.lock_rounded,
                                   isPassword: true,
                                   isDark: isDark,
+                                  onChanged: (_) => authProvider.clearError(),
                                   validator: (value) {
                                     if (value == null || value.isEmpty) return 'يرجى إدخال كلمة المرور';
                                     if (value.length < 6) return 'كلمة المرور يجب أن تكون 6 أحرف على الأقل';
@@ -412,6 +415,40 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                                         ),
                                   ),
                                 ),
+                                const SizedBox(height: 16),
+
+                                // Guest Mode Button
+                                Container(
+                                  height: 56,
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(16),
+                                    border: Border.all(
+                                      color: isDark ? Colors.white24 : AppColors.darkGreen.withOpacity(0.3),
+                                      width: 1.5,
+                                    ),
+                                  ),
+                                  child: TextButton(
+                                    onPressed: () {
+                                      Navigator.pushReplacement(
+                                        context,
+                                        MaterialPageRoute(builder: (_) => const DashboardPage()),
+                                      );
+                                    },
+                                    style: TextButton.styleFrom(
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(16),
+                                      ),
+                                    ),
+                                    child: Text(
+                                      'تخطي - الدخول كضيف',
+                                      style: GoogleFonts.ibmPlexSansArabic(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                        color: isDark ? Colors.white70 : AppColors.darkGreen,
+                                      ),
+                                    ),
+                                  ),
+                                ),
                                 const SizedBox(height: 32),
 
                                 // Divider
@@ -445,25 +482,7 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                                         onTap: _isGoogleLoading ? () {} : _handleGoogleLogin,
                                       ),
                                     ),
-                                    const SizedBox(width: 16),
-                                    Expanded(
-                                      child: _SocialButton(
-                                        title: 'رقم الهاتف',
-                                        icon: Icons.phone_android_rounded,
-                                        color: isDark ? Colors.white : AppColors.darkGreen,
-                                        onTap: () {
-                                          Navigator.push(
-                                            context,
-                                            PageRouteBuilder(
-                                              pageBuilder: (context, animation, secondaryAnimation) => const PhoneAuthPage(),
-                                              transitionsBuilder: (context, animation, secondaryAnimation, child) {
-                                                return FadeTransition(opacity: animation, child: child);
-                                              },
-                                            ),
-                                          );
-                                        },
-                                      ),
-                                    ),
+                                    // Phone auth button hidden from UI (code preserved)
                                   ],
                                 ),
                                 const SizedBox(height: 40),
@@ -534,6 +553,7 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
     TextInputType? keyboardType,
     TextDirection? textDirection,
     String? Function(String?)? validator,
+    void Function(String)? onChanged,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -555,6 +575,7 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
           keyboardType: keyboardType,
           textDirection: textDirection,
           validator: validator,
+          onChanged: onChanged,
           style: GoogleFonts.ibmPlexSansArabic(
             color: isDark ? Colors.white : Colors.black87,
             fontWeight: FontWeight.w500,

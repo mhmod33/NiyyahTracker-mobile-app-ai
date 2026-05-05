@@ -84,12 +84,13 @@ class _RegisterPageState extends State<RegisterPage> {
                 padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 20.0),
                 child: Form(
                   key: _formKey,
+                  autovalidateMode: AutovalidateMode.onUserInteraction,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
                         'إنشاء حساب جديد',
-                        style: GoogleFonts.cairo(
+                        style: GoogleFonts.ibmPlexSansArabic(
                           fontSize: 28,
                           fontWeight: FontWeight.bold,
                           color: isDark ? Colors.white : AppColors.darkGreen,
@@ -98,7 +99,7 @@ class _RegisterPageState extends State<RegisterPage> {
                       const SizedBox(height: 8),
                       Text(
                         'انضم إلينا في رحلة التطوير الروحي اليومية',
-                        style: GoogleFonts.cairo(
+                        style: GoogleFonts.ibmPlexSansArabic(
                           fontSize: 16,
                           color: isDark ? Colors.white60 : Colors.grey[600],
                         ),
@@ -123,7 +124,7 @@ class _RegisterPageState extends State<RegisterPage> {
                               Expanded(
                                 child: Text(
                                   authProvider.errorMessage!,
-                                  style: GoogleFonts.cairo(fontSize: 13, color: Colors.red[700]),
+                                  style: GoogleFonts.ibmPlexSansArabic(fontSize: 13, color: Colors.red[700]),
                                 ),
                               ),
                             ],
@@ -136,6 +137,7 @@ class _RegisterPageState extends State<RegisterPage> {
                         hint: 'محمود محمد',
                         icon: Icons.person_outline,
                         isDark: isDark,
+                        onChanged: (_) => authProvider.clearError(),
                         validator: (value) {
                           if (value == null || value.trim().isEmpty) return 'يرجى إدخال الاسم';
                           if (value.trim().length < 2) return 'الاسم قصير جداً';
@@ -151,6 +153,7 @@ class _RegisterPageState extends State<RegisterPage> {
                         keyboardType: TextInputType.emailAddress,
                         textDirection: TextDirection.ltr,
                         isDark: isDark,
+                        onChanged: (_) => authProvider.clearError(),
                         validator: (value) {
                           if (value == null || value.isEmpty) return 'يرجى إدخال البريد الإلكتروني';
                           if (!value.contains('@') || !value.contains('.')) return 'بريد إلكتروني غير صالح';
@@ -167,6 +170,7 @@ class _RegisterPageState extends State<RegisterPage> {
                         obscure: _obscurePassword,
                         onToggleObscure: () => setState(() => _obscurePassword = !_obscurePassword),
                         isDark: isDark,
+                        onChanged: (_) => authProvider.clearError(),
                         validator: (value) {
                           if (value == null || value.isEmpty) return 'يرجى إدخال كلمة المرور';
                           if (value.length < 6) return 'كلمة المرور يجب أن تكون 6 أحرف على الأقل';
@@ -183,6 +187,7 @@ class _RegisterPageState extends State<RegisterPage> {
                         obscure: _obscureConfirm,
                         onToggleObscure: () => setState(() => _obscureConfirm = !_obscureConfirm),
                         isDark: isDark,
+                        onChanged: (_) => authProvider.clearError(),
                         validator: (value) {
                           if (value == null || value.isEmpty) return 'يرجى تأكيد كلمة المرور';
                           if (value != _passwordController.text) return 'كلمة المرور غير متطابقة';
@@ -209,7 +214,7 @@ class _RegisterPageState extends State<RegisterPage> {
                               )
                             : Text(
                                 'إنشاء الحساب',
-                                style: GoogleFonts.cairo(
+                                style: GoogleFonts.ibmPlexSansArabic(
                                   fontSize: 18,
                                   fontWeight: FontWeight.bold,
                                   color: Colors.white,
@@ -223,7 +228,7 @@ class _RegisterPageState extends State<RegisterPage> {
                           onPressed: () => Navigator.pop(context),
                           child: Text(
                             'لديك حساب بالفعل؟ سجل الدخول',
-                            style: GoogleFonts.cairo(
+                            style: GoogleFonts.ibmPlexSansArabic(
                               color: AppColors.midGreen,
                               fontWeight: FontWeight.bold,
                             ),
@@ -253,13 +258,14 @@ class _RegisterPageState extends State<RegisterPage> {
     TextInputType? keyboardType,
     TextDirection? textDirection,
     String? Function(String?)? validator,
+    void Function(String)? onChanged,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           label,
-          style: GoogleFonts.cairo(
+          style: GoogleFonts.ibmPlexSansArabic(
             fontWeight: FontWeight.bold,
             color: isDark ? Colors.white : AppColors.darkGreen,
           ),
@@ -271,9 +277,10 @@ class _RegisterPageState extends State<RegisterPage> {
           keyboardType: keyboardType,
           textDirection: textDirection,
           validator: validator,
+          onChanged: onChanged,
           decoration: InputDecoration(
             hintText: hint,
-            hintStyle: GoogleFonts.cairo(color: Colors.grey[400]),
+            hintStyle: GoogleFonts.ibmPlexSansArabic(color: Colors.grey[400]),
             prefixIcon: Icon(icon, color: AppColors.midGreen),
             suffixIcon: isPassword
                 ? IconButton(

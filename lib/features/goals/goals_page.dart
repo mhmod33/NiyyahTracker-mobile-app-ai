@@ -431,7 +431,7 @@ class _GoalCardState extends State<_GoalCard> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('تم تحديث التقدم بنجاح', style: GoogleFonts.cairo(color: Colors.white)),
+            content: Text('تم تحديث التقدم بنجاح', style: GoogleFonts.ibmPlexSansArabic(color: Colors.white)),
             backgroundColor: AppColors.darkGreen,
             duration: const Duration(seconds: 2),
           ),
@@ -441,7 +441,7 @@ class _GoalCardState extends State<_GoalCard> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('حدث خطأ أثناء التحديث', style: GoogleFonts.cairo()),
+            content: Text('حدث خطأ أثناء التحديث', style: GoogleFonts.ibmPlexSansArabic()),
             backgroundColor: Colors.red,
           ),
         );
@@ -621,7 +621,7 @@ class _GoalCardState extends State<_GoalCard> {
                     SnackBar(
                       content: Text(
                         'يرجى إدخال قيمة صحيحة بين 0 و ${widget.goal.targetValue}',
-                        style: GoogleFonts.cairo(),
+                        style: GoogleFonts.ibmPlexSansArabic(),
                       ),
                       backgroundColor: Colors.red,
                     ),
@@ -667,14 +667,14 @@ class _AddGoalSheetState extends State<_AddGoalSheet> {
     
     if (title.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('يرجى إدخال عنوان الهدف', style: GoogleFonts.cairo()), backgroundColor: Colors.red),
+        SnackBar(content: Text('يرجى إدخال عنوان الهدف', style: GoogleFonts.ibmPlexSansArabic()), backgroundColor: Colors.red),
       );
       return;
     }
 
     if (targetStr.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('يرجى إدخال القيمة المستهدفة', style: GoogleFonts.cairo()), backgroundColor: Colors.red),
+        SnackBar(content: Text('يرجى إدخال القيمة المستهدفة', style: GoogleFonts.ibmPlexSansArabic()), backgroundColor: Colors.red),
       );
       return;
     }
@@ -682,7 +682,7 @@ class _AddGoalSheetState extends State<_AddGoalSheet> {
     final target = int.tryParse(targetStr) ?? 0;
     if (target <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('يرجى إدخال قيمة مستهدفة صحيحة', style: GoogleFonts.cairo()), backgroundColor: Colors.red),
+        SnackBar(content: Text('يرجى إدخال قيمة مستهدفة صحيحة', style: GoogleFonts.ibmPlexSansArabic()), backgroundColor: Colors.red),
       );
       return;
     }
@@ -693,7 +693,7 @@ class _AddGoalSheetState extends State<_AddGoalSheet> {
     if (userId.isEmpty) {
       setState(() => _isLoading = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('يرجى تسجيل الدخول أولاً', style: GoogleFonts.cairo()), backgroundColor: Colors.red),
+        SnackBar(content: Text('يرجى تسجيل الدخول أولاً', style: GoogleFonts.ibmPlexSansArabic()), backgroundColor: Colors.red),
       );
       return;
     }
@@ -717,13 +717,13 @@ class _AddGoalSheetState extends State<_AddGoalSheet> {
       if (mounted) {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('تم إضافة الهدف بنجاح 🎯', style: GoogleFonts.cairo(color: Colors.white)), backgroundColor: AppColors.darkGreen),
+          SnackBar(content: Text('تم إضافة الهدف بنجاح 🎯', style: GoogleFonts.ibmPlexSansArabic(color: Colors.white)), backgroundColor: AppColors.darkGreen),
         );
       }
     } catch (e) {
       setState(() => _isLoading = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('حدث خطأ أثناء حفظ الهدف', style: GoogleFonts.cairo()), backgroundColor: Colors.red),
+        SnackBar(content: Text('حدث خطأ أثناء حفظ الهدف', style: GoogleFonts.ibmPlexSansArabic()), backgroundColor: Colors.red),
       );
     }
   }
@@ -747,13 +747,13 @@ class _AddGoalSheetState extends State<_AddGoalSheet> {
       child: Padding(
         padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom, left: 20, right: 20, top: 20),
         child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text('هدف جديد', style: GoogleFonts.cairo(fontSize: 20, fontWeight: FontWeight.bold, color: greenColor)),
+          Text('هدف جديد', style: GoogleFonts.ibmPlexSansArabic(fontSize: 20, fontWeight: FontWeight.bold, color: greenColor)),
           const SizedBox(height: 16),
           TextField(
             controller: _titleController,
             style: TextStyle(color: textColor),
             decoration: InputDecoration(
-              labelText: 'عنوان الهدف', labelStyle: GoogleFonts.cairo(color: widget.isDark ? Colors.white54 : null),
+              labelText: 'عنوان الهدف', labelStyle: GoogleFonts.ibmPlexSansArabic(color: widget.isDark ? Colors.white54 : null),
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
               enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: borderColor)),
               focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: greenColor)),
@@ -765,7 +765,7 @@ class _AddGoalSheetState extends State<_AddGoalSheet> {
             keyboardType: TextInputType.number,
             style: TextStyle(color: textColor),
             decoration: InputDecoration(
-              labelText: 'القيمة المستهدفة', labelStyle: GoogleFonts.cairo(color: widget.isDark ? Colors.white54 : null),
+              labelText: 'القيمة المستهدفة', labelStyle: GoogleFonts.ibmPlexSansArabic(color: widget.isDark ? Colors.white54 : null),
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
               enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: borderColor)),
               focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: greenColor)),
@@ -780,7 +780,7 @@ class _AddGoalSheetState extends State<_AddGoalSheet> {
                   dropdownColor: widget.isDark ? const Color(0xFF1E1E1E) : Colors.white,
                   style: TextStyle(color: textColor, fontFamily: 'IBM Plex Sans Arabic'),
                   decoration: InputDecoration(
-                    labelText: 'التصنيف', labelStyle: GoogleFonts.cairo(color: widget.isDark ? Colors.white54 : null),
+                    labelText: 'التصنيف', labelStyle: GoogleFonts.ibmPlexSansArabic(color: widget.isDark ? Colors.white54 : null),
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                     enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: borderColor)),
                     focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: greenColor)),
@@ -816,7 +816,7 @@ class _AddGoalSheetState extends State<_AddGoalSheet> {
                     controller: _customCategoryController,
                     style: TextStyle(color: textColor),
                     decoration: InputDecoration(
-                      labelText: 'اسم التصنيف', labelStyle: GoogleFonts.cairo(color: widget.isDark ? Colors.white54 : null),
+                      labelText: 'اسم التصنيف', labelStyle: GoogleFonts.ibmPlexSansArabic(color: widget.isDark ? Colors.white54 : null),
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                       enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: borderColor)),
                       focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: greenColor)),
@@ -832,7 +832,7 @@ class _AddGoalSheetState extends State<_AddGoalSheet> {
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.darkGreen, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
             child: _isLoading 
               ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-              : Text('حفظ الهدف', style: GoogleFonts.cairo(color: Colors.white, fontWeight: FontWeight.bold)),
+              : Text('حفظ الهدف', style: GoogleFonts.ibmPlexSansArabic(color: Colors.white, fontWeight: FontWeight.bold)),
           )),
           const SizedBox(height: 20),
         ]),

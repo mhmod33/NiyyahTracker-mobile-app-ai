@@ -93,13 +93,13 @@ class _AnalyticsPageState extends State<AnalyticsPage> with SingleTickerProvider
         backgroundColor: bgColor,
         appBar: AppBar(
           backgroundColor: AppColors.darkGreen,
-          title: Text('لوحة التحليلات', style: GoogleFonts.cairo(color: Colors.white, fontWeight: FontWeight.bold)),
+          title: Text('لوحة التحليلات', style: GoogleFonts.ibmPlexSansArabic(color: Colors.white, fontWeight: FontWeight.bold)),
           centerTitle: true,
           bottom: TabBar(
             controller: _tabController,
             indicatorColor: AppColors.gold,
-            labelStyle: GoogleFonts.cairo(fontWeight: FontWeight.bold),
-            unselectedLabelStyle: GoogleFonts.cairo(),
+            labelStyle: GoogleFonts.ibmPlexSansArabic(fontWeight: FontWeight.bold),
+            unselectedLabelStyle: GoogleFonts.ibmPlexSansArabic(),
             labelColor: Colors.white,
             unselectedLabelColor: Colors.white60,
             tabs: const [Tab(text: 'أسبوعي'), Tab(text: 'شهري')],
@@ -191,8 +191,8 @@ class _AnalyticsPageState extends State<AnalyticsPage> with SingleTickerProvider
         children: [
           Text(icon, style: const TextStyle(fontSize: 20)),
           const SizedBox(height: 4),
-          Text(value, style: GoogleFonts.cairo(fontWeight: FontWeight.bold, fontSize: 14, color: valueColor)),
-          Text(label, style: GoogleFonts.cairo(fontSize: 10, color: labelColor), textAlign: TextAlign.center),
+          Text(value, style: GoogleFonts.ibmPlexSansArabic(fontWeight: FontWeight.bold, fontSize: 14, color: valueColor)),
+          Text(label, style: GoogleFonts.ibmPlexSansArabic(fontSize: 10, color: labelColor), textAlign: TextAlign.center),
         ],
       ),
     );
@@ -215,7 +215,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> with SingleTickerProvider
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: GoogleFonts.cairo(fontWeight: FontWeight.bold, color: titleColor)),
+          Text(title, style: GoogleFonts.ibmPlexSansArabic(fontWeight: FontWeight.bold, color: titleColor)),
           const SizedBox(height: 16),
           SizedBox(
             height: 150,
@@ -236,7 +236,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> with SingleTickerProvider
                     sideTitles: SideTitles(
                       showTitles: true,
                       getTitlesWidget: (v, _) => Text(days[v.toInt()],
-                          style: GoogleFonts.cairo(fontSize: 11, color: isDark ? Colors.white70 : AppColors.gray)),
+                          style: GoogleFonts.ibmPlexSansArabic(fontSize: 11, color: isDark ? Colors.white70 : AppColors.gray)),
                     ),
                   ),
                 ),
@@ -274,15 +274,15 @@ class _AnalyticsPageState extends State<AnalyticsPage> with SingleTickerProvider
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text('توزيع العبادات هذا الشهر',
-              style: GoogleFonts.cairo(fontWeight: FontWeight.bold, color: titleColor)),
+              style: GoogleFonts.ibmPlexSansArabic(fontWeight: FontWeight.bold, color: titleColor)),
           const SizedBox(height: 16),
           SizedBox(
             height: 200,
             child: PieChart(PieChartData(
               sections: [
-                PieChartSectionData(value: _totalQuranPages.toDouble(), title: 'القرآن', color: AppColors.gold, titleStyle: GoogleFonts.cairo(fontSize: 11, color: Colors.white, fontWeight: FontWeight.bold)),
-                PieChartSectionData(value: _completedPrayers.toDouble() * 10, title: 'الصلاة', color: AppColors.lightGreen, titleStyle: GoogleFonts.cairo(fontSize: 11, color: Colors.white, fontWeight: FontWeight.bold)),
-                PieChartSectionData(value: _streak.toDouble() * 5, title: 'النشاط', color: AppColors.midGreen, titleStyle: GoogleFonts.cairo(fontSize: 11, color: Colors.white, fontWeight: FontWeight.bold)),
+                PieChartSectionData(value: _totalQuranPages.toDouble(), title: 'القرآن', color: AppColors.gold, titleStyle: GoogleFonts.ibmPlexSansArabic(fontSize: 11, color: Colors.white, fontWeight: FontWeight.bold)),
+                PieChartSectionData(value: _completedPrayers.toDouble() * 10, title: 'الصلاة', color: AppColors.lightGreen, titleStyle: GoogleFonts.ibmPlexSansArabic(fontSize: 11, color: Colors.white, fontWeight: FontWeight.bold)),
+                PieChartSectionData(value: _streak.toDouble() * 5, title: 'النشاط', color: AppColors.midGreen, titleStyle: GoogleFonts.ibmPlexSansArabic(fontSize: 11, color: Colors.white, fontWeight: FontWeight.bold)),
               ],
               centerSpaceRadius: 40,
             )),
@@ -309,7 +309,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> with SingleTickerProvider
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text('🏆 أفضل أيامك هذا الشهر',
-              style: GoogleFonts.cairo(fontWeight: FontWeight.bold, color: titleColor)),
+              style: GoogleFonts.ibmPlexSansArabic(fontWeight: FontWeight.bold, color: titleColor)),
           const SizedBox(height: 12),
           ...(_totalQuranPages > 0 ? ['إنجاز متميز في القرآن 📖', 'مواظبة على الصلوات 🕌'] : ['ابدأ تسجيل عباداتك لتظهر هنا 🌟']).map(
             (d) => Padding(
@@ -318,7 +318,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> with SingleTickerProvider
                 children: [
                   const Icon(Icons.star, color: AppColors.gold, size: 18),
                   const SizedBox(width: 8),
-                  Expanded(child: Text(d, style: GoogleFonts.cairo(fontSize: 13, color: textColor))),
+                  Expanded(child: Text(d, style: GoogleFonts.ibmPlexSansArabic(fontSize: 13, color: textColor))),
                 ],
               ),
             ),

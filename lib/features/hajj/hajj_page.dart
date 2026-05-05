@@ -21,7 +21,7 @@ class HajjPage extends StatelessWidget {
         backgroundColor: const Color(0xFF1A1200),
         appBar: AppBar(
           backgroundColor: const Color(0xFF1A1200),
-          title: Text('🕋 مود الحج', style: GoogleFonts.cairo(color: Colors.white, fontWeight: FontWeight.bold)),
+          title: Text('🕋 مود الحج', style: GoogleFonts.ibmPlexSansArabic(color: Colors.white, fontWeight: FontWeight.bold)),
           centerTitle: true,
         ),
         body: ListView(
@@ -32,7 +32,7 @@ class HajjPage extends StatelessWidget {
             _mapPlaceholder(context),
             const SizedBox(height: 16),
             Text('خطوات المناسك يوماً بيوم',
-                style: GoogleFonts.cairo(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                style: GoogleFonts.ibmPlexSansArabic(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
             const SizedBox(height: 12),
             ..._rituals.map((r) => _RitualCard(ritual: r)),
           ],
@@ -56,10 +56,10 @@ class HajjPage extends StatelessWidget {
         children: [
           Text('🕋', style: const TextStyle(fontSize: 40)),
           const SizedBox(height: 8),
-          Text('العد التنازلي لموسم الحج', style: GoogleFonts.cairo(color: AppColors.goldLight, fontSize: 14)),
+          Text('العد التنازلي لموسم الحج', style: GoogleFonts.ibmPlexSansArabic(color: AppColors.goldLight, fontSize: 14)),
           const SizedBox(height: 4),
-          Text('٦٠ يوماً', style: GoogleFonts.cairo(color: Colors.white, fontSize: 36, fontWeight: FontWeight.bold)),
-          Text('حتى ٨ ذو الحجة ١٤٤٧', style: GoogleFonts.cairo(color: Colors.white60, fontSize: 12)),
+          Text('٦٠ يوماً', style: GoogleFonts.ibmPlexSansArabic(color: Colors.white, fontSize: 36, fontWeight: FontWeight.bold)),
+          Text('حتى ٨ ذو الحجة ١٤٤٧', style: GoogleFonts.ibmPlexSansArabic(color: Colors.white60, fontSize: 12)),
         ],
       ),
     );
@@ -78,8 +78,8 @@ class HajjPage extends StatelessWidget {
         children: [
           const Icon(Icons.map, color: AppColors.gold, size: 40),
           const SizedBox(height: 8),
-          Text('خريطة المشاعر المقدسة', style: GoogleFonts.cairo(color: Colors.white70, fontWeight: FontWeight.bold)),
-          Text('مكة المكرمة · منى · عرفات · مزدلفة', style: GoogleFonts.cairo(color: Colors.white38, fontSize: 12)),
+          Text('خريطة المشاعر المقدسة', style: GoogleFonts.ibmPlexSansArabic(color: Colors.white70, fontWeight: FontWeight.bold)),
+          Text('مكة المكرمة · منى · عرفات · مزدلفة', style: GoogleFonts.ibmPlexSansArabic(color: Colors.white38, fontSize: 12)),
         ],
       ),
     );
@@ -113,12 +113,12 @@ class _RitualCardState extends State<_RitualCard> {
             leading: CircleAvatar(
               backgroundColor: _done ? AppColors.lightGreen : AppColors.gold.withOpacity(0.2),
               child: Text(widget.ritual['day'].toString().substring(0, 1),
-                  style: GoogleFonts.cairo(color: Colors.white, fontWeight: FontWeight.bold)),
+                  style: GoogleFonts.ibmPlexSansArabic(color: Colors.white, fontWeight: FontWeight.bold)),
             ),
             title: Text(widget.ritual['title'] as String,
-                style: GoogleFonts.cairo(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
+                style: GoogleFonts.ibmPlexSansArabic(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
             subtitle: Text('${widget.ritual['day']} — ${widget.ritual['date']}',
-                style: GoogleFonts.cairo(color: Colors.white54, fontSize: 11)),
+                style: GoogleFonts.ibmPlexSansArabic(color: Colors.white54, fontSize: 11)),
             trailing: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -145,7 +145,7 @@ class _RitualCardState extends State<_RitualCard> {
                 ),
                 child: Text(
                   '🤲 ${widget.ritual['dua']}',
-                  style: GoogleFonts.cairo(color: AppColors.goldLight, fontSize: 13, height: 1.6),
+                  style: GoogleFonts.ibmPlexSansArabic(color: AppColors.goldLight, fontSize: 13, height: 1.6),
                   textAlign: TextAlign.center,
                 ),
               ),

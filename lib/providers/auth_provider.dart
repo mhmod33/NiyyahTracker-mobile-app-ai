@@ -225,7 +225,7 @@ class AppAuthProvider extends ChangeNotifier {
       case 'too-many-requests':
         return 'محاولات كثيرة جداً. حاول لاحقاً';
       case 'operation-not-allowed':
-        return 'هذه العملية غير مسموحة';
+        return 'طريقة التسجيل هذه غير مفعلة. يرجى التواصل مع الدعم أو استخدام طريقة أخرى';
       case 'network-request-failed':
         return 'خطأ في الاتصال بالإنترنت';
       case 'invalid-credential':

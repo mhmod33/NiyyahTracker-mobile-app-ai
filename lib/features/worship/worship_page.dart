@@ -95,7 +95,7 @@ class _WorshipPageState extends State<WorshipPage> {
     final userId = context.read<AppAuthProvider>().userId;
     if (userId.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('يرجى تسجيل الدخول أولاً', style: GoogleFonts.cairo()), backgroundColor: Colors.red),
+        SnackBar(content: Text('يرجى تسجيل الدخول أولاً', style: GoogleFonts.ibmPlexSansArabic()), backgroundColor: Colors.red),
       );
       return;
     }
@@ -124,7 +124,7 @@ class _WorshipPageState extends State<WorshipPage> {
       });
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('تم حفظ عبادات اليوم بفضل الله 🤍', style: GoogleFonts.cairo(color: Colors.white)),
+          content: Text('تم حفظ عبادات اليوم بفضل الله 🤍', style: GoogleFonts.ibmPlexSansArabic(color: Colors.white)),
           backgroundColor: AppColors.darkGreen,
           duration: const Duration(seconds: 3),
         ));
@@ -133,7 +133,7 @@ class _WorshipPageState extends State<WorshipPage> {
       setState(() => _isSaving = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('حدث خطأ أثناء حفظ العبادات', style: GoogleFonts.cairo()),
+          content: Text('حدث خطأ أثناء حفظ العبادات', style: GoogleFonts.ibmPlexSansArabic()),
           backgroundColor: Colors.red,
           duration: const Duration(seconds: 3),
         ));
@@ -312,7 +312,7 @@ class _WorshipPageState extends State<WorshipPage> {
       icon: _isSaving 
           ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
           : const Icon(Icons.save, color: Colors.white),
-      label: Text('حفظ بطاقة اليوم', style: GoogleFonts.cairo(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+      label: Text('حفظ بطاقة اليوم', style: GoogleFonts.ibmPlexSansArabic(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
     ));
   }
 
@@ -342,9 +342,9 @@ class _WorshipPageState extends State<WorshipPage> {
                 child: const Icon(Icons.verified_rounded, color: AppColors.darkGreen, size: 64),
               ),
               const SizedBox(height: 16),
-              Text('تقبل الله طاعتك!', style: GoogleFonts.cairo(fontSize: 24, fontWeight: FontWeight.bold, color: isDark ? AppColors.lightGreen : AppColors.darkGreen)),
+              Text('تقبل الله طاعتك!', style: GoogleFonts.ibmPlexSansArabic(fontSize: 24, fontWeight: FontWeight.bold, color: isDark ? AppColors.lightGreen : AppColors.darkGreen)),
               const SizedBox(height: 8),
-              Text('لقد أتممت تسجيل عبادات اليوم بنجاح 🤍', textAlign: TextAlign.center, style: GoogleFonts.cairo(fontSize: 14, color: subColor)),
+              Text('لقد أتممت تسجيل عبادات اليوم بنجاح 🤍', textAlign: TextAlign.center, style: GoogleFonts.ibmPlexSansArabic(fontSize: 14, color: subColor)),
               const SizedBox(height: 24),
               const Divider(),
               const SizedBox(height: 16),
@@ -359,7 +359,7 @@ class _WorshipPageState extends State<WorshipPage> {
                 child: OutlinedButton.icon(
                   onPressed: () => setState(() => _isEditing = true),
                   icon: const Icon(Icons.edit_rounded, size: 20),
-                  label: Text('تعديل', style: GoogleFonts.cairo(fontWeight: FontWeight.bold)),
+                  label: Text('تعديل', style: GoogleFonts.ibmPlexSansArabic(fontWeight: FontWeight.bold)),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: AppColors.darkGreen,
                     side: const BorderSide(color: AppColors.darkGreen),

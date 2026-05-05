@@ -16,7 +16,7 @@ class RamadanPage extends StatelessWidget {
         backgroundColor: const Color(0xFF0A0E21),
         appBar: AppBar(
           backgroundColor: const Color(0xFF0A0E21),
-          title: Text('🌙 مود رمضان', style: GoogleFonts.cairo(color: Colors.white, fontWeight: FontWeight.bold)),
+          title: Text('🌙 مود رمضان', style: GoogleFonts.ibmPlexSansArabic(color: Colors.white, fontWeight: FontWeight.bold)),
           centerTitle: true,
         ),
         body: ListView(
@@ -54,10 +54,10 @@ class RamadanPage extends StatelessWidget {
         children: [
           Text('⭐', style: const TextStyle(fontSize: 40)),
           const SizedBox(height: 8),
-          Text('العد التنازلي لليلة القدر', style: GoogleFonts.cairo(color: Colors.white70, fontSize: 14)),
+          Text('العد التنازلي لليلة القدر', style: GoogleFonts.ibmPlexSansArabic(color: Colors.white70, fontSize: 14)),
           const SizedBox(height: 4),
-          Text('${days.abs()} يوم', style: GoogleFonts.cairo(color: Colors.white, fontSize: 38, fontWeight: FontWeight.bold)),
-          Text('ليلة ٢٧ رمضان', style: GoogleFonts.cairo(color: AppColors.goldLight, fontSize: 13)),
+          Text('${days.abs()} يوم', style: GoogleFonts.ibmPlexSansArabic(color: Colors.white, fontSize: 38, fontWeight: FontWeight.bold)),
+          Text('ليلة ٢٧ رمضان', style: GoogleFonts.ibmPlexSansArabic(color: AppColors.goldLight, fontSize: 13)),
         ],
       ),
     );
@@ -73,7 +73,7 @@ class RamadanPage extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('مواعيد اليوم', style: GoogleFonts.cairo(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+          Text('مواعيد اليوم', style: GoogleFonts.ibmPlexSansArabic(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
           const SizedBox(height: 12),
           Row(
             children: [
@@ -98,8 +98,8 @@ class RamadanPage extends StatelessWidget {
         children: [
           Text(emoji, style: const TextStyle(fontSize: 24)),
           const SizedBox(height: 6),
-          Text(label, style: GoogleFonts.cairo(color: Colors.white70, fontSize: 12)),
-          Text(time, style: GoogleFonts.cairo(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+          Text(label, style: GoogleFonts.ibmPlexSansArabic(color: Colors.white70, fontSize: 12)),
+          Text(time, style: GoogleFonts.ibmPlexSansArabic(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
         ],
       ),
     );
@@ -116,7 +116,7 @@ class RamadanPage extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('خطة الـ ٣٠ يوم', style: GoogleFonts.cairo(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+          Text('خطة الـ ٣٠ يوم', style: GoogleFonts.ibmPlexSansArabic(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
           const SizedBox(height: 12),
           Wrap(
             spacing: 6,
@@ -135,7 +135,7 @@ class RamadanPage extends StatelessWidget {
                 ),
                 child: Center(
                   child: Text('$day',
-                      style: GoogleFonts.cairo(
+                      style: GoogleFonts.ibmPlexSansArabic(
                           color: isDone || isToday ? Colors.white : Colors.white54,
                           fontSize: 11,
                           fontWeight: isToday ? FontWeight.bold : FontWeight.normal)),
@@ -158,19 +158,19 @@ class RamadanPage extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('🕌 التراويح', style: GoogleFonts.cairo(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+          Text('🕌 التراويح', style: GoogleFonts.ibmPlexSansArabic(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
           const SizedBox(height: 12),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('صليت التراويح الليلة؟', style: GoogleFonts.cairo(color: Colors.white70)),
+              Text('صليت التراويح الليلة؟', style: GoogleFonts.ibmPlexSansArabic(color: Colors.white70)),
               ElevatedButton(
                 onPressed: () {},
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.lightGreen,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                 ),
-                child: Text('نعم ✓', style: GoogleFonts.cairo(color: Colors.white, fontWeight: FontWeight.bold)),
+                child: Text('نعم ✓', style: GoogleFonts.ibmPlexSansArabic(color: Colors.white, fontWeight: FontWeight.bold)),
               ),
             ],
           ),
@@ -183,7 +183,7 @@ class RamadanPage extends StatelessWidget {
             borderRadius: BorderRadius.circular(4),
           ),
           const SizedBox(height: 6),
-          Text('١٤ / ٣٠ ليلة', style: GoogleFonts.cairo(color: Colors.white54, fontSize: 12)),
+          Text('١٤ / ٣٠ ليلة', style: GoogleFonts.ibmPlexSansArabic(color: Colors.white54, fontSize: 12)),
         ],
       ),
     );
