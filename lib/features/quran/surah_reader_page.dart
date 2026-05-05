@@ -243,22 +243,30 @@ class _MushafPageWidget extends StatelessWidget {
           String verseText = quran.getVerse(surah, v, verseEndSymbol: false);
           // Remove Basmala from first verse (except Fatiha & Tawbah)
           if (v == 1 && surah != 1 && surah != 9) {
-            // Remove all possible Basmala variations (with and without diacritics, different spellings)
-            final basmalaPatterns = [
-              quran.basmala,
-              r'بِسْمِ اللَّهِ الرَّحْمَـٰنِ الرَّحِيمِ',
-              r'بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ',
-              r'بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيمِ',
-              r'بسم الله الرحمن الرحيم',
-              r'بسم الله الرحمن الرحيم ',
-              r'بِسْمِ اللَّهِ الرَّحْمَـٰنِ الرَّحِيمِ ',
-              r'بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ ',
-            ];
-            for (final pattern in basmalaPatterns) {
-              verseText = verseText.replaceFirst(RegExp('^${RegExp.escape(pattern)}\\s*'), '');
-              verseText = verseText.replaceFirst(pattern, '');
+            // Remove any leading Basmala (more robust approach)
+            final trimmed = verseText.trim();
+            
+            // Check if the verse starts with Basmala characters
+            if (trimmed.startsWith('ب') || trimmed.startsWith('بِ')) {
+              // Find the end of Basmala (look for the first verse content)
+              // Basmala is usually the first part, so we can split and take the rest
+              // or remove the first 38-40 characters (typical Basmala length)
+              final basmalaLength = quran.basmala.length;
+              if (trimmed.length > basmalaLength) {
+                // Try removing exact Basmala first
+                if (trimmed.startsWith(quran.basmala)) {
+                  verseText = trimmed.substring(quran.basmala.length).trim();
+                } else {
+                  // If exact match fails, remove any leading Arabic text until we hit the verse content
+                  // This is a fallback for different Basmala representations
+                  final words = trimmed.split(' ');
+                  if (words.length > 4) {
+                    // Basmala is 4 words, so skip first 4
+                    verseText = words.skip(4).join(' ').trim();
+                  }
+                }
+              }
             }
-            verseText = verseText.trim();
           }
           final tapHandler = TapGestureRecognizer()..onTap = () => _showVerseActions(context, surah, v);
             final bool isHighlighted = (highlightSurah != null && highlightVerse != null && highlightSurah == surah && highlightVerse == v);

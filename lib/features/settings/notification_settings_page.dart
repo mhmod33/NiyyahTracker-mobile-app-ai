@@ -103,6 +103,77 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
     }
   }
 
+  Future<void> _scheduleTestNotification() async {
+    try {
+      await _notificationService.scheduleTestNotificationIn5Minutes();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('تم جدولة الإشعار بعد 5 دقائق!'),
+            backgroundColor: AppColors.darkGreen,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('فشل جدولة الإشعار: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _showPendingNotifications() async {
+    try {
+      final pending = await _notificationService.getPendingNotifications();
+      if (!mounted) return;
+      
+      showDialog(
+        context: context,
+        builder: (context) => Directionality(
+          textDirection: TextDirection.rtl,
+          child: AlertDialog(
+            title: const Text('الإشعارات المجدولة'),
+            content: SizedBox(
+              width: double.maxFinite,
+              child: pending.isEmpty
+                  ? const Text('لا توجد إشعارات مجدولة')
+                  : ListView.builder(
+                      shrinkWrap: true,
+                      itemCount: pending.length,
+                      itemBuilder: (context, index) {
+                        final notification = pending[index];
+                        return ListTile(
+                          title: Text(notification.title ?? 'بدون عنوان'),
+                          subtitle: Text('ID: ${notification.id}'),
+                        );
+                      },
+                    ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('إغلاق'),
+              ),
+            ],
+          ),
+        ),
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('خطأ: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -250,7 +321,37 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
                           ],
                         ),
 
+                        const SizedBox(height: 24),
 
+                        // Test Section
+                        _SettingsSection(
+                          title: 'اختبار وأدوات',
+                          icon: Icons.build_rounded,
+                          isDark: isDark,
+                          children: [
+                            _TestTile(
+                              title: 'إرسال إشعار اختباري',
+                              subtitle: 'تجربة تلقي الإشعارات فوراً',
+                              icon: Icons.notifications_active_rounded,
+                              onTap: _testNotification,
+                              isDark: isDark,
+                            ),
+                            _TestTile(
+                              title: 'جدول إشعار بعد 5 دقائق',
+                              subtitle: 'تجربة الإشعارات المجدولة',
+                              icon: Icons.schedule_rounded,
+                              onTap: _scheduleTestNotification,
+                              isDark: isDark,
+                            ),
+                            _TestTile(
+                              title: 'عرض الإشعارات المجدولة',
+                              subtitle: 'عرض جميع الإشعارات التي تم جدولتها',
+                              icon: Icons.list_rounded,
+                              onTap: _showPendingNotifications,
+                              isDark: isDark,
+                            ),
+                          ],
+                        ),
 
                         const SizedBox(height: 32),
                       ]),
