@@ -65,6 +65,7 @@ dependencies:
   timezone: ^0.9.4
   google_maps_flutter: ^2.17.0
   country_picker: ^2.0.27
+  flutter_timezone: ^5.0.2
 
 
 dev_dependencies:

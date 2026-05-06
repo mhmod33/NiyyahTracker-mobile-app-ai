@@ -52,15 +52,15 @@ void main() async {
   }
 
   try {
-    await DailySummaryService().initializeNotifications();
-    await DailySummaryService().scheduleMidnightReminder();
+    await NotificationService().init();
+    await NotificationService().initializeAllSchedules();
   } catch (e) {
     // Silently fail
   }
 
   try {
-    await NotificationService().init();
-    await NotificationService().initializeAllSchedules();
+    await DailySummaryService().initializeNotifications();
+    await DailySummaryService().scheduleMidnightReminder();
   } catch (e) {
     // Silently fail
   }

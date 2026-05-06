@@ -5,6 +5,9 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:hive/hive.dart';
+import 'package:adhan/adhan.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:flutter_timezone/flutter_timezone.dart';
 import '../widgets/notification_overlay.dart';
 
 class NotificationService {
@@ -28,7 +31,10 @@ class NotificationService {
     developer.log('🔔 NotificationService.init() called', name: 'NotificationService');
     try {
       tz.initializeTimeZones();
-      developer.log('✅ Time zones initialized', name: 'NotificationService');
+      final currentTimeZone = await FlutterTimezone.getLocalTimezone();
+      final String timeZoneName = currentTimeZone.identifier;
+      tz.setLocalLocation(tz.getLocation(timeZoneName));
+      developer.log('✅ Time zones initialized for $timeZoneName', name: 'NotificationService');
       
       if (!Hive.isBoxOpen('notification_settings')) {
         developer.log('Opening notification_settings box...', name: 'NotificationService');
@@ -505,22 +511,49 @@ class NotificationService {
     }
 
     try {
+      Coordinates coords = Coordinates(30.0444, 31.2357); // Default to Cairo
+      try {
+        bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+        if (serviceEnabled) {
+          LocationPermission permission = await Geolocator.checkPermission();
+          if (permission == LocationPermission.denied) {
+            permission = await Geolocator.requestPermission();
+          }
+          if (permission != LocationPermission.denied && permission != LocationPermission.deniedForever) {
+            Position pos = await Geolocator.getCurrentPosition(locationSettings: const LocationSettings(accuracy: LocationAccuracy.low));
+            coords = Coordinates(pos.latitude, pos.longitude);
+          }
+        }
+      } catch (locErr) {
+        developer.log('Location fetch error: $locErr', name: 'NotificationService');
+      }
+
+      final params = CalculationMethod.egyptian.getParameters()..madhab = Madhab.shafi;
+      final pt = PrayerTimes(coords, DateComponents.from(DateTime.now()), params);
+
       final prayers = [
-        {'name': 'الفجر', 'hour': 5, 'id': 3001},
-        {'name': 'الظهر', 'hour': 12, 'id': 3002},
-        {'name': 'العصر', 'hour': 15, 'id': 3003},
-        {'name': 'المغرب', 'hour': 18, 'id': 3004},
-        {'name': 'العشاء', 'hour': 20, 'id': 3005},
+        {'name': 'الفجر', 'time': pt.fajr, 'id': 3001},
+        {'name': 'الظهر', 'time': pt.dhuhr, 'id': 3002},
+        {'name': 'العصر', 'time': pt.asr, 'id': 3003},
+        {'name': 'المغرب', 'time': pt.maghrib, 'id': 3004},
+        {'name': 'العشاء', 'time': pt.isha, 'id': 3005},
       ];
 
       for (final prayer in prayers) {
         developer.log('Scheduling notification for ${prayer['name']}', name: 'NotificationService');
+        
+        DateTime prayerTime = prayer['time'] as DateTime;
+        if (prayerTime.isBefore(DateTime.now())) {
+          prayerTime = prayerTime.add(const Duration(days: 1));
+        }
+        final tzScheduledTime = tz.TZDateTime.from(prayerTime, tz.local);
+
         await _scheduleZoned(
           id: prayer['id'] as int,
           title: 'حان وقت صلاة ${prayer['name']}',
           body: 'الصلاة خير من النوم - حان وقت صلاة ${prayer['name']}',
-          scheduledTime: _nextTime(prayer['hour'] as int, 0),
-          details: NotificationDetails(
+          scheduledTime: tzScheduledTime,
+          details: const NotificationDetails(
             android: AndroidNotificationDetails(
               _prayerChannelId,
               'أوقات الصلاة',
@@ -529,7 +562,7 @@ class NotificationService {
               priority: Priority.high,
               icon: '@mipmap/ic_launcher',
             ),
-            iOS: const DarwinNotificationDetails(
+            iOS: DarwinNotificationDetails(
               presentAlert: true,
               presentBadge: true,
               presentSound: true,
@@ -538,16 +571,15 @@ class NotificationService {
           matchDateTimeComponents: DateTimeComponents.time,
         );
 
-        int beforeHour = (prayer['hour'] as int) - 1;
-        int beforeMinute = 45;
-        if (beforeHour < 0) beforeHour = 23;
+        final beforeTime = prayerTime.subtract(const Duration(minutes: 15));
+        final tzBeforeTime = tz.TZDateTime.from(beforeTime, tz.local);
 
         await _scheduleZoned(
           id: (prayer['id'] as int) + 100,
           title: 'تذكير بصلاة ${prayer['name']}',
           body: 'بقي 15 دقيقة على أذان ${prayer['name']}',
-          scheduledTime: _nextTime(beforeHour, beforeMinute),
-          details: NotificationDetails(
+          scheduledTime: tzBeforeTime,
+          details: const NotificationDetails(
             android: AndroidNotificationDetails(
               _prayerChannelId,
               'تنبيهات قبل الصلاة',
@@ -556,7 +588,7 @@ class NotificationService {
               priority: Priority.high,
               icon: '@mipmap/ic_launcher',
             ),
-            iOS: const DarwinNotificationDetails(
+            iOS: DarwinNotificationDetails(
               presentAlert: true,
               presentBadge: true,
               presentSound: true,
