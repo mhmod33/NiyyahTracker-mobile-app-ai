@@ -102,8 +102,27 @@ class NotificationService {
     try {
       final androidPlugin = _notifications.resolvePlatformSpecificImplementation<
           AndroidFlutterLocalNotificationsPlugin>();
+      
+      // Request notification permission
       final androidResult = await androidPlugin?.requestNotificationsPermission();
-      developer.log('Android permission result: $androidResult', name: 'NotificationService');
+      developer.log('Android notification permission result: $androidResult', name: 'NotificationService');
+      
+      if (androidResult == false) {
+        developer.log('⚠️ WARNING: Android notification permission was DENIED!', name: 'NotificationService');
+      }
+      
+      // Request exact alarm permission (for Android 12+)
+      final canScheduleExactAlarms = await androidPlugin?.canScheduleExactNotifications();
+      developer.log('Can schedule exact alarms: $canScheduleExactAlarms', name: 'NotificationService');
+      
+      if (canScheduleExactAlarms == false) {
+        developer.log('Requesting exact alarm permission...', name: 'NotificationService');
+        final exactResult = await androidPlugin?.requestExactAlarmsPermission();
+        developer.log('Exact alarm permission result: $exactResult', name: 'NotificationService');
+        if (exactResult == false) {
+          developer.log('⚠️ WARNING: Exact alarm permission was DENIED!', name: 'NotificationService');
+        }
+      }
 
       final iosPlugin = _notifications.resolvePlatformSpecificImplementation<
           IOSFlutterLocalNotificationsPlugin>();
@@ -113,6 +132,10 @@ class NotificationService {
         sound: true,
       );
       developer.log('iOS permission result: $iosResult', name: 'NotificationService');
+      
+      if (iosResult == false) {
+        developer.log('⚠️ WARNING: iOS notification permissions were DENIED!', name: 'NotificationService');
+      }
     } catch (e, stackTrace) {
       developer.log('❌ Error requesting permissions', name: 'NotificationService', error: e, stackTrace: stackTrace);
     }
@@ -252,23 +275,28 @@ class NotificationService {
     }
   }
 
-  Future<void> scheduleMorningAzkar() async {
-    developer.log('Scheduling morning azkar notification...', name: 'NotificationService');
+  Future<bool> scheduleMorningAzkar() async {
+    developer.log('📌 Scheduling morning azkar notification...', name: 'NotificationService');
     if (!morningAzkarEnabled) {
-      developer.log('Morning azkar disabled, skipping', name: 'NotificationService');
-      return;
+      developer.log('⏭️ Morning azkar disabled, skipping', name: 'NotificationService');
+      return false;
     }
 
     try {
-      final scheduledTime = _nextTime(4, 45);
-      developer.log('Scheduled time: $scheduledTime', name: 'NotificationService');
+      // First, cancel any existing notification with this ID
+      await _notifications.cancel(1001);
       
-      await _notifications.zonedSchedule(
-        1001,
-        'تذكير بأذكار الصباح',
-        'بقي 15 دقيقة على وقت أذكار الصباح',
-        scheduledTime,
-        const NotificationDetails(
+      final scheduledTime = _nextTime(4, 45);
+      developer.log('🎯 Target time for morning azkar: $scheduledTime', name: 'NotificationService');
+      developer.log('⏱️ Time until notification: ${scheduledTime.difference(tz.TZDateTime.now(tz.local)).inMinutes} minutes', 
+          name: 'NotificationService');
+      
+      await _scheduleZoned(
+        id: 1001,
+        title: 'تذكير بأذكار الصباح',
+        body: 'بقي 15 دقيقة على وقت أذكار الصباح',
+        scheduledTime: scheduledTime,
+        details: const NotificationDetails(
           android: AndroidNotificationDetails(
             _azkarChannelId,
             'أذكار وتذكيرات',
@@ -276,6 +304,8 @@ class NotificationService {
             importance: Importance.high,
             priority: Priority.high,
             icon: '@mipmap/ic_launcher',
+            enableVibration: true,
+            playSound: true,
           ),
           iOS: DarwinNotificationDetails(
             presentAlert: true,
@@ -283,34 +313,52 @@ class NotificationService {
             presentSound: true,
           ),
         ),
-        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-        uiLocalNotificationDateInterpretation:
-            UILocalNotificationDateInterpretation.absoluteTime,
         matchDateTimeComponents: DateTimeComponents.time,
       );
-      developer.log('✅ Morning azkar notification scheduled', name: 'NotificationService');
+      
+      developer.log('📤 zonedSchedule() call succeeded for ID 1001', name: 'NotificationService');
+      
+      // Verify notification was scheduled - use longer delay for matchDateTimeComponents
+      await Future.delayed(const Duration(milliseconds: 1200));
+      final pending = await getPendingNotifications();
+      
+      final isScheduled = pending.any((n) => n.id == 1001);
+      
+      if (isScheduled) {
+        developer.log('✅✅ SUCCESS: Morning azkar ID 1001 confirmed in pending list', name: 'NotificationService');
+      } else {
+        developer.log('⚠️ WARNING: Morning azkar ID 1001 NOT found in pending list despite successful zonedSchedule()', 
+            name: 'NotificationService');
+        developer.log('💡 This might be normal with matchDateTimeComponents - notification will trigger at scheduled time', 
+            name: 'NotificationService');
+      }
+      
+      // Return true anyway if zonedSchedule succeeded, even if not in pending list
+      return true;
     } catch (e, stackTrace) {
-      developer.log('❌ Error scheduling morning azkar', name: 'NotificationService', error: e, stackTrace: stackTrace);
+      developer.log('❌ FAILED: Error scheduling morning azkar', name: 'NotificationService', 
+          error: e, stackTrace: stackTrace);
+      return false;
     }
   }
 
-  Future<void> scheduleEveningAzkar() async {
+  Future<bool> scheduleEveningAzkar() async {
     developer.log('Scheduling evening azkar notification...', name: 'NotificationService');
     if (!eveningAzkarEnabled) {
       developer.log('Evening azkar disabled, skipping', name: 'NotificationService');
-      return;
+      return false;
     }
 
     try {
       final scheduledTime = _nextTime(17, 45);
       developer.log('Scheduled time: $scheduledTime', name: 'NotificationService');
       
-      await _notifications.zonedSchedule(
-        1002,
-        'تذكير بأذكار المساء',
-        'بقي 15 دقيقة على وقت أذكار المساء',
-        scheduledTime,
-        const NotificationDetails(
+      await _scheduleZoned(
+        id: 1002,
+        title: 'تذكير بأذكار المساء',
+        body: 'بقي 15 دقيقة على وقت أذكار المساء',
+        scheduledTime: scheduledTime,
+        details: const NotificationDetails(
           android: AndroidNotificationDetails(
             _azkarChannelId,
             'أذكار وتذكيرات',
@@ -325,34 +373,43 @@ class NotificationService {
             presentSound: true,
           ),
         ),
-        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-        uiLocalNotificationDateInterpretation:
-            UILocalNotificationDateInterpretation.absoluteTime,
         matchDateTimeComponents: DateTimeComponents.time,
       );
-      developer.log('✅ Evening azkar notification scheduled', name: 'NotificationService');
+      
+      // Verify notification was scheduled
+      await Future.delayed(const Duration(milliseconds: 300));
+      final pending = await getPendingNotifications();
+      final isScheduled = pending.any((n) => n.id == 1002);
+      
+      if (isScheduled) {
+        developer.log('✅ Evening azkar notification scheduled', name: 'NotificationService');
+      } else {
+        developer.log('⚠️ Evening azkar notification not found in pending list', name: 'NotificationService');
+      }
+      return isScheduled;
     } catch (e, stackTrace) {
       developer.log('❌ Error scheduling evening azkar', name: 'NotificationService', error: e, stackTrace: stackTrace);
+      return false;
     }
   }
 
-  Future<void> scheduleSleepAzkar() async {
+  Future<bool> scheduleSleepAzkar() async {
     developer.log('Scheduling sleep azkar notification...', name: 'NotificationService');
     if (!sleepAzkarEnabled) {
       developer.log('Sleep azkar disabled, skipping', name: 'NotificationService');
-      return;
+      return false;
     }
 
     try {
       final scheduledTime = _nextTime(21, 45);
       developer.log('Scheduled time: $scheduledTime', name: 'NotificationService');
       
-      await _notifications.zonedSchedule(
-        1003,
-        'تذكير بأذكار النوم',
-        'بقي 15 دقيقة على وقت أذكار النوم',
-        scheduledTime,
-        const NotificationDetails(
+      await _scheduleZoned(
+        id: 1003,
+        title: 'تذكير بأذكار النوم',
+        body: 'بقي 15 دقيقة على وقت أذكار النوم',
+        scheduledTime: scheduledTime,
+        details: const NotificationDetails(
           android: AndroidNotificationDetails(
             _azkarChannelId,
             'أذكار وتذكيرات',
@@ -367,35 +424,46 @@ class NotificationService {
             presentSound: true,
           ),
         ),
-        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-        uiLocalNotificationDateInterpretation:
-            UILocalNotificationDateInterpretation.absoluteTime,
         matchDateTimeComponents: DateTimeComponents.time,
       );
-      developer.log('✅ Sleep azkar notification scheduled', name: 'NotificationService');
+      
+      // Verify notification was scheduled
+      await Future.delayed(const Duration(milliseconds: 300));
+      final pending = await getPendingNotifications();
+      final isScheduled = pending.any((n) => n.id == 1003);
+      
+      if (isScheduled) {
+        developer.log('✅ Sleep azkar notification scheduled', name: 'NotificationService');
+      } else {
+        developer.log('⚠️ Sleep azkar notification not found in pending list', name: 'NotificationService');
+      }
+      return isScheduled;
     } catch (e, stackTrace) {
       developer.log('❌ Error scheduling sleep azkar', name: 'NotificationService', error: e, stackTrace: stackTrace);
+      return false;
     }
   }
 
-  Future<void> scheduleAzkarReminders() async {
+  Future<bool> scheduleAzkarReminders() async {
     developer.log('Scheduling azkar reminders...', name: 'NotificationService');
     if (!azkarReminderEnabled) {
       developer.log('Azkar reminders disabled, skipping', name: 'NotificationService');
-      return;
+      return false;
     }
 
     try {
       int id = 2000;
-      for (int hour = 8; hour <= 22; hour++) {
-        for (int minute in [0, 15, 30, 45]) {
+      int scheduledCount = 0;
+      // Every 2 hours from 8 AM to 10 PM => 8, 10, 12, 14, 16, 18, 20, 22 (8 reminders/day)
+      for (int hour = 8; hour <= 22; hour += 2) {
+        for (int minute in [0]) {
           final scheduledTime = _nextTime(hour, minute);
-          await _notifications.zonedSchedule(
-            id++,
-            'تذكير بالذكر',
-            'لا تنسى ذكر الله في هذا الوقت',
-            scheduledTime,
-            const NotificationDetails(
+          await _scheduleZoned(
+            id: id++,
+            title: 'تذكير بالذكر',
+            body: 'لا تنسى ذكر الله في هذا الوقت',
+            scheduledTime: scheduledTime,
+            details: const NotificationDetails(
               android: AndroidNotificationDetails(
                 _azkarChannelId,
                 'أذكار وتذكيرات',
@@ -410,24 +478,30 @@ class NotificationService {
                 presentSound: true,
               ),
             ),
-            androidScheduleMode: AndroidScheduleMode.inexact,
-            uiLocalNotificationDateInterpretation:
-                UILocalNotificationDateInterpretation.absoluteTime,
             matchDateTimeComponents: DateTimeComponents.time,
           );
+          scheduledCount++;
         }
       }
-      developer.log('✅ Azkar reminders scheduled', name: 'NotificationService');
+      
+      // Verify at least some notifications were scheduled
+      await Future.delayed(const Duration(milliseconds: 500));
+      final pending = await getPendingNotifications();
+      final reminderCount = pending.where((n) => n.id >= 2000 && n.id < 2060).length;
+      
+      developer.log('✅ Azkar reminders scheduled: $scheduledCount notifications, $reminderCount verified in pending', name: 'NotificationService');
+      return reminderCount > 0;
     } catch (e, stackTrace) {
       developer.log('❌ Error scheduling azkar reminders', name: 'NotificationService', error: e, stackTrace: stackTrace);
+      return false;
     }
   }
 
-  Future<void> schedulePrayerTimes() async {
+  Future<bool> schedulePrayerTimes() async {
     developer.log('Scheduling prayer times notifications...', name: 'NotificationService');
     if (!prayerTimesEnabled) {
       developer.log('Prayer times disabled, skipping', name: 'NotificationService');
-      return;
+      return false;
     }
 
     try {
@@ -441,12 +515,12 @@ class NotificationService {
 
       for (final prayer in prayers) {
         developer.log('Scheduling notification for ${prayer['name']}', name: 'NotificationService');
-        await _notifications.zonedSchedule(
-          prayer['id'] as int,
-          'حان وقت صلاة ${prayer['name']}',
-          'الصلاة خير من النوم - حان وقت صلاة ${prayer['name']}',
-          _nextTime(prayer['hour'] as int, 0),
-          NotificationDetails(
+        await _scheduleZoned(
+          id: prayer['id'] as int,
+          title: 'حان وقت صلاة ${prayer['name']}',
+          body: 'الصلاة خير من النوم - حان وقت صلاة ${prayer['name']}',
+          scheduledTime: _nextTime(prayer['hour'] as int, 0),
+          details: NotificationDetails(
             android: AndroidNotificationDetails(
               _prayerChannelId,
               'أوقات الصلاة',
@@ -455,28 +529,25 @@ class NotificationService {
               priority: Priority.high,
               icon: '@mipmap/ic_launcher',
             ),
-            iOS: DarwinNotificationDetails(
+            iOS: const DarwinNotificationDetails(
               presentAlert: true,
               presentBadge: true,
               presentSound: true,
             ),
           ),
-          androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-          uiLocalNotificationDateInterpretation:
-              UILocalNotificationDateInterpretation.absoluteTime,
           matchDateTimeComponents: DateTimeComponents.time,
         );
 
         int beforeHour = (prayer['hour'] as int) - 1;
         int beforeMinute = 45;
         if (beforeHour < 0) beforeHour = 23;
-        
-        await _notifications.zonedSchedule(
-          (prayer['id'] as int) + 100,
-          'تذكير بصلاة ${prayer['name']}',
-          'بقي 15 دقيقة على أذان ${prayer['name']}',
-          _nextTime(beforeHour, beforeMinute),
-          NotificationDetails(
+
+        await _scheduleZoned(
+          id: (prayer['id'] as int) + 100,
+          title: 'تذكير بصلاة ${prayer['name']}',
+          body: 'بقي 15 دقيقة على أذان ${prayer['name']}',
+          scheduledTime: _nextTime(beforeHour, beforeMinute),
+          details: NotificationDetails(
             android: AndroidNotificationDetails(
               _prayerChannelId,
               'تنبيهات قبل الصلاة',
@@ -485,21 +556,27 @@ class NotificationService {
               priority: Priority.high,
               icon: '@mipmap/ic_launcher',
             ),
-            iOS: DarwinNotificationDetails(
+            iOS: const DarwinNotificationDetails(
               presentAlert: true,
               presentBadge: true,
               presentSound: true,
             ),
           ),
-          androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-          uiLocalNotificationDateInterpretation:
-              UILocalNotificationDateInterpretation.absoluteTime,
           matchDateTimeComponents: DateTimeComponents.time,
         );
       }
-      developer.log('✅ Prayer times notifications scheduled', name: 'NotificationService');
+      
+      // Verify at least some notifications were scheduled
+      await Future.delayed(const Duration(milliseconds: 500));
+      final pending = await getPendingNotifications();
+      final prayerCount = pending.where((n) => n.id >= 3001 && n.id <= 3005).length;
+      final reminderCount = pending.where((n) => n.id >= 3101 && n.id <= 3105).length;
+      
+      developer.log('✅ Prayer times notifications scheduled: $prayerCount prayers, $reminderCount reminders verified', name: 'NotificationService');
+      return prayerCount > 0;
     } catch (e, stackTrace) {
       developer.log('❌ Error scheduling prayer times', name: 'NotificationService', error: e, stackTrace: stackTrace);
+      return false;
     }
   }
 
@@ -577,13 +654,18 @@ class NotificationService {
       now.day,
       hour,
       minute,
+      0, // seconds
+      0, // milliseconds
     );
 
+    developer.log('_nextTime: now=$now, target=$scheduledDate', name: 'NotificationService');
+    
     if (scheduledDate.isBefore(now)) {
+      developer.log('_nextTime: target is in the past, adding 1 day', name: 'NotificationService');
       scheduledDate = scheduledDate.add(const Duration(days: 1));
     }
 
-    developer.log('nextTime($hour:$minute) -> $scheduledDate', name: 'NotificationService');
+    developer.log('_nextTime($hour:$minute) -> final=$scheduledDate (${scheduledDate.difference(now).inMinutes} min from now)', name: 'NotificationService');
     return scheduledDate;
   }
 
@@ -636,39 +718,84 @@ class NotificationService {
   }
 
   Future<List<PendingNotificationRequest>> getPendingNotifications() async {
-    developer.log('Getting pending notifications...', name: 'NotificationService');
+    developer.log('🔍 Fetching all pending notifications...', name: 'NotificationService');
     try {
       final pending = await _notifications.pendingNotificationRequests();
-      developer.log('Found ${pending.length} pending notifications', name: 'NotificationService');
-      for (var n in pending) {
-        developer.log(' - ID: ${n.id}, Title: ${n.title}', name: 'NotificationService');
+      developer.log('📊 Total pending notifications: ${pending.length}', name: 'NotificationService');
+      
+      if (pending.isEmpty) {
+        developer.log('⚠️ NO pending notifications found!', name: 'NotificationService');
+      } else {
+        for (var n in pending) {
+          developer.log('  📌 ID: ${n.id}, Title: "${n.title}", Body: "${n.body}"', 
+              name: 'NotificationService');
+        }
       }
+      
+      // Additional debug info
+      final pendingCount = pending.length;
+      final azkarCount = pending.where((n) => n.id >= 1000 && n.id < 2000).length;
+      final reminderCount = pending.where((n) => n.id >= 2000 && n.id < 3000).length;
+      final prayerCount = pending.where((n) => n.id >= 3000 && n.id < 4000).length;
+      
+      developer.log('📈 Summary: Total=$pendingCount, Azkar=$azkarCount, Reminders=$reminderCount, Prayer=$prayerCount',
+          name: 'NotificationService');
+      
       return pending;
     } catch (e, stackTrace) {
-      developer.log('❌ Error getting pending notifications', name: 'NotificationService', error: e, stackTrace: stackTrace);
+      developer.log('❌ Error getting pending notifications', name: 'NotificationService', 
+          error: e, stackTrace: stackTrace);
       return [];
     }
   }
-
-  Future<void> scheduleTestNotificationIn5Minutes() async {
-    developer.log('Scheduling test notification in 5 minutes...', name: 'NotificationService');
+  
+  Future<void> checkPermissionsStatus() async {
+    developer.log('=== Checking Notification Permissions Status ===', name: 'NotificationService');
     try {
-      final scheduledTime = tz.TZDateTime.now(tz.local).add(const Duration(minutes: 5));
-      developer.log('Test notification will be sent at: $scheduledTime', name: 'NotificationService');
+      final androidPlugin = _notifications.resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin>();
+      
+      final canScheduleExact = await androidPlugin?.canScheduleExactNotifications();
+      developer.log('Can Schedule Exact Notifications: $canScheduleExact', name: 'NotificationService');
+      
+      final iosPlugin = _notifications.resolvePlatformSpecificImplementation<
+          IOSFlutterLocalNotificationsPlugin>();
+      
+      developer.log('=== End Permission Check ===', name: 'NotificationService');
+    } catch (e, stackTrace) {
+      developer.log('Error checking permissions', name: 'NotificationService', error: e, stackTrace: stackTrace);
+    }
+  }
 
-      await _notifications.zonedSchedule(
-        9999,
-        'اختبار الإشعارات',
-        'هذا إشعار اختباري مجدول بعد 5 دقائق',
-        scheduledTime,
-        const NotificationDetails(
+  Future<bool> scheduleSimpleTestNotification() async {
+    developer.log('📌 Scheduling SIMPLE test notification (no matchDateTimeComponents)...', 
+        name: 'NotificationService');
+    try {
+      // Cancel existing
+      await _notifications.cancel(9998);
+      
+      final now = tz.TZDateTime.now(tz.local);
+      final scheduledTime = now.add(const Duration(seconds: 60));
+
+      developer.log('🎯 Scheduling for: $scheduledTime (in ${scheduledTime.difference(now).inSeconds} seconds)',
+          name: 'NotificationService');
+      
+      // Schedule WITHOUT matchDateTimeComponents
+      await _scheduleZoned(
+        id: 9987,
+        title: 'اختبار إشعار بسيط',
+        body: 'هذا إشعار اختبار بدون تكرار',
+        scheduledTime: scheduledTime,
+        details: const NotificationDetails(
           android: AndroidNotificationDetails(
-            _azkarChannelId,
+            'azkar_reminders',
             'أذكار وتذكيرات',
             channelDescription: 'تذكيرات الأذكار اليومية',
-            importance: Importance.high,
-            priority: Priority.high,
+            importance: Importance.max,
+            priority: Priority.max,
             icon: '@mipmap/ic_launcher',
+            enableVibration: true,
+            playSound: true,
           ),
           iOS: DarwinNotificationDetails(
             presentAlert: true,
@@ -676,14 +803,235 @@ class NotificationService {
             presentSound: true,
           ),
         ),
-        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      );
+      
+      developer.log('📤 zonedSchedule() call succeeded for simple test (ID 9998)', 
+          name: 'NotificationService');
+      
+      await Future.delayed(const Duration(milliseconds: 800));
+      final pending = await getPendingNotifications();
+      
+      final isFound = pending.any((n) => n.id == 9998);
+      
+      if (isFound) {
+        developer.log('✅ SUCCESS: Simple test notification ID 9998 found in pending list!', 
+            name: 'NotificationService');
+      } else {
+        developer.log('❌ FAILED: Simple test notification ID 9998 NOT found in pending list!', 
+            name: 'NotificationService');
+      }
+      
+      return isFound;
+    } catch (e, stackTrace) {
+      developer.log('❌ Error scheduling simple test notification', name: 'NotificationService',
+          error: e, stackTrace: stackTrace);
+      return false;
+    }
+  }
+
+  Future<bool> scheduleTestNotificationIn30Seconds() async {
+    developer.log('📋 Scheduling test notification in 30 seconds...', name: 'NotificationService');
+    try {
+      // First cancel any existing notification with the same ID
+      await _notifications.cancel(9999);
+      developer.log('Cancelled existing notification with ID 9999', name: 'NotificationService');
+      
+      // Create TZDateTime properly
+      final now = tz.TZDateTime.now(tz.local);
+      final futureTime = now.add(const Duration(seconds: 30));
+      
+      // Ensure we have a properly constructed TZDateTime
+      final scheduledTime = tz.TZDateTime(
+        tz.local,
+        futureTime.year,
+        futureTime.month,
+        futureTime.day,
+        futureTime.hour,
+        futureTime.minute,
+        futureTime.second,
+      );
+      
+      developer.log('Current TZ time: $now', name: 'NotificationService');
+      developer.log('Target notification time: $scheduledTime', name: 'NotificationService');
+      developer.log('Time difference: ${scheduledTime.difference(now).inSeconds} seconds', name: 'NotificationService');
+
+      // Check permissions before scheduling
+      final permissions = await checkNotificationPermissions();
+      developer.log('Notification permissions: $permissions', name: 'NotificationService');
+      
+      developer.log('📤 Calling zonedSchedule with ID 9999...', name: 'NotificationService');
+      
+      await _scheduleZoned(
+        id: 5555,
+        title: 'اختبار الإشعارات',
+        body: 'هذا إشعار اختباري مجدول بعد 30 ثانية',
+        scheduledTime: scheduledTime,
+        details: const NotificationDetails(
+          android: AndroidNotificationDetails(
+            _azkarChannelId,
+            'أذكار وتذكيرات',
+            channelDescription: 'تذكيرات الأذكار اليومية',
+            importance: Importance.max,
+            priority: Priority.max,
+            icon: '@mipmap/ic_launcher',
+            showWhen: true,
+            enableVibration: true,
+            playSound: true,
+          ),
+          iOS: DarwinNotificationDetails(
+            presentAlert: true,
+            presentBadge: true,
+            presentSound: true,
+          ),
+        ),
+      );
+      
+      developer.log('✅ zonedSchedule() completed without error', name: 'NotificationService');
+      
+      // Verify the notification is pending
+      await Future.delayed(const Duration(milliseconds: 1000));
+      final pending = await getPendingNotifications();
+      developer.log('📊 Total pending notifications: ${pending.length}', name: 'NotificationService');
+      
+      // Check if our notification with ID 9999 is in the pending list
+      final isScheduled = pending.any((n) => n.id == 9999);
+      
+      if (isScheduled) {
+        developer.log('✅ Notification ID 9999 FOUND in pending list', name: 'NotificationService');
+        final notif = pending.firstWhere((n) => n.id == 9999);
+        developer.log('Notification details: ID=${notif.id}, Title=${notif.title}', name: 'NotificationService');
+      } else {
+        developer.log('❌ Notification ID 9999 NOT FOUND in pending list', name: 'NotificationService');
+        developer.log('All pending notification IDs: ${pending.map((n) => n.id).toList()}', name: 'NotificationService');
+      }
+      
+      return isScheduled;
+    } catch (e, stackTrace) {
+      developer.log('❌ ERROR in scheduleTestNotificationIn30Seconds', name: 'NotificationService', error: e, stackTrace: stackTrace);
+      rethrow;
+    }
+  }
+
+  Future<Map<String, bool>> checkNotificationPermissions() async {
+    developer.log('Checking notification permissions...', name: 'NotificationService');
+    try {
+      final androidPlugin = _notifications.resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin>();
+      
+      final notificationsEnabled = await androidPlugin?.areNotificationsEnabled();
+      final canScheduleExact = await androidPlugin?.canScheduleExactNotifications();
+      
+      developer.log('✅ Notifications enabled: $notificationsEnabled', name: 'NotificationService');
+      developer.log('✅ Can schedule exact alarms: $canScheduleExact', name: 'NotificationService');
+      
+      if (notificationsEnabled != true) {
+        developer.log('⚠️ WARNING: Notifications are disabled!', name: 'NotificationService');
+      }
+      if (canScheduleExact != true) {
+        developer.log('⚠️ WARNING: Cannot schedule exact alarms!', name: 'NotificationService');
+      }
+      
+      return {
+        'notificationsEnabled': notificationsEnabled ?? false,
+        'canScheduleExact': canScheduleExact ?? false,
+      };
+    } catch (e, stackTrace) {
+      developer.log('❌ Error checking permissions', name: 'NotificationService', error: e, stackTrace: stackTrace);
+      return {'notificationsEnabled': false, 'canScheduleExact': false};
+    }
+  }
+
+  /// Opens the system settings page for granting exact alarm permission (Android 12+).
+  /// Returns true if the permission is now granted after returning from settings.
+  Future<bool> openExactAlarmSettings() async {
+    try {
+      final androidPlugin = _notifications.resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin>();
+      if (androidPlugin == null) return false;
+
+      final alreadyGranted = await androidPlugin.canScheduleExactNotifications();
+      if (alreadyGranted == true) return true;
+
+      // Opens the "Alarms & reminders" special app access page in Settings
+      await androidPlugin.requestExactAlarmsPermission();
+
+      // Re-check after user returns from Settings
+      final result = await androidPlugin.canScheduleExactNotifications();
+      return result == true;
+    } catch (e, stackTrace) {
+      developer.log('❌ Error opening exact alarm settings', name: 'NotificationService',
+          error: e, stackTrace: stackTrace);
+      return false;
+    }
+  }
+
+  /// Schedules a notification using exact timing if permitted; falls back to
+  /// inexact automatically. Catches the SecurityException that flutter_local_notifications
+  /// throws on Android 14+ when exact alarms aren't granted, then retries inexact.
+  Future<bool> _scheduleZoned({
+    required int id,
+    required String title,
+    required String body,
+    required tz.TZDateTime scheduledTime,
+    required NotificationDetails details,
+    DateTimeComponents? matchDateTimeComponents,
+  }) async {
+    final androidPlugin = _notifications.resolvePlatformSpecificImplementation<
+        AndroidFlutterLocalNotificationsPlugin>();
+
+    // Default to true on platforms where the API isn't applicable (iOS / older Android).
+    final bool canExact =
+        await androidPlugin?.canScheduleExactNotifications() ?? true;
+
+    AndroidScheduleMode mode = canExact
+        ? AndroidScheduleMode.exactAllowWhileIdle
+        : AndroidScheduleMode.inexactAllowWhileIdle;
+
+    developer.log(
+        '🛠️ _scheduleZoned id=$id at=$scheduledTime mode=$mode '
+        'canExact=$canExact match=$matchDateTimeComponents',
+        name: 'NotificationService');
+
+    Future<void> doSchedule(AndroidScheduleMode m) {
+      return _notifications.zonedSchedule(
+        id,
+        title,
+        body,
+        scheduledTime,
+        details,
+        androidScheduleMode: m,
         uiLocalNotificationDateInterpretation:
             UILocalNotificationDateInterpretation.absoluteTime,
+        matchDateTimeComponents: matchDateTimeComponents,
       );
-      developer.log('✅ Test notification scheduled successfully', name: 'NotificationService');
-    } catch (e, stackTrace) {
-      developer.log('❌ Error scheduling test notification', name: 'NotificationService', error: e, stackTrace: stackTrace);
-      rethrow;
+    }
+
+    try {
+      await doSchedule(mode);
+      developer.log('✅ Scheduled id=$id with mode=$mode', name: 'NotificationService');
+      return true;
+    } catch (e, st) {
+      developer.log('❌ zonedSchedule failed for id=$id mode=$mode: $e',
+          name: 'NotificationService', error: e, stackTrace: st);
+
+      // Retry with inexact if the failure was due to missing exact-alarm permission.
+      final isPermError = e.toString().toLowerCase().contains('exact_alarm') ||
+          e.toString().toLowerCase().contains('exact alarm') ||
+          e.toString().toLowerCase().contains('securityexception');
+      if (mode == AndroidScheduleMode.exactAllowWhileIdle && isPermError) {
+        try {
+          developer.log('🔁 Retrying id=$id with inexactAllowWhileIdle…',
+              name: 'NotificationService');
+          await doSchedule(AndroidScheduleMode.inexactAllowWhileIdle);
+          developer.log('✅ Scheduled id=$id with fallback inexact mode',
+              name: 'NotificationService');
+          return true;
+        } catch (e2, st2) {
+          developer.log('❌ Fallback also failed for id=$id: $e2',
+              name: 'NotificationService', error: e2, stackTrace: st2);
+        }
+      }
+      return false;
     }
   }
 

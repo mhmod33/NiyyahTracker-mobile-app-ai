@@ -80,84 +80,70 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
     }
   }
 
-  Future<void> _testNotification() async {
+  Future<void> _checkPermissions() async {
     try {
-      await _notificationService.showTestNotification(context: context);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('تم إرسال إشعار اختباري'),
-            backgroundColor: AppColors.darkGreen,
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('فشل إرسال الإشعار: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
-  }
-
-  Future<void> _scheduleTestNotification() async {
-    try {
-      await _notificationService.scheduleTestNotificationIn5Minutes();
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('تم جدولة الإشعار بعد 5 دقائق!'),
-            backgroundColor: AppColors.darkGreen,
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('فشل جدولة الإشعار: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
-  }
-
-  Future<void> _showPendingNotifications() async {
-    try {
-      final pending = await _notificationService.getPendingNotifications();
+      final permissions = await _notificationService.checkNotificationPermissions();
       if (!mounted) return;
-      
+
+      final notificationsEnabled = permissions['notificationsEnabled'] ?? false;
+      final canScheduleExact = permissions['canScheduleExact'] ?? false;
+
       showDialog(
         context: context,
-        builder: (context) => Directionality(
+        builder: (ctx) => Directionality(
           textDirection: TextDirection.rtl,
           child: AlertDialog(
-            title: const Text('الإشعارات المجدولة'),
-            content: SizedBox(
-              width: double.maxFinite,
-              child: pending.isEmpty
-                  ? const Text('لا توجد إشعارات مجدولة')
-                  : ListView.builder(
-                      shrinkWrap: true,
-                      itemCount: pending.length,
-                      itemBuilder: (context, index) {
-                        final notification = pending[index];
-                        return ListTile(
-                          title: Text(notification.title ?? 'بدون عنوان'),
-                          subtitle: Text('ID: ${notification.id}'),
-                        );
-                      },
+            title: const Text('حالة الأذونات'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _PermissionRow(
+                  label: 'إشعارات التطبيق',
+                  granted: notificationsEnabled,
+                ),
+                const SizedBox(height: 12),
+                _PermissionRow(
+                  label: 'الإنذارات الدقيقة (Exact Alarms)',
+                  granted: canScheduleExact,
+                ),
+                if (!canScheduleExact) ...[
+                  const SizedBox(height: 16),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.orange.withOpacity(0.15),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.orange.withOpacity(0.4)),
                     ),
+                    child: const Text(
+                      'بدون إذن الإنذارات الدقيقة، لن تُرسَل الإشعارات في وقتها المحدد.\n\nاضغط "منح الإذن" وفعِّل "الإنذارات والتذكيرات" للتطبيق.',
+                      style: TextStyle(color: Colors.orange, fontSize: 13, height: 1.5),
+                    ),
+                  ),
+                ],
+              ],
             ),
             actions: [
               TextButton(
-                onPressed: () => Navigator.pop(context),
+                onPressed: () => Navigator.pop(ctx),
                 child: const Text('إغلاق'),
               ),
+              if (!canScheduleExact)
+                ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.darkGreen,
+                    foregroundColor: Colors.white,
+                  ),
+                  icon: const Icon(Icons.settings_rounded, size: 18),
+                  label: const Text('منح الإذن'),
+                  onPressed: () async {
+                    Navigator.pop(ctx);
+                    await _notificationService.openExactAlarmSettings();
+                    // Re-check after returning from settings
+                    if (mounted) _checkPermissions();
+                  },
+                ),
             ],
           ),
         ),
@@ -323,31 +309,17 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
 
                         const SizedBox(height: 24),
 
-                        // Test Section
+                        // Permissions Section
                         _SettingsSection(
-                          title: 'اختبار وأدوات',
-                          icon: Icons.build_rounded,
+                          title: 'الأذونات',
+                          icon: Icons.security_rounded,
                           isDark: isDark,
                           children: [
                             _TestTile(
-                              title: 'إرسال إشعار اختباري',
-                              subtitle: 'تجربة تلقي الإشعارات فوراً',
-                              icon: Icons.notifications_active_rounded,
-                              onTap: _testNotification,
-                              isDark: isDark,
-                            ),
-                            _TestTile(
-                              title: 'جدول إشعار بعد 5 دقائق',
-                              subtitle: 'تجربة الإشعارات المجدولة',
-                              icon: Icons.schedule_rounded,
-                              onTap: _scheduleTestNotification,
-                              isDark: isDark,
-                            ),
-                            _TestTile(
-                              title: 'عرض الإشعارات المجدولة',
-                              subtitle: 'عرض جميع الإشعارات التي تم جدولتها',
-                              icon: Icons.list_rounded,
-                              onTap: _showPendingNotifications,
+                              title: 'فحص الأذونات',
+                              subtitle: 'تأكد من تفعيل أذونات الإشعارات',
+                              icon: Icons.verified_user_rounded,
+                              onTap: _checkPermissions,
                               isDark: isDark,
                             ),
                           ],
@@ -360,6 +332,28 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
                 ],
               ),
       ),
+    );
+  }
+}
+
+class _PermissionRow extends StatelessWidget {
+  final String label;
+  final bool granted;
+
+  const _PermissionRow({required this.label, required this.granted});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Icon(
+          granted ? Icons.check_circle_rounded : Icons.cancel_rounded,
+          color: granted ? Colors.green : Colors.red,
+          size: 22,
+        ),
+        const SizedBox(width: 10),
+        Expanded(child: Text(label, style: const TextStyle(fontSize: 14))),
+      ],
     );
   }
 }
