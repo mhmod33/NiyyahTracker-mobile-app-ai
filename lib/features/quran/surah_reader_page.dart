@@ -10,6 +10,8 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:quran/quran.dart' as quran;
 import 'package:share_plus/share_plus.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:hive_flutter/hive_flutter.dart';
+import 'dart:async';
 import '../../core/app_colors.dart';
 import '../../core/directional_icon.dart';
 
@@ -24,6 +26,9 @@ class SurahReaderPage extends StatefulWidget {
 class _SurahReaderPageState extends State<SurahReaderPage> {
   late PageController _pageController;
   int _currentPage = 0;
+  int? _highlightSurah;
+  int? _highlightVerse;
+  Timer? _highlightTimer;
 
   @override
   void initState() {
@@ -31,10 +36,28 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
     int startPage = quran.getPageNumber(widget.surahNumber, widget.initialVerse);
     _currentPage = startPage - 1;
     _pageController = PageController(initialPage: _currentPage);
+    
+    // Setup temporary highlight
+    if (widget.initialVerse != 1) {
+      _highlightSurah = widget.surahNumber;
+      _highlightVerse = widget.initialVerse;
+      _highlightTimer = Timer(const Duration(seconds: 1), () {
+        if (mounted) {
+          setState(() {
+            _highlightSurah = null;
+            _highlightVerse = null;
+          });
+        }
+      });
+    }
   }
 
   @override
-  void dispose() { _pageController.dispose(); super.dispose(); }
+  void dispose() { 
+    _pageController.dispose(); 
+    _highlightTimer?.cancel();
+    super.dispose(); 
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -56,11 +79,12 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
               child: PageView.builder(
                 controller: _pageController,
                 itemCount: 604,
+                allowImplicitScrolling: true,
                 onPageChanged: (i) => setState(() => _currentPage = i),
                 itemBuilder: (ctx, index) => _MushafPageWidget(
                   pageNumber: index + 1,
-                  highlightSurah: widget.surahNumber,
-                  highlightVerse: widget.initialVerse,
+                  highlightSurah: _highlightSurah,
+                  highlightVerse: _highlightVerse,
                   isDark: isDark,
                 ),
               ),
@@ -107,7 +131,7 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
 }
 
 // ─── Mushaf Page Widget ───
-class _MushafPageWidget extends StatelessWidget {
+class _MushafPageWidget extends StatefulWidget {
   final int pageNumber;
   final int? highlightSurah;
   final int? highlightVerse;
@@ -115,184 +139,325 @@ class _MushafPageWidget extends StatelessWidget {
   const _MushafPageWidget({required this.pageNumber, this.highlightSurah, this.highlightVerse, required this.isDark});
 
   @override
-  Widget build(BuildContext context) {
-    final pageData = quran.getPageData(pageNumber);
-    final screenH = MediaQuery.of(context).size.height -
-        MediaQuery.of(context).padding.top -
-        MediaQuery.of(context).padding.bottom - 80;
+  State<_MushafPageWidget> createState() => _MushafPageWidgetState();
+}
 
-    return Container(
-      width: double.infinity,
-      height: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          return ConstrainedBox(
-            constraints: BoxConstraints(
-              minWidth: constraints.maxWidth,
-              minHeight: constraints.maxHeight,
+class _MushafPageWidgetState extends State<_MushafPageWidget> with AutomaticKeepAliveClientMixin {
+  // Cache the computed font size so it doesn't recompute during swipe animation
+  double? _cachedFontSize;
+  double? _cachedWidth;
+  double? _cachedHeight;
+
+  // Constants used in both rendering and measurement — must match exactly.
+  static const double _hPad = 10.0;
+  static const double _vPad = 6.0;
+  static const double _lineHeight = 1.85;
+
+  @override
+  bool get wantKeepAlive => true;
+
+  int get pageNumber => widget.pageNumber;
+  int? get highlightSurah => widget.highlightSurah;
+  int? get highlightVerse => widget.highlightVerse;
+  bool get isDark => widget.isDark;
+
+  double _computeFontSize(List pageData, double availableW, double availableH) {
+    // Return cached if dimensions haven't changed
+    if (_cachedFontSize != null && _cachedWidth == availableW && _cachedHeight == availableH) {
+      return _cachedFontSize!;
+    }
+
+    double lo = 12.0, hi = 30.0;
+    for (int i = 0; i < 15; i++) {
+      final mid = (lo + hi) / 2;
+      final measured = _measurePage(pageData, mid, availableW);
+      if (measured <= availableH) {
+        lo = mid;
+      } else {
+        hi = mid;
+      }
+    }
+
+    _cachedFontSize = lo;
+    _cachedWidth = availableW;
+    _cachedHeight = availableH;
+    return lo;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    super.build(context); // required for AutomaticKeepAliveClientMixin
+    final pageData = quran.getPageData(pageNumber);
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final availableW = constraints.maxWidth;
+        final availableH = constraints.maxHeight;
+        final fontSize = _computeFontSize(pageData, availableW, availableH);
+
+        return SizedBox(
+          width: availableW,
+          height: availableH,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: _hPad, vertical: _vPad),
+            child: Column(
+              mainAxisAlignment: pageData.length > 1
+                  ? MainAxisAlignment.spaceBetween
+                  : MainAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: pageData.map((data) {
+                final surah = data['surah'] as int;
+                final start = data['start'] as int;
+                final end   = data['end']   as int;
+                return Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    if (start == 1) _buildSurahHeader(context, surah, fontSize),
+                    if (start == 1 && surah != 1 && surah != 9) _buildBasmala(fontSize),
+                    _buildVersesBlock(context, surah, start, end, fontSize),
+                  ],
+                );
+              }).toList(),
             ),
-            child: FittedBox(
-              fit: BoxFit.scaleDown,
-              alignment: Alignment.center,
-              child: SizedBox(
-                width: constraints.maxWidth,
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.start,
-                  children: pageData.map((data) {
-                    final surah = data['surah'] as int;
-                    final start = data['start'] as int;
-                    final end = data['end'] as int;
-                    return Column(
-                      children: [
-                        if (start == 1) _buildSurahHeader(context, surah),
-                        if (start == 1 && surah != 1 && surah != 9) _buildBasmala(),
-                        const SizedBox(height: 2),
-                        _buildVersesBlock(context, surah, start, end),
-                        const SizedBox(height: 2),
-                      ],
-                    );
-                  }).toList(),
-                ),
-              ),
-            ),
-          );
-        },
-      ),
+          ),
+        );
+      },
     );
   }
 
-  Widget _buildSurahHeader(BuildContext context, int surah) {
+  // ── Accurate page-height measurement ──
+  // Replicates the exact rendering math for every component on the page.
+  double _measurePage(List pageData, double fontSize, double totalWidth) {
+    final innerWidth = totalWidth - _hPad * 2;
+    double total = _vPad * 2;
+
+    for (final data in pageData) {
+      final surah = data['surah'] as int;
+      final start = data['start'] as int;
+      final end   = data['end']   as int;
+
+      if (start == 1) {
+        total += _measureHeaderHeight(fontSize);
+        if (surah != 1 && surah != 9) {
+          total += _measureBasmalaHeight(fontSize);
+        }
+      }
+      total += _measureVersesHeight(surah, start, end, fontSize, innerWidth);
+    }
+    return total;
+  }
+
+  double _measureHeaderHeight(double fontSize) {
+    final marginV  = fontSize * 0.15 * 2;
+    final paddingV = fontSize * 0.4  * 2;
+    const border   = 3.0; // 1.5 * 2
+    final titleFS  = (fontSize * 1.4).clamp(16.0, 28.0);
+    // Line height for Arabic display font is ~1.35 of em.
+    final contentH = titleFS * 1.35;
+    return marginV + paddingV + border + contentH;
+  }
+
+  double _measureBasmalaHeight(double fontSize) {
+    final marginV  = fontSize * 0.3 + fontSize * 0.1;
+    final paddingV = fontSize * 0.2 * 2;
+    const border   = 2.0;
+    final textFS   = (fontSize * 1.3).clamp(14.0, 30.0);
+    final contentH = textFS * 1.35;
+    return marginV + paddingV + border + contentH;
+  }
+
+  double _measureVersesHeight(int surah, int start, int end, double fontSize, double width) {
+    // Build the same inline spans used in the real render, so TextPainter
+    // produces the same line count and height.
+    final spans = <InlineSpan>[];
+    final markSize = (fontSize * 1.5).clamp(24.0, 38.0);
+    final markBoxW = markSize + markSize * 0.16; // includes symmetric margin
+
+    for (int v = start; v <= end; v++) {
+      String t = quran.getVerse(surah, v, verseEndSymbol: false);
+      if (v == 1 && surah != 1 && surah != 9) {
+        final trimmed = t.trim();
+        if (trimmed.startsWith(quran.basmala)) {
+          t = trimmed.substring(quran.basmala.length).trim();
+        } else {
+          final words = trimmed.split(' ');
+          if (words.length > 4) t = words.skip(4).join(' ').trim();
+        }
+      }
+      spans.add(TextSpan(
+        text: t,
+        style: TextStyle(
+          fontFamily: 'KFGQPC Uthmanic Script Hafs',
+          fontSize: fontSize,
+          height: _lineHeight,
+        ),
+      ));
+      spans.add(const WidgetSpan(child: SizedBox())); // placeholder (dims set below)
+      spans.add(TextSpan(
+        text: ' ',
+        style: TextStyle(
+          fontFamily: 'KFGQPC Uthmanic Script Hafs',
+          fontSize: fontSize,
+          height: _lineHeight,
+        ),
+      ));
+    }
+
+    final verseCount = end - start + 1;
+    final tp = TextPainter(
+      text: TextSpan(children: spans),
+      textDirection: TextDirection.rtl,
+      textAlign: TextAlign.justify,
+    );
+    tp.setPlaceholderDimensions(List.generate(
+      verseCount,
+      (_) => PlaceholderDimensions(
+        size: Size(markBoxW, markSize),
+        alignment: PlaceholderAlignment.middle,
+      ),
+    ));
+    tp.layout(maxWidth: width);
+    final h = tp.height;
+    tp.dispose();
+    return h;
+  }
+
+  Widget _buildSurahHeader(BuildContext context, int surah, double fontSize) {
     final verseCount = quran.getVerseCount(surah);
     final place = quran.getPlaceOfRevelation(surah) == "Makkah" ? "مكية" : "مدنية";
     return Container(
       width: double.infinity,
-      margin: const EdgeInsets.symmetric(vertical: 3),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      margin: EdgeInsets.symmetric(vertical: fontSize * 0.15),
+      padding: EdgeInsets.symmetric(horizontal: fontSize * 0.8, vertical: fontSize * 0.4),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [AppColors.darkGreen.withOpacity(0.25), AppColors.darkGreen.withOpacity(0.10)],
+          colors: [AppColors.darkGreen.withValues(alpha: 0.25), AppColors.darkGreen.withValues(alpha: 0.10)],
           begin: Alignment.centerRight, end: Alignment.centerLeft,
         ),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.darkGreen.withOpacity(0.4), width: 1.5),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: AppColors.darkGreen.withValues(alpha: 0.4), width: 1.5),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text('$place • $verseCount آية', style: GoogleFonts.ibmPlexSansArabic(color: isDark ? Colors.white60 : AppColors.textSecondary, fontSize: 11)),
+          Text('$place • $verseCount آية',
+              style: GoogleFonts.ibmPlexSansArabic(
+                  color: isDark ? Colors.white60 : AppColors.textSecondary,
+                  fontSize: (fontSize * 0.6).clamp(9.0, 13.0))),
           Text(
             'سورة ${quran.getSurahNameArabic(surah)}',
             style: TextStyle(
-              fontFamily: 'KFGQPC Uthmanic Script Hafs', fontSize: 26,
-              color: isDark ? Colors.white : AppColors.textPrimary, fontWeight: FontWeight.bold,
+              fontFamily: 'KFGQPC Uthmanic Script Hafs',
+              fontSize: (fontSize * 1.4).clamp(16.0, 28.0),
+              color: isDark ? Colors.white : AppColors.textPrimary,
+              fontWeight: FontWeight.bold,
             ),
           ),
-          const SizedBox(width: 60),
+          SizedBox(width: fontSize * 3),
         ],
       ),
     );
   }
 
-  Widget _buildBasmala() {
+  Widget _buildBasmala(double fontSize) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 6, top: 2),
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+      margin: EdgeInsets.only(bottom: fontSize * 0.3, top: fontSize * 0.1),
+      padding: EdgeInsets.symmetric(horizontal: fontSize * 0.5, vertical: fontSize * 0.2),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [
-            Colors.transparent,
-            AppColors.darkGreen.withOpacity(0.15),
-            Colors.transparent,
-          ],
+          colors: [Colors.transparent, AppColors.darkGreen.withValues(alpha: 0.15), Colors.transparent],
         ),
         border: Border(
-          bottom: BorderSide(color: AppColors.darkGreen.withOpacity(0.3), width: 1),
-          top: BorderSide(color: AppColors.darkGreen.withOpacity(0.3), width: 1),
+          bottom: BorderSide(color: AppColors.darkGreen.withValues(alpha: 0.3), width: 1),
+          top: BorderSide(color: AppColors.darkGreen.withValues(alpha: 0.3), width: 1),
         ),
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.auto_awesome_outlined, color: AppColors.darkGreen.withOpacity(0.8), size: 18),
-          const SizedBox(width: 12),
-          Text(
-            quran.basmala,
-            style: TextStyle(
-              fontFamily: 'KFGQPC Uthmanic Script Hafs', 
-              fontSize: 28,
-              color: isDark ? Colors.white : AppColors.textPrimary, 
-              shadows: isDark ? [const Shadow(color: Colors.black45, blurRadius: 4, offset: Offset(0, 2))] : null,
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.auto_awesome_outlined, color: AppColors.darkGreen.withValues(alpha: 0.8), size: fontSize * 0.9),
+            SizedBox(width: fontSize * 0.4),
+            Text(
+              quran.basmala,
+              style: TextStyle(
+                fontFamily: 'KFGQPC Uthmanic Script Hafs',
+                fontSize: (fontSize * 1.3).clamp(14.0, 30.0),
+                color: isDark ? Colors.white : AppColors.textPrimary,
+                shadows: isDark ? [const Shadow(color: Colors.black45, blurRadius: 4, offset: Offset(0, 2))] : null,
+              ),
+              textAlign: TextAlign.center,
             ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(width: 12),
-          Icon(Icons.auto_awesome_outlined, color: AppColors.darkGreen.withOpacity(0.8), size: 18),
-        ],
+            SizedBox(width: fontSize * 0.4),
+            Icon(Icons.auto_awesome_outlined, color: AppColors.darkGreen.withValues(alpha: 0.8), size: fontSize * 0.9),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildVersesBlock(BuildContext context, int surah, int start, int end) {
-    return RichText(
-      textAlign: TextAlign.justify,
-      textDirection: TextDirection.rtl,
-      text: TextSpan(
-          children: List.generate(end - start + 1, (i) => start + i).expand((v) {
-          String verseText = quran.getVerse(surah, v, verseEndSymbol: false);
-          // Remove Basmala from first verse (except Fatiha & Tawbah)
-          if (v == 1 && surah != 1 && surah != 9) {
-            // Remove any leading Basmala (more robust approach)
-            final trimmed = verseText.trim();
-            
-            // Check if the verse starts with Basmala characters
-            if (trimmed.startsWith('ب') || trimmed.startsWith('بِ')) {
-              // Find the end of Basmala (look for the first verse content)
-              // Basmala is usually the first part, so we can split and take the rest
-              // or remove the first 38-40 characters (typical Basmala length)
-              final basmalaLength = quran.basmala.length;
-              if (trimmed.length > basmalaLength) {
-                // Try removing exact Basmala first
-                if (trimmed.startsWith(quran.basmala)) {
-                  verseText = trimmed.substring(quran.basmala.length).trim();
-                } else {
-                  // If exact match fails, remove any leading Arabic text until we hit the verse content
-                  // This is a fallback for different Basmala representations
-                  final words = trimmed.split(' ');
-                  if (words.length > 4) {
-                    // Basmala is 4 words, so skip first 4
-                    verseText = words.skip(4).join(' ').trim();
-                  }
-                }
-              }
-            }
-          }
-          final tapHandler = TapGestureRecognizer()..onTap = () => _showVerseActions(context, surah, v);
-            final bool isHighlighted = (highlightSurah != null && highlightVerse != null && highlightSurah == surah && highlightVerse == v);
-            return [
-            TextSpan(
-              text: verseText,
-              style: TextStyle(
-                fontFamily: 'KFGQPC Uthmanic Script Hafs',
-                fontSize: pageNumber <= 2 ? 30 : 24,
-                height: 1.7,
-                color: isHighlighted ? Colors.black : (isDark ? const Color(0xFFF5F0E8) : AppColors.textPrimary),
-                backgroundColor: isHighlighted ? Colors.yellow.withOpacity(0.18) : null,
-              ),
-              recognizer: tapHandler,
-            ),
-            WidgetSpan(
-              alignment: PlaceholderAlignment.middle,
-              child: GestureDetector(
-                onTap: () => _showVerseActions(context, surah, v),
-                child: _AyahEndMark(number: v, isDark: isDark),
-              ),
-            ),
-            const TextSpan(text: ' '),
-          ];
-        }).toList(),
-      ),
+  Widget _buildVersesBlock(BuildContext context, int surah, int start, int end, double fontSize) {
+    // Build verse ranges to map character offsets to verse numbers
+    final List<_VerseRange> verseRanges = [];
+    final spans = <InlineSpan>[];
+    int charOffset = 0;
+
+    for (int v = start; v <= end; v++) {
+      String verseText = quran.getVerse(surah, v, verseEndSymbol: false);
+      if (v == 1 && surah != 1 && surah != 9) {
+        final trimmed = verseText.trim();
+        if (trimmed.startsWith(quran.basmala)) {
+          verseText = trimmed.substring(quran.basmala.length).trim();
+        } else {
+          final words = trimmed.split(' ');
+          if (words.length > 4) verseText = words.skip(4).join(' ').trim();
+        }
+      }
+
+      final startOffset = charOffset;
+      charOffset += verseText.length;
+
+      final bool isHighlighted = (highlightSurah != null && highlightVerse != null &&
+          highlightSurah == surah && highlightVerse == v);
+
+      spans.add(TextSpan(
+        text: verseText,
+        style: TextStyle(
+          fontFamily: 'KFGQPC Uthmanic Script Hafs',
+          fontSize: fontSize,
+          height: 1.8,
+          color: isHighlighted ? Colors.black : (isDark ? const Color(0xFFF5F0E8) : AppColors.textPrimary),
+          backgroundColor: isHighlighted ? Colors.yellow.withValues(alpha: 0.18) : null,
+        ),
+      ));
+      spans.add(WidgetSpan(
+        alignment: PlaceholderAlignment.middle,
+        child: _AyahEndMark(number: v, isDark: isDark, size: (fontSize * 1.5).clamp(24.0, 38.0)),
+      ));
+      // Space character after mark
+      spans.add(TextSpan(
+        text: ' ',
+        style: TextStyle(
+          fontFamily: 'KFGQPC Uthmanic Script Hafs',
+          fontSize: fontSize,
+          height: 1.8,
+        ),
+      ));
+      charOffset += 1; // for the space
+
+      verseRanges.add(_VerseRange(startOffset, charOffset, v));
+    }
+
+    final textSpan = TextSpan(children: spans);
+
+    return _TappableRichText(
+      textSpan: textSpan,
+      verseRanges: verseRanges,
+      surah: surah,
+      onVerseTap: (verse) => _showVerseActions(context, surah, verse),
     );
   }
 
@@ -310,14 +475,14 @@ class _MushafPageWidget extends StatelessWidget {
           child: Padding(
             padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom + 20, left: 20, right: 20, top: 20),
             child: Column(mainAxisSize: MainAxisSize.min, children: [
-            Container(width: 40, height: 4, decoration: BoxDecoration(color: AppColors.darkGreen.withOpacity(0.5), borderRadius: BorderRadius.circular(2))),
+            Container(width: 40, height: 4, decoration: BoxDecoration(color: AppColors.darkGreen.withValues(alpha: 0.5), borderRadius: BorderRadius.circular(2))),
             const SizedBox(height: 16),
             Container(
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color: AppColors.darkGreen.withOpacity(0.08),
+                color: AppColors.darkGreen.withValues(alpha: 0.08),
                 borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: AppColors.darkGreen.withOpacity(0.2)),
+                border: Border.all(color: AppColors.darkGreen.withValues(alpha: 0.2)),
               ),
               child: Text(verseText, style: TextStyle(fontFamily: 'KFGQPC Uthmanic Script Hafs', color: isDark ? Colors.white : AppColors.textPrimary, fontSize: 18, height: 1.8), textAlign: TextAlign.center, maxLines: 3, overflow: TextOverflow.ellipsis),
             ),
@@ -329,7 +494,22 @@ class _MushafPageWidget extends StatelessWidget {
             _actionTile(Icons.auto_stories_rounded, 'تفسير الجلالين', () { Navigator.pop(ctx); _showTafseer(context, surah, verse, 'ar.jalalayn', 'تفسير الجلالين'); }),
             _actionTile(Icons.share_rounded, 'مشاركة نص', () { Navigator.pop(ctx); Share.share('﴿$verse﴾ $verseText\n\n- سورة $surahName -\n\nNiyyah Tracker'); }),
             _actionTile(Icons.image_rounded, 'مشاركة كصورة', () { Navigator.pop(ctx); _shareAsImage(context, surah, verse); }),
-            _actionTile(Icons.bookmark_border_rounded, 'إضافة علامة', () { Navigator.pop(ctx); _snack(context, 'تم إضافة العلامة'); }),
+            _actionTile(Icons.bookmark_border_rounded, 'إضافة علامة', () async { 
+              Navigator.pop(ctx); 
+              final box = await Hive.openBox('quran_bookmarks');
+              final key = '$surah-$verse';
+              if (box.containsKey(key)) {
+                if (context.mounted) _snack(context, 'الآية موجودة بالفعل في المحفوظات');
+              } else {
+                await box.put(key, {
+                  'surah': surah,
+                  'verse': verse,
+                  'surahName': surahName,
+                  'timestamp': DateTime.now().millisecondsSinceEpoch,
+                });
+                if (context.mounted) _snack(context, 'تم إضافة العلامة للمحفوظات');
+              }
+            }),
             const SizedBox(height: 8),
           ]),
         ),
@@ -344,7 +524,7 @@ class _MushafPageWidget extends StatelessWidget {
       contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 0),
       leading: Container(
         width: 34, height: 34,
-        decoration: BoxDecoration(color: AppColors.darkGreen.withOpacity(0.12), borderRadius: BorderRadius.circular(8)),
+        decoration: BoxDecoration(color: AppColors.darkGreen.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(8)),
         child: Icon(icon, color: AppColors.darkGreen, size: 18),
       ),
       title: Text(label, style: GoogleFonts.ibmPlexSansArabic(color: isDark ? Colors.white : AppColors.textPrimary, fontSize: 14, fontWeight: FontWeight.w600)),
@@ -367,6 +547,7 @@ class _MushafPageWidget extends StatelessWidget {
 
     try {
       final response = await http.get(Uri.parse('https://api.alquran.cloud/v1/ayah/$surah:$verse/$edition')).timeout(const Duration(seconds: 10));
+      if (!context.mounted) return;
       Navigator.pop(context); 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
@@ -376,6 +557,7 @@ class _MushafPageWidget extends StatelessWidget {
         _snack(context, 'تعذر جلب التفسير. حاول مرة أخرى.');
       }
     } catch (e) {
+      if (!context.mounted) return;
       Navigator.pop(context);
       _snack(context, 'لا يوجد اتصال بالإنترنت أو الخادم لا يستجيب.');
     }
@@ -395,13 +577,13 @@ class _MushafPageWidget extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Container(width: 40, height: 4, decoration: BoxDecoration(color: AppColors.darkGreen.withOpacity(0.5), borderRadius: BorderRadius.circular(2))),
+              Container(width: 40, height: 4, decoration: BoxDecoration(color: AppColors.darkGreen.withValues(alpha: 0.5), borderRadius: BorderRadius.circular(2))),
               const SizedBox(height: 16),
               Text(title, style: GoogleFonts.ibmPlexSansArabic(color: AppColors.lightGreen, fontSize: 18, fontWeight: FontWeight.bold)),
               Text('سورة $surahName - آية $verse', style: GoogleFonts.ibmPlexSansArabic(color: isDark ? Colors.white70 : AppColors.textSecondary, fontSize: 13)),
               const SizedBox(height: 16),
               Container(
-                constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.5),
+                constraints: BoxConstraints(maxHeight: MediaQuery.of(ctx).size.height * 0.5),
                 child: SingleChildScrollView(
                   child: Text(text, style: TextStyle(fontFamily: 'KFGQPC Uthmanic Script Hafs', color: isDark ? Colors.white : AppColors.textPrimary, fontSize: 20, height: 1.8), textAlign: TextAlign.justify),
                 ),
@@ -439,7 +621,7 @@ class _MushafPageWidget extends StatelessWidget {
                 child: Column(mainAxisSize: MainAxisSize.min, children: [
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
-                    decoration: BoxDecoration(border: Border.all(color: AppColors.darkGreen.withOpacity(0.5)), borderRadius: BorderRadius.circular(20)),
+                    decoration: BoxDecoration(border: Border.all(color: AppColors.darkGreen.withValues(alpha: 0.5)), borderRadius: BorderRadius.circular(20)),
                     child: Text('سورة $surahName', style: GoogleFonts.amiri(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
                   ),
                   const SizedBox(height: 20),
@@ -447,12 +629,12 @@ class _MushafPageWidget extends StatelessWidget {
                   const SizedBox(height: 12),
                   Text('﴿ $verse ﴾', style: GoogleFonts.amiri(color: AppColors.lightGreen, fontSize: 18)),
                   const SizedBox(height: 20),
-                  Container(height: 1, color: AppColors.darkGreen.withOpacity(0.3)),
+                  Container(height: 1, color: AppColors.darkGreen.withValues(alpha: 0.3)),
                   const SizedBox(height: 12),
                   Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                    Icon(Icons.eco_rounded, color: AppColors.lightGreen.withOpacity(0.7), size: 16),
+                    Icon(Icons.eco_rounded, color: AppColors.lightGreen.withValues(alpha: 0.7), size: 16),
                     const SizedBox(width: 6),
-                    Text('Niyyah Tracker', style: GoogleFonts.inter(color: AppColors.lightGreen.withOpacity(0.7), fontSize: 12, fontWeight: FontWeight.w600)),
+                    Text('Niyyah Tracker', style: GoogleFonts.inter(color: AppColors.lightGreen.withValues(alpha: 0.7), fontSize: 12, fontWeight: FontWeight.w600)),
                   ]),
                 ]),
               ),
@@ -476,9 +658,11 @@ class _MushafPageWidget extends StatelessWidget {
                         final dir = await getTemporaryDirectory();
                         final file = File('${dir.path}/ayah_${surah}_$verse.png');
                         await file.writeAsBytes(bytes);
+                        if (!ctx.mounted) return;
                         Navigator.pop(ctx);
                         await Share.shareXFiles([XFile(file.path)], text: 'سورة $surahName - آية $verse\nNiyyah Tracker');
                       } catch (e) {
+                        if (!ctx.mounted) return;
                         Navigator.pop(ctx);
                         _snack(context, 'حدث خطأ في المشاركة');
                       }
@@ -499,7 +683,8 @@ class _MushafPageWidget extends StatelessWidget {
 class _AyahEndMark extends StatelessWidget {
   final int number;
   final bool isDark;
-  const _AyahEndMark({required this.number, required this.isDark});
+  final double size;
+  const _AyahEndMark({required this.number, required this.isDark, this.size = 32});
   String _toArabic(int n) {
     const ar = ['٠','١','٢','٣','٤','٥','٦','٧','٨','٩'];
     return n.toString().split('').map((e) => ar[int.parse(e)]).join('');
@@ -507,12 +692,83 @@ class _AyahEndMark extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 3),
-      width: 34, height: 34,
+      margin: EdgeInsets.symmetric(horizontal: size * 0.08),
+      width: size, height: size,
       child: Stack(alignment: Alignment.center, children: [
-        Icon(Icons.circle_outlined, size: 32, color: AppColors.darkGreen.withOpacity(0.7)),
-        Text(_toArabic(number), style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: isDark ? Colors.white : AppColors.textPrimary)),
+        Icon(Icons.circle_outlined, size: size, color: AppColors.darkGreen.withValues(alpha: 0.7)),
+        Text(_toArabic(number), style: TextStyle(
+          fontSize: size * 0.34,
+          fontWeight: FontWeight.bold,
+          color: isDark ? Colors.white : AppColors.textPrimary,
+        )),
       ]),
+    );
+  }
+}
+
+
+
+// ─── Verse Range helper ───
+class _VerseRange {
+  final int startOffset;
+  final int endOffset;
+  final int verse;
+  const _VerseRange(this.startOffset, this.endOffset, this.verse);
+}
+
+// ─── Tappable RichText ───
+// Uses onTapUp instead of TapGestureRecognizer on TextSpans.
+// This way the gesture arena is NOT blocked — horizontal drags
+// pass through to PageView immediately on first swipe.
+class _TappableRichText extends StatelessWidget {
+  final TextSpan textSpan;
+  final List<_VerseRange> verseRanges;
+  final int surah;
+  final void Function(int verse) onVerseTap;
+
+  const _TappableRichText({
+    required this.textSpan,
+    required this.verseRanges,
+    required this.surah,
+    required this.onVerseTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.deferToChild,
+      onTapUp: (details) {
+        // Find which verse was tapped using TextPainter hit-testing
+        final renderBox = context.findRenderObject() as RenderBox?;
+        if (renderBox == null) return;
+        final localPos = details.localPosition;
+
+        final tp = TextPainter(
+          text: textSpan,
+          textDirection: TextDirection.rtl,
+          textAlign: TextAlign.justify,
+        )..layout(maxWidth: renderBox.size.width);
+
+        final offset = tp.getPositionForOffset(localPos).offset;
+        tp.dispose();
+
+        // Find which verse this offset belongs to
+        for (final range in verseRanges) {
+          if (offset >= range.startOffset && offset < range.endOffset) {
+            onVerseTap(range.verse);
+            return;
+          }
+        }
+        // If tapped between ranges (on a mark), find nearest
+        if (verseRanges.isNotEmpty) {
+          onVerseTap(verseRanges.last.verse);
+        }
+      },
+      child: RichText(
+        textAlign: TextAlign.justify,
+        textDirection: TextDirection.rtl,
+        text: textSpan,
+      ),
     );
   }
 }

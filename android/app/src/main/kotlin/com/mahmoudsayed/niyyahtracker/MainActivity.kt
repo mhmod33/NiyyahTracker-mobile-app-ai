@@ -1,4 +1,4 @@
-package com.example.niyyah_tracker_flutter
+package com.mahmoudsayed.niyyahtracker
 
 import io.flutter.embedding.android.FlutterActivity
 

@@ -47,5 +47,6 @@ GoogleService-Info.plist
 firebase_options.dart
 *.keystore
 *.jks
+key.properties
 .env
 .env.*

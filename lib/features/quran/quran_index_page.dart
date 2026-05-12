@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:quran/quran.dart' as quran;
 import '../../core/app_colors.dart';
 import '../../core/directional_icon.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import 'surah_reader_page.dart';
 
 class QuranPage extends StatefulWidget {
@@ -47,12 +48,12 @@ class _QuranPageState extends State<QuranPage> with SingleTickerProviderStateMix
             indicatorWeight: 3,
             labelStyle: GoogleFonts.ibmPlexSansArabic(fontWeight: FontWeight.w700, fontSize: 14, color: Colors.white),
             unselectedLabelStyle: GoogleFonts.ibmPlexSansArabic(fontWeight: FontWeight.w500, fontSize: 14, color: Colors.white70),
-            tabs: const [Tab(text: 'السور'), Tab(text: 'الأجزاء'), Tab(text: 'الأحزاب')],
+            tabs: const [Tab(text: 'السور'), Tab(text: 'الأجزاء'), Tab(text: 'المحفوظات')],
           ),
         ),
         body: TabBarView(
           controller: _tabController,
-          children: [_buildSurahList(isDark), _buildJuzList(isDark), _buildHizbList(isDark)],
+          children: [_buildSurahList(isDark), _buildJuzList(isDark), _buildBookmarksList(isDark)],
         ),
       ),
     );
@@ -90,15 +91,69 @@ class _QuranPageState extends State<QuranPage> with SingleTickerProviderStateMix
     );
   }
 
-  Widget _buildHizbList(bool isDark) {
-    return ListView.builder(
-      padding: const EdgeInsets.all(12),
-      itemCount: 60,
-      itemBuilder: (ctx, i) {
-        final hizb = i + 1;
-        return _QuranIndexTile(
-          index: hizb, title: 'الحزب $hizb', subtitle: 'الحزب رقم $hizb من القرآن الكريم', isDark: isDark,
-          onTap: () => Navigator.push(ctx, MaterialPageRoute(builder: (_) => SurahReaderPage(surahNumber: 1))),
+  Widget _buildBookmarksList(bool isDark) {
+    return FutureBuilder(
+      future: Hive.openBox('quran_bookmarks'),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) return const Center(child: CircularProgressIndicator(color: AppColors.darkGreen));
+        
+        final box = snapshot.data as Box;
+        return ValueListenableBuilder(
+          valueListenable: box.listenable(),
+          builder: (context, Box box, _) {
+            final items = box.values.toList().cast<Map>();
+            if (items.isEmpty) {
+              return Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.bookmark_border_rounded, size: 60, color: isDark ? Colors.white24 : Colors.black12),
+                    const SizedBox(height: 16),
+                    Text('لا توجد محفوظات حالياً', style: GoogleFonts.ibmPlexSansArabic(color: isDark ? Colors.white38 : Colors.black38, fontSize: 16)),
+                  ],
+                ),
+              );
+            }
+            
+            // Sort by timestamp descending
+            items.sort((a, b) => (b['timestamp'] ?? 0).compareTo(a['timestamp'] ?? 0));
+
+            return ListView.builder(
+              padding: const EdgeInsets.all(12),
+              itemCount: items.length,
+              itemBuilder: (ctx, i) {
+                final item = items[i];
+                final s = item['surah'] as int;
+                final v = item['verse'] as int;
+                final sName = item['surahName'] as String;
+                
+                return _QuranIndexTile(
+                  index: v,
+                  title: 'سورة $sName',
+                  subtitle: 'آية رقم $v',
+                  isDark: isDark,
+                  onTap: () => Navigator.push(ctx, MaterialPageRoute(builder: (_) => SurahReaderPage(surahNumber: s, initialVerse: v))),
+                  onLongPress: () async {
+                    final confirm = await showDialog<bool>(
+                      context: context,
+                      builder: (c) => AlertDialog(
+                        backgroundColor: isDark ? const Color(0xFF1A1A1A) : Colors.white,
+                        title: Text('حذف؟', style: GoogleFonts.ibmPlexSansArabic(color: isDark ? Colors.white : Colors.black87)),
+                        content: Text('هل تريد إزالة هذه الآية من المحفوظات؟', style: GoogleFonts.ibmPlexSansArabic(color: isDark ? Colors.white70 : Colors.black54)),
+                        actions: [
+                          TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('إلغاء')),
+                          TextButton(onPressed: () => Navigator.pop(c, true), child: const Text('حذف', style: TextStyle(color: Colors.red))),
+                        ],
+                      ),
+                    );
+                    if (confirm == true) {
+                      await box.delete('$s-$v');
+                    }
+                  },
+                );
+              },
+            );
+          },
         );
       },
     );
@@ -117,8 +172,8 @@ String _removeDiacritics(String text) {
 }
 
 class _QuranIndexTile extends StatelessWidget {
-  final int index; final String title, subtitle; final bool isDark; final VoidCallback onTap;
-  const _QuranIndexTile({required this.index, required this.title, required this.subtitle, required this.isDark, required this.onTap});
+  final int index; final String title, subtitle; final bool isDark; final VoidCallback onTap; final VoidCallback? onLongPress;
+  const _QuranIndexTile({required this.index, required this.title, required this.subtitle, required this.isDark, required this.onTap, this.onLongPress});
 
   @override
   Widget build(BuildContext context) {
@@ -134,6 +189,7 @@ class _QuranIndexTile extends StatelessWidget {
       ),
       child: ListTile(
         onTap: onTap,
+        onLongPress: onLongPress,
         leading: Container(
           width: 44, height: 44,
           decoration: BoxDecoration(
