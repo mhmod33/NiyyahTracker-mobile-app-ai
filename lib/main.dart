@@ -13,6 +13,8 @@ import 'firebase_options.dart';
 import 'services/daily_summary_service.dart';
 import 'services/notification_service.dart';
 import 'services/azan_service.dart';
+import 'services/quran_audio_service.dart';
+import 'services/reciter_download_service.dart';
 
 /// App-wide font helper — IBM Plex Sans Arabic everywhere.
 TextStyle _font({
@@ -67,6 +69,11 @@ void main() async {
   }
 
   try {
+    await QuranAudioService().init();
+  } catch (e) {
+    // Silently fail
+  }
+  try {
     await DailySummaryService().initializeNotifications();
     await DailySummaryService().scheduleMidnightReminder();
   } catch (e) {
@@ -78,6 +85,8 @@ void main() async {
       providers: [
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
         ChangeNotifierProvider(create: (_) => AppAuthProvider()),
+        ChangeNotifierProvider.value(value: QuranAudioService()),
+        ChangeNotifierProvider.value(value: ReciterDownloadService()),
       ],
       child: const NiyyahTrackerApp(),
     ),

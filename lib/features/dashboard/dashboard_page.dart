@@ -29,6 +29,8 @@ import '../../providers/auth_provider.dart';
 import '../../services/firebase_service.dart';
 import '../../services/daily_summary_service.dart';
 import '../../models/worship_model.dart' as db_model;
+import '../../widgets/mini_player.dart';
+import '../quran/reciter_library_page.dart';
 
 TextStyle _f({double sz = 14, FontWeight fw = FontWeight.w400, Color? c, double? h}) =>
     GoogleFonts.ibmPlexSansArabic(fontSize: sz, fontWeight: fw, color: c, height: h);
@@ -239,6 +241,7 @@ class _DashboardPageState extends State<DashboardPage> {
                     _QuickChip(icon: Icons.volume_up_rounded, label: 'الأذان', color: Colors.teal, onTap: () => _to(const AzanSettingsPage())),
                     _QuickChip(icon: Icons.explore_rounded, label: 'اتجاة القبلة', color: Colors.green, onTap: () => _to(const QiblaPage())),
                     _QuickChip(icon: Icons.menu_book_rounded, label: 'المصحف الشريف', color: Colors.purple, onTap: () => _to(const QuranPage())),
+                    _QuickChip(icon: Icons.headphones_rounded, label: 'مكتبة القراء', color: const Color(0xFF1B7A4E), onTap: () => _to(const ReciterLibraryPage())),
                     _QuickChip(icon: Icons.location_on_rounded, label: 'المساجد', color: Colors.cyan, onTap: () => _to(const NearbyMosquesPage())),
                     _QuickChip(icon: Icons.front_hand_rounded, label: 'الأذكار اليومية', color: Colors.orange, onTap: () => _to(const AzkarCounterPage())),
                   ],
@@ -284,7 +287,13 @@ class _DashboardPageState extends State<DashboardPage> {
           ],
         ),
         extendBody: true,
-        bottomNavigationBar: _ModernNavBar(currentIndex: _currentIndex, onTap: (i) => setState(() => _currentIndex = i)),
+        bottomNavigationBar: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const MiniPlayer(),
+            _ModernNavBar(currentIndex: _currentIndex, onTap: (i) => setState(() => _currentIndex = i)),
+          ],
+        ),
       ),
     );
   }

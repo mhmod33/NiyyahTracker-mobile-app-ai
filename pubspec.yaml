@@ -69,6 +69,7 @@ dependencies:
   just_audio: ^0.9.36
   audio_session: ^0.1.25
   android_alarm_manager_plus: ^4.0.4
+  dio: ^5.7.0
 
 
 dev_dependencies:
@@ -108,6 +109,19 @@ flutter:
     - assets/audio/azan/tobar/
     - assets/audio/azan/makkah/
     - assets/audio/azan/madinah/
+    - assets/audio/quran/snippets/احمد فؤاد/_سورة الرحمن الشيخ أحمد فؤاد بني سويف(128K).mp3
+    - assets/audio/quran/snippets/احمد فؤاد/آيات_من_سورة_يوسف(128K).mp3
+    - assets/audio/quran/snippets/احمد فؤاد/أيات من العنكبوت ليلة 21(128K).mp3
+    - assets/audio/quran/snippets/احمد فؤاد/اخر_سورة_الزمر_الشيخ_احمد_فؤاد(128K).mp3
+    - assets/audio/quran/snippets/احمد فؤاد/اخر_سورة_الشعراء_الشيخ_احمد_فؤاد(128K).mp3
+    - assets/audio/quran/snippets/احمد فؤاد/الأعراف ، أحمد فؤاد(128K).mp3
+    - assets/audio/quran/snippets/احمد فؤاد/الشيخ أحمد فؤاد سورة هود.mp3
+    - assets/audio/quran/snippets/احمد فؤاد/سورة_الطور_والنجم_للشيخ_احمد_فؤاد(128K).mp3
+    - assets/audio/quran/snippets/احمد فؤاد/سورة_المطففين_ودعاء_للشيخ_أحمد_فؤاد_(1).mp3
+    - assets/audio/quran/snippets/احمد فؤاد/سورة-آل-عمران-من-الآيه-149(128K).mp3
+    - assets/audio/quran/snippets/احمد فؤاد/مريم_.._أحمد_فؤاد(128K).mp3
+    - assets/audio/quran/snippets/احمد فؤاد/من_سورة_الرعد__،_القارئ_أحمد_فؤاد(128K).mp3
+    - assets/audio/quran/snippets/احمد فؤاد/نصف سورة  الأحزاب الثانى(128K).mp3
 
   fonts:
     - family: KFGQPC Uthmanic Script Hafs

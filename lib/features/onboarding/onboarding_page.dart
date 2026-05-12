@@ -242,13 +242,17 @@ class _OnboardingPageState extends State<OnboardingPage> {
                               child: _currentPage == _pages.length - 1
                                   ? Row(
                                       mainAxisAlignment: MainAxisAlignment.center,
+                                      mainAxisSize: MainAxisSize.min,
                                       children: [
-                                        Text(
-                                          'ابدأ الآن',
-                                          style: GoogleFonts.ibmPlexSansArabic(
-                                            color: Colors.white,
-                                            fontSize: 16,
-                                            fontWeight: FontWeight.bold,
+                                        Flexible(
+                                          child: Text(
+                                            'ابدأ الآن',
+                                            overflow: TextOverflow.ellipsis,
+                                            style: GoogleFonts.ibmPlexSansArabic(
+                                              color: Colors.white,
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.bold,
+                                            ),
                                           ),
                                         ),
                                         const SizedBox(width: 8),

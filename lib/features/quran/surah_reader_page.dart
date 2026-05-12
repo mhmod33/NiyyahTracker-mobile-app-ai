@@ -14,6 +14,8 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'dart:async';
 import '../../core/app_colors.dart';
 import '../../core/directional_icon.dart';
+import '../../services/quran_audio_service.dart';
+import 'reciter_library_page.dart';
 
 class SurahReaderPage extends StatefulWidget {
   final int surahNumber;
@@ -101,6 +103,10 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
     final s = data['surah'] as int;
     final j = quran.getJuzNumber(s, data['start']);
     final h = ((j - 1) * 2 + 1);
+    final audioService = QuranAudioService();
+    final isPlayingThisSurah = audioService.state.currentSurah == s &&
+        audioService.state.isPlaying;
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       color: bgColor,
@@ -114,6 +120,33 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
           Text(quran.getSurahNameArabic(s), style: GoogleFonts.amiri(color: textColor, fontWeight: FontWeight.bold, fontSize: 14)),
           Text('Juz $j', style: GoogleFonts.inter(color: subtextColor, fontSize: 12)),
           Text('Hizb $h', style: GoogleFonts.inter(color: subtextColor, fontSize: 12)),
+          // Audio button
+          GestureDetector(
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => ReciterLibraryPage(surahToPlay: s),
+                ),
+              );
+            },
+            child: Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: isPlayingThisSurah
+                    ? AppColors.darkGreen
+                    : AppColors.darkGreen.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(
+                isPlayingThisSurah
+                    ? Icons.graphic_eq_rounded
+                    : Icons.headphones_rounded,
+                color: isPlayingThisSurah ? Colors.white : AppColors.darkGreen,
+                size: 18,
+              ),
+            ),
+          ),
         ],
       ),
     );
