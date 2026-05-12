@@ -625,14 +625,6 @@ class AzanService {
     }
   }
 
-  /// Test the azan notification banner and sound.
-  /// Shows the heads-up banner immediately and plays the azan.
-  Future<void> testAzanNotification() async {
-    developer.log('🧪 Testing azan notification...', name: 'AzanService');
-    await _showAzanNotification('الظهر');
-    await playAzan(isFajr: false);
-  }
-
   /// Dispose resources.
   void dispose() {
     _azanCheckTimer?.cancel();
