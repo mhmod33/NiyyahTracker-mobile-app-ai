@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:developer' as developer;
+import 'dart:ui';
 import 'package:just_audio/just_audio.dart';
+import 'package:audio_session/audio_session.dart';
 import 'package:hive/hive.dart';
 import 'package:adhan/adhan.dart';
 import 'package:geolocator/geolocator.dart';
@@ -28,14 +30,26 @@ class Muazzin {
 class AzanService {
   static final AzanService _instance = AzanService._internal();
   factory AzanService() => _instance;
-  AzanService._internal();
+  AzanService._internal() {
+    // Listen for when azan finishes playing to dismiss the notification
+    _audioPlayer.playerStateStream.listen((state) {
+      if (state.processingState == ProcessingState.completed) {
+        _stopMonitor?.cancel();
+        _stopMonitor = null;
+        _notificationsPlugin.cancel(4000);
+        developer.log('🔇 Azan finished, notification dismissed', name: 'AzanService');
+      }
+    });
+  }
 
   final AudioPlayer _audioPlayer = AudioPlayer();
   late Box _settingsBox;
   Timer? _azanCheckTimer;
+  Timer? _stopMonitor; // Monitors if notification was dismissed to stop audio
+  StreamSubscription<double>? _volumeSubscription;
 
-  // Notification plugin reference
-  final FlutterLocalNotificationsPlugin _notifications =
+  // Use the shared singleton plugin instance
+  final FlutterLocalNotificationsPlugin _notificationsPlugin =
       FlutterLocalNotificationsPlugin();
 
   // ── Settings Keys ──
@@ -48,7 +62,7 @@ class AzanService {
   static const String _ishaAzanEnabledKey = 'isha_azan_enabled';
 
   // ── Notification Channel ──
-  static const String _azanChannelId = 'azan_channel';
+  static const String azanChannelId = 'azan_channel';
   static const String _azanChannelName = 'الأذان';
   static const String _azanChannelDesc = 'تشغيل الأذان عند دخول وقت الصلاة';
 
@@ -87,6 +101,41 @@ class AzanService {
         _settingsBox = Hive.box('azan_settings');
       }
 
+      // Configure audio session so volume buttons control the azan
+      // and interruptions (like phone calls) pause/stop it
+      try {
+        final session = await AudioSession.instance;
+        await session.configure(const AudioSessionConfiguration(
+          avAudioSessionCategory: AVAudioSessionCategory.playback,
+          avAudioSessionCategoryOptions: AVAudioSessionCategoryOptions.duckOthers,
+          avAudioSessionMode: AVAudioSessionMode.defaultMode,
+          androidAudioAttributes: AndroidAudioAttributes(
+            contentType: AndroidAudioContentType.music,
+            usage: AndroidAudioUsage.media,
+          ),
+          androidAudioFocusGainType: AndroidAudioFocusGainType.gain,
+          androidWillPauseWhenDucked: false,
+        ));
+
+        // Listen for audio becoming noisy (headphones unplugged) or interruptions
+        session.interruptionEventStream.listen((event) {
+          if (event.begin) {
+            // Audio interrupted (phone call, etc.) — stop azan
+            developer.log('🔇 Audio interrupted, stopping azan', name: 'AzanService');
+            stopAzan();
+            dismissAzanNotification();
+          }
+        });
+
+        session.becomingNoisyEventStream.listen((_) {
+          developer.log('🔇 Audio becoming noisy, stopping azan', name: 'AzanService');
+          stopAzan();
+          dismissAzanNotification();
+        });
+      } catch (e) {
+        developer.log('⚠️ Audio session config error: $e', name: 'AzanService');
+      }
+
       await _createAzanChannel();
       _startAzanChecker();
 
@@ -96,17 +145,40 @@ class AzanService {
     }
   }
 
+  /// Called by NotificationService when a notification action is received.
+  /// This handles the "stop_azan" action from the notification banner.
+  void handleNotificationAction(NotificationResponse response) {
+    developer.log('🔔 AzanService handling action: ${response.actionId}', name: 'AzanService');
+    if (response.actionId == 'stop_azan') {
+      _audioPlayer.pause();
+      _audioPlayer.stop();
+      _volumeSubscription?.cancel();
+      _volumeSubscription = null;
+      _stopMonitor?.cancel();
+      _stopMonitor = null;
+      dismissAzanNotification();
+      developer.log('⏹️ Azan stopped via notification action', name: 'AzanService');
+    }
+  }
+
+  /// Dismiss the azan notification banner.
+  void dismissAzanNotification() {
+    _notificationsPlugin.cancel(4000);
+  }
+
   Future<void> _createAzanChannel() async {
     const channel = AndroidNotificationChannel(
-      _azanChannelId,
+      azanChannelId,
       _azanChannelName,
       description: _azanChannelDesc,
       importance: Importance.max,
-      playSound: false, // We handle sound via just_audio
+      playSound: false,
       enableVibration: true,
+      showBadge: true,
+      enableLights: true,
     );
 
-    await _notifications
+    await _notificationsPlugin
         .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
         ?.createNotificationChannel(channel);
   }
@@ -215,6 +287,17 @@ class AzanService {
       await _audioPlayer.setAsset(assetPath);
       await _audioPlayer.setVolume(1.0);
       await _audioPlayer.play();
+
+      // Monitor volume — if user lowers volume to 0, stop the azan
+      _volumeSubscription?.cancel();
+      _volumeSubscription = _audioPlayer.volumeStream.listen((volume) {
+        if (volume <= 0.01 && _audioPlayer.playing) {
+          developer.log('🔇 Volume reduced to 0, stopping azan', name: 'AzanService');
+          stopAzan();
+          dismissAzanNotification();
+          _volumeSubscription?.cancel();
+        }
+      });
     } catch (e, st) {
       developer.log('❌ Error playing azan', name: 'AzanService', error: e, stackTrace: st);
     }
@@ -251,9 +334,22 @@ class AzanService {
   /// Stop the currently playing azan.
   Future<void> stopAzan() async {
     try {
+      developer.log('⏹️ stopAzan called, playing=${_audioPlayer.playing}', name: 'AzanService');
+      _volumeSubscription?.cancel();
+      _volumeSubscription = null;
+      _stopMonitor?.cancel();
+      _stopMonitor = null;
+      if (_audioPlayer.playing) {
+        await _audioPlayer.pause();
+      }
       await _audioPlayer.stop();
+      await _audioPlayer.seek(Duration.zero);
     } catch (e) {
-      developer.log('❌ Error stopping azan', name: 'AzanService', error: e);
+      developer.log('❌ Error stopping azan: $e', name: 'AzanService');
+      try {
+        await _audioPlayer.setVolume(0);
+        await _audioPlayer.pause();
+      } catch (_) {}
     }
   }
 
@@ -343,16 +439,18 @@ class AzanService {
     }
   }
 
-  /// Show a notification when azan starts.
+  /// Show a heads-up banner notification when azan starts.
+  /// This appears as a floating banner on top of everything, even outside the app.
+  /// Includes a "Stop Azan" action button.
   Future<void> _showAzanNotification(String prayerName) async {
     try {
-      await _notifications.show(
+      await _notificationsPlugin.show(
         4000,
-        'حان وقت صلاة $prayerName',
-        'الله أكبر - حان الآن موعد أذان $prayerName',
-        const NotificationDetails(
+        '🕌 حان وقت صلاة $prayerName',
+        'الله أكبر الله أكبر - حان الآن موعد أذان $prayerName',
+        NotificationDetails(
           android: AndroidNotificationDetails(
-            _azanChannelId,
+            azanChannelId,
             _azanChannelName,
             channelDescription: _azanChannelDesc,
             importance: Importance.max,
@@ -361,19 +459,77 @@ class AzanService {
             enableVibration: true,
             playSound: false,
             ongoing: true,
-            autoCancel: true,
+            autoCancel: false,
+            fullScreenIntent: true,
+            category: AndroidNotificationCategory.alarm,
+            visibility: NotificationVisibility.public,
+            ticker: 'حان وقت صلاة $prayerName',
+            styleInformation: BigTextStyleInformation(
+              'الله أكبر الله أكبر\nأشهد أن لا إله إلا الله\nحان الآن موعد أذان $prayerName',
+              contentTitle: '🕌 حان وقت صلاة $prayerName',
+              summaryText: 'النية - أوقات الصلاة',
+              htmlFormatBigText: false,
+            ),
+            timeoutAfter: 300000,
+            colorized: true,
+            color: const Color(0xFF1B7A4E),
+            actions: <AndroidNotificationAction>[
+              const AndroidNotificationAction(
+                'stop_azan',
+                'إيقاف الأذان ⏹',
+                showsUserInterface: false,
+                cancelNotification: true,
+              ),
+            ],
           ),
-          iOS: DarwinNotificationDetails(
+          iOS: const DarwinNotificationDetails(
             presentAlert: true,
             presentBadge: true,
             presentSound: false,
+            interruptionLevel: InterruptionLevel.timeSensitive,
           ),
         ),
         payload: 'azan_$prayerName',
       );
+
+      // Start monitoring: if notification gets dismissed (user pressed stop),
+      // stop the audio. This is the reliable way since background isolate
+      // can't access the same AudioPlayer instance.
+      _startStopMonitor();
     } catch (e) {
       developer.log('❌ Error showing azan notification', name: 'AzanService', error: e);
     }
+  }
+
+  /// Polls every 500ms to check if the azan notification was dismissed.
+  /// If dismissed while audio is still playing, it means user pressed "Stop".
+  void _startStopMonitor() {
+    _stopMonitor?.cancel();
+    _stopMonitor = Timer.periodic(const Duration(milliseconds: 500), (timer) async {
+      if (!_audioPlayer.playing) {
+        timer.cancel();
+        _stopMonitor = null;
+        return;
+      }
+
+      try {
+        final pending = await _notificationsPlugin.getActiveNotifications();
+        final azanNotifExists = pending.any((n) => n.id == 4000);
+
+        if (!azanNotifExists) {
+          // Notification was dismissed (user pressed stop button)
+          developer.log('⏹️ Notification dismissed, stopping audio', name: 'AzanService');
+          await _audioPlayer.pause();
+          await _audioPlayer.stop();
+          _volumeSubscription?.cancel();
+          _volumeSubscription = null;
+          timer.cancel();
+          _stopMonitor = null;
+        }
+      } catch (e) {
+        developer.log('⚠️ Stop monitor error: $e', name: 'AzanService');
+      }
+    });
   }
 
   /// Schedule azan notifications for all enabled prayers.
@@ -406,14 +562,14 @@ class AzanService {
         final prayerName = prayer['name'] as String;
         final id = prayer['id'] as int;
 
-        await _notifications.zonedSchedule(
+        await _notificationsPlugin.zonedSchedule(
           id,
-          'حان وقت صلاة $prayerName',
-          'الله أكبر - حان الآن موعد أذان $prayerName',
+          '🕌 حان وقت صلاة $prayerName',
+          'الله أكبر الله أكبر - حان الآن موعد أذان $prayerName',
           tzTime,
-          const NotificationDetails(
+          NotificationDetails(
             android: AndroidNotificationDetails(
-              _azanChannelId,
+              azanChannelId,
               _azanChannelName,
               channelDescription: _azanChannelDesc,
               importance: Importance.max,
@@ -421,11 +577,32 @@ class AzanService {
               icon: '@mipmap/ic_launcher',
               enableVibration: true,
               playSound: false,
+              fullScreenIntent: true,
+              category: AndroidNotificationCategory.alarm,
+              visibility: NotificationVisibility.public,
+              ticker: 'حان وقت صلاة $prayerName',
+              styleInformation: BigTextStyleInformation(
+                'الله أكبر الله أكبر\nأشهد أن لا إله إلا الله\nحان الآن موعد أذان $prayerName',
+                contentTitle: '🕌 حان وقت صلاة $prayerName',
+                summaryText: 'النية - أوقات الصلاة',
+              ),
+              timeoutAfter: 60000,
+              colorized: true,
+              color: const Color(0xFF1B7A4E),
+              actions: <AndroidNotificationAction>[
+                const AndroidNotificationAction(
+                  'stop_azan',
+                  'إيقاف الأذان ⏹',
+                  showsUserInterface: false,
+                  cancelNotification: true,
+                ),
+              ],
             ),
-            iOS: DarwinNotificationDetails(
+            iOS: const DarwinNotificationDetails(
               presentAlert: true,
               presentBadge: true,
               presentSound: false,
+              interruptionLevel: InterruptionLevel.timeSensitive,
             ),
           ),
           androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
@@ -444,13 +621,23 @@ class AzanService {
   /// Cancel all azan notifications.
   Future<void> cancelAzanNotifications() async {
     for (int id = 4000; id <= 4005; id++) {
-      await _notifications.cancel(id);
+      await _notificationsPlugin.cancel(id);
     }
+  }
+
+  /// Test the azan notification banner and sound.
+  /// Shows the heads-up banner immediately and plays the azan.
+  Future<void> testAzanNotification() async {
+    developer.log('🧪 Testing azan notification...', name: 'AzanService');
+    await _showAzanNotification('الظهر');
+    await playAzan(isFajr: false);
   }
 
   /// Dispose resources.
   void dispose() {
     _azanCheckTimer?.cancel();
+    _stopMonitor?.cancel();
+    _volumeSubscription?.cancel();
     _audioPlayer.dispose();
   }
 }

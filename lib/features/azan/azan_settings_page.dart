@@ -105,6 +105,21 @@ class _AzanSettingsPageState extends State<AzanSettingsPage> {
     _loadSettings();
   }
 
+  Future<void> _testAzan() async {
+    try {
+      await _azanService.testAzanNotification();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('تم إرسال إشعار الأذان - اخرج من التطبيق لرؤية البانر'),
+          backgroundColor: Color(0xFF1B7A4E),
+        ),
+      );
+    } catch (e) {
+      _showError(e.toString());
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -277,6 +292,24 @@ class _AzanSettingsPageState extends State<AzanSettingsPage> {
                               ],
                             ),
                           ),
+                        ),
+
+                        const SizedBox(height: 20),
+
+                        // Test Section
+                        _SettingsSection(
+                          title: 'اختبار',
+                          icon: Icons.science_rounded,
+                          isDark: isDark,
+                          children: [
+                            _TestTile(
+                              title: 'تجربة الأذان',
+                              subtitle: 'اختبار الإشعار والصوت (اخرج من التطبيق بعد الضغط)',
+                              icon: Icons.play_circle_rounded,
+                              onTap: _testAzan,
+                              isDark: isDark,
+                            ),
+                          ],
                         ),
 
                         const SizedBox(height: 32),
@@ -474,6 +507,71 @@ class _NavigationTile extends StatelessWidget {
                 isBack: false,
                 size: 16,
                 color: AppColors.darkGreen,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _TestTile extends StatelessWidget {
+  final String title;
+  final String subtitle;
+  final IconData icon;
+  final VoidCallback onTap;
+  final bool isDark;
+
+  const _TestTile({
+    required this.title,
+    required this.subtitle,
+    required this.icon,
+    required this.onTap,
+    required this.isDark,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final textColor = isDark ? Colors.white : AppColors.textPrimary;
+    final subColor = isDark ? Colors.white60 : AppColors.textSecondary;
+
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+        child: Row(
+          children: [
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: AppColors.darkGreen.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(icon, color: AppColors.darkGreen, size: 18),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title, style: _f(sz: 16, fw: FontWeight.w600, c: textColor)),
+                  Text(subtitle, style: _f(sz: 12, fw: FontWeight.w400, c: subColor)),
+                ],
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: AppColors.darkGreen.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Icon(
+                Icons.play_arrow_rounded,
+                color: AppColors.darkGreen,
+                size: 20,
               ),
             ),
           ],

@@ -9,6 +9,20 @@ import 'package:adhan/adhan.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
 import '../widgets/notification_overlay.dart';
+import 'azan_service.dart';
+
+/// Top-level background handler for notification actions (required to be top-level).
+@pragma('vm:entry-point')
+void notificationBackgroundHandler(NotificationResponse response) {
+  if (response.actionId == 'stop_azan') {
+    // In background isolate, we can't access the existing AudioPlayer instance.
+    // The cancelNotification: true in the action already dismisses the notification.
+    // We create a fresh instance to attempt stopping audio.
+    try {
+      AzanService().stopAzan();
+    } catch (_) {}
+  }
+}
 
 class NotificationService {
   static final NotificationService _instance = NotificationService._internal();
@@ -60,6 +74,7 @@ class NotificationService {
       await _notifications.initialize(
         initSettings,
         onDidReceiveNotificationResponse: _onNotificationTapped,
+        onDidReceiveBackgroundNotificationResponse: notificationBackgroundHandler,
       );
       developer.log('✅ Notifications plugin initialized', name: 'NotificationService');
 
@@ -148,7 +163,24 @@ class NotificationService {
   }
 
   void _onNotificationTapped(NotificationResponse response) {
-    developer.log('Notification tapped: ${response.payload}', name: 'NotificationService');
+    developer.log('Notification response: payload=${response.payload}, action=${response.actionId}, type=${response.notificationResponseType}', name: 'NotificationService');
+
+    // Route azan stop action to AzanService
+    if (response.actionId == 'stop_azan') {
+      developer.log('⏹️ Stop azan action received in foreground', name: 'NotificationService');
+      AzanService().handleNotificationAction(response);
+      return;
+    }
+
+    // Also handle if user taps the notification body itself (not the action button)
+    if (response.payload != null && response.payload!.startsWith('azan_')) {
+      developer.log('⏹️ Azan notification body tapped, stopping', name: 'NotificationService');
+      final azanService = AzanService();
+      // Immediately pause audio
+      azanService.stopAzan();
+      azanService.dismissAzanNotification();
+      return;
+    }
   }
 
   bool get morningAzkarEnabled {
