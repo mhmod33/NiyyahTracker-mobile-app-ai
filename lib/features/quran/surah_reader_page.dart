@@ -3,7 +3,6 @@ import 'dart:convert';
 import 'dart:ui' as ui;
 import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
-import 'package:flutter/gestures.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/rendering.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -15,6 +14,8 @@ import 'dart:async';
 import '../../core/app_colors.dart';
 import '../../core/directional_icon.dart';
 import '../../services/quran_audio_service.dart';
+import '../../services/wird_service.dart';
+import '../../services/wird_notification_service.dart';
 import 'reciter_library_page.dart';
 
 class SurahReaderPage extends StatefulWidget {
@@ -31,6 +32,7 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
   int? _highlightSurah;
   int? _highlightVerse;
   Timer? _highlightTimer;
+  final WirdService _wirdService = WirdService();
 
   @override
   void initState() {
@@ -52,13 +54,38 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
         }
       });
     }
+
+    // Start wird session tracking
+    _startWirdSession();
+  }
+
+  Future<void> _startWirdSession() async {
+    await _wirdService.init();
+    await _wirdService.startReadingSession(_currentPage + 1);
   }
 
   @override
-  void dispose() { 
-    _pageController.dispose(); 
+  void dispose() {
+    _pageController.dispose();
     _highlightTimer?.cancel();
-    super.dispose(); 
+    // End wird session and check for session completion
+    _endWirdSession();
+    super.dispose();
+  }
+
+  void _endWirdSession() {
+    _wirdService.endReadingSession(_currentPage + 1).then((pagesRead) async {
+      if (pagesRead >= 5) {
+        final session = WirdSession.current;
+        final wasAlreadyDone = _wirdService.isSessionDoneToday(session);
+        if (!wasAlreadyDone) {
+          await WirdNotificationService().showSessionCompletedNotification(session);
+        }
+        // Check streak milestone
+        final streak = _wirdService.getCurrentStreak();
+        await WirdNotificationService().showStreakMilestone(streak);
+      }
+    });
   }
 
   @override
@@ -82,7 +109,9 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
                 controller: _pageController,
                 itemCount: 604,
                 allowImplicitScrolling: true,
-                onPageChanged: (i) => setState(() => _currentPage = i),
+                onPageChanged: (i) {
+                  setState(() => _currentPage = i);
+                },
                 itemBuilder: (ctx, index) => _MushafPageWidget(
                   pageNumber: index + 1,
                   highlightSurah: _highlightSurah,
@@ -776,12 +805,30 @@ class _TappableRichText extends StatelessWidget {
         if (renderBox == null) return;
         final localPos = details.localPosition;
 
+        // Each verse produces exactly one WidgetSpan (_AyahEndMark).
+        // We must supply PlaceholderDimensions for every WidgetSpan before
+        // calling layout(), otherwise Flutter asserts 'dimensions != null'.
+        final verseCount = verseRanges.length;
+
         final tp = TextPainter(
           text: textSpan,
           textDirection: TextDirection.rtl,
           textAlign: TextAlign.justify,
-        )..layout(maxWidth: renderBox.size.width);
+        );
 
+        if (verseCount > 0) {
+          tp.setPlaceholderDimensions(
+            List.generate(
+              verseCount,
+              (_) => const PlaceholderDimensions(
+                size: Size(32, 32),
+                alignment: PlaceholderAlignment.middle,
+              ),
+            ),
+          );
+        }
+
+        tp.layout(maxWidth: renderBox.size.width);
         final offset = tp.getPositionForOffset(localPos).offset;
         tp.dispose();
 

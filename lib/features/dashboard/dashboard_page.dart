@@ -5,7 +5,6 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart' as uuid;
 import '../../core/app_colors.dart';
-import '../../core/theme_provider.dart';
 import '../../core/app_models.dart';
 import '../worship/worship_page.dart';
 import '../goals/goals_page.dart';
@@ -31,6 +30,8 @@ import '../../services/daily_summary_service.dart';
 import '../../models/worship_model.dart' as db_model;
 import '../../widgets/mini_player.dart';
 import '../quran/reciter_library_page.dart';
+import '../wird/daily_wird_page.dart';
+import '../../services/wird_service.dart';
 
 TextStyle _f({double sz = 14, FontWeight fw = FontWeight.w400, Color? c, double? h}) =>
     GoogleFonts.ibmPlexSansArabic(fontSize: sz, fontWeight: fw, color: c, height: h);
@@ -53,12 +54,26 @@ class _DashboardPageState extends State<DashboardPage> {
   Map<String, dynamic> _todaySummary = {};
   final FirebaseService _firebaseService = FirebaseService();
   final DailySummaryService _dailySummaryService = DailySummaryService();
+  final WirdService _wirdService = WirdService();
+  WirdDayRecord? _wirdRecord;
+  int _wirdStreak = 0;
 
   @override
   void initState() {
     super.initState();
     _checkTodayAccountability();
     _loadTodaySummary();
+    _loadWirdData();
+  }
+
+  Future<void> _loadWirdData() async {
+    await _wirdService.init();
+    if (mounted) {
+      setState(() {
+        _wirdRecord = _wirdService.getTodayRecord();
+        _wirdStreak = _wirdService.getCurrentStreak();
+      });
+    }
   }
 
   Future<void> _loadTodaySummary() async {
@@ -227,6 +242,10 @@ class _DashboardPageState extends State<DashboardPage> {
               SliverToBoxAdapter(child: _buildDailySummaryCard(isDark)),
             ],
 
+            // ── Daily Wird Section ──
+            SliverToBoxAdapter(child: _SectionTitle(title: 'الورد اليومي', icon: Icons.auto_stories_rounded)),
+            SliverToBoxAdapter(child: _buildWirdCard(isDark)),
+
             // ── Quick Access Section ──
             SliverToBoxAdapter(child: _SectionTitle(title: 'الوصول السريع', icon: Icons.grid_view_rounded)),
             SliverToBoxAdapter(
@@ -279,6 +298,9 @@ class _DashboardPageState extends State<DashboardPage> {
                   _FeatureCard(icon: Icons.today_rounded, label: 'سنن الجمعة', color: Colors.teal, isDark: isDark, onTap: () => _to(const FridayTipsPage())),
                   _FeatureCard(icon: Icons.import_contacts_rounded, label: 'مكتبة الأذكار', color: Colors.green, isDark: isDark, onTap: () => _to(const AzkarLibraryPage())),
                   _FeatureCard(icon: Icons.mosque_rounded, label: 'المساجد', color: Colors.blueAccent, isDark: isDark, onTap: () => _to(const NearbyMosquesPage())),
+                  _FeatureCard(icon: Icons.headphones_rounded, label: 'مكتبة القراء', color: const Color(0xFF1B5E20), isDark: isDark, onTap: () => _to(const ReciterLibraryPage())),
+                  _FeatureCard(icon: Icons.wb_sunny_outlined, label: 'الأذكار اليومية', color: Colors.amber.shade700, isDark: isDark, onTap: () => _to(const AzkarLibraryPage())),
+                  _FeatureCard(icon: Icons.volume_up_rounded, label: 'إعدادات الأذان', color: Colors.indigo, isDark: isDark, onTap: () => _to(const AzanSettingsPage())),
                 ],
               ),
             ),
@@ -433,6 +455,111 @@ class _DashboardPageState extends State<DashboardPage> {
     );
   }
 
+  Widget _buildWirdCard(bool isDark) {
+    final record = _wirdRecord;
+    final streak = _wirdStreak;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: GestureDetector(
+        onTap: () async {
+          await Navigator.push(context, MaterialPageRoute(builder: (_) => const DailyWirdPage()));
+          _loadWirdData();
+        },
+        child: Container(
+          padding: const EdgeInsets.all(18),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topRight,
+              end: Alignment.bottomLeft,
+              colors: isDark
+                  ? [const Color(0xFF1A3A28), const Color(0xFF0D2818)]
+                  : [AppColors.darkGreen, const Color(0xFF145A3A)],
+            ),
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.darkGreen.withValues(alpha: 0.35),
+                blurRadius: 16,
+                offset: const Offset(0, 6),
+              ),
+            ],
+          ),
+          child: Column(children: [
+            Row(children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: const Icon(Icons.auto_stories_rounded, color: Colors.white, size: 26),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text('الورد اليومي', style: _f(sz: 17, fw: FontWeight.w800, c: Colors.white)),
+                  Text(
+                    record != null && record.isCompleted
+                        ? 'أتممت وردك اليوم! تقبل الله 🤍'
+                        : 'اقرأ وردك اليومي من القرآن الكريم',
+                    style: _f(sz: 12, c: Colors.white70),
+                  ),
+                ]),
+              ),
+              if (streak > 0)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: AppColors.gold,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Row(mainAxisSize: MainAxisSize.min, children: [
+                    const Icon(Icons.local_fire_department_rounded, size: 16, color: Colors.white),
+                    const SizedBox(width: 4),
+                    Text('$streak', style: _f(sz: 14, fw: FontWeight.w900, c: Colors.white)),
+                  ]),
+                ),
+            ]),
+            const SizedBox(height: 14),
+            if (record != null) ...[
+              ClipRRect(
+                borderRadius: BorderRadius.circular(6),
+                child: LinearProgressIndicator(
+                  value: record.progress,
+                  minHeight: 8,
+                  backgroundColor: Colors.white.withValues(alpha: 0.2),
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                    record.isCompleted ? AppColors.gold : Colors.white,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+                Text(
+                  '${record.pagesRead} / ${record.targetPages} صفحة',
+                  style: _f(sz: 12, c: Colors.white70),
+                ),
+                Row(children: WirdSession.all.map((s) {
+                  final done = record.sessionPages[s] != null && record.sessionPages[s]! >= 5;
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 6),
+                    child: Icon(
+                      WirdSession.iconData(s),
+                      size: 18,
+                      color: done ? WirdSession.iconColor(s) : Colors.white.withValues(alpha: 0.3),
+                    ),
+                  );
+                }).toList()),
+              ]),
+            ] else
+              Text('اضغط لبدء وردك اليومي', style: _f(sz: 13, c: Colors.white60)),
+          ]),
+        ),
+      ),
+    );
+  }
+
   Widget _buildDailySummaryCard(bool isDark) {
     if (_isLoadingSummary) {
       return const Padding(
@@ -443,7 +570,7 @@ class _DashboardPageState extends State<DashboardPage> {
 
     final prayerCount = _todaySummary['prayerCount'] ?? 0;
     final quranPages = _todaySummary['quranPages'] ?? 0;
-    final completedWorships = _todaySummary['completedWorships'] as List<String> ?? [];
+    final completedWorships = (_todaySummary['completedWorships'] as List<dynamic>?)?.cast<String>() ?? [];
     final totalWorships = _todaySummary['totalWorships'] ?? 0;
 
     return Padding(

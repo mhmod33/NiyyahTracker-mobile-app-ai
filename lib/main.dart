@@ -15,6 +15,8 @@ import 'services/notification_service.dart';
 import 'services/azan_service.dart';
 import 'services/quran_audio_service.dart';
 import 'services/reciter_download_service.dart';
+import 'services/wird_service.dart';
+import 'services/wird_notification_service.dart';
 
 /// App-wide font helper — IBM Plex Sans Arabic everywhere.
 TextStyle _font({
@@ -76,6 +78,14 @@ void main() async {
   try {
     await DailySummaryService().initializeNotifications();
     await DailySummaryService().scheduleMidnightReminder();
+  } catch (e) {
+    // Silently fail
+  }
+
+  try {
+    await WirdService().init();
+    await WirdNotificationService().init();
+    await WirdNotificationService().scheduleAll();
   } catch (e) {
     // Silently fail
   }
