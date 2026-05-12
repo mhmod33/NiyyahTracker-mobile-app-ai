@@ -12,6 +12,7 @@ import 'features/splash/splash_page.dart';
 import 'firebase_options.dart';
 import 'services/daily_summary_service.dart';
 import 'services/notification_service.dart';
+import 'services/azan_service.dart';
 
 /// App-wide font helper — IBM Plex Sans Arabic everywhere.
 TextStyle _font({
@@ -54,6 +55,13 @@ void main() async {
   try {
     await NotificationService().init();
     await NotificationService().initializeAllSchedules();
+  } catch (e) {
+    // Silently fail
+  }
+
+  try {
+    await AzanService().init();
+    await AzanService().scheduleAzanNotifications();
   } catch (e) {
     // Silently fail
   }

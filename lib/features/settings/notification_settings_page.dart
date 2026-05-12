@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../core/app_colors.dart';
 import '../../core/directional_icon.dart';
 import '../../services/notification_service.dart';
+import '../azan/azan_settings_page.dart';
 
 TextStyle _f({double sz = 14, FontWeight fw = FontWeight.w400, Color? c, double? h}) =>
     GoogleFonts.ibmPlexSansArabic(fontSize: sz, fontWeight: fw, color: c, height: h);
@@ -302,6 +303,31 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
                               icon: Icons.access_time_rounded,
                               value: _prayerTimesEnabled,
                               onChanged: (value) => _updateSetting('prayer_times', value),
+                              isDark: isDark,
+                            ),
+                          ],
+                        ),
+
+                        const SizedBox(height: 24),
+
+                        // Azan Settings
+                        _SettingsSection(
+                          title: 'الأذان',
+                          icon: Icons.volume_up_rounded,
+                          isDark: isDark,
+                          children: [
+                            _TestTile(
+                              title: 'إعدادات الأذان',
+                              subtitle: 'تفعيل الأذان واختيار المؤذن',
+                              icon: Icons.mosque_rounded,
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => const AzanSettingsPage(),
+                                  ),
+                                );
+                              },
                               isDark: isDark,
                             ),
                           ],

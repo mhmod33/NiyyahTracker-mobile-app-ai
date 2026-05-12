@@ -22,6 +22,7 @@ import '../challenges/challenges_page.dart';
 import '../quran/quran_page.dart';
 import '../azkar/azkar_library_page.dart';
 import '../settings/notification_settings_page.dart';
+import '../azan/azan_settings_page.dart';
 import '../auth/login_page.dart';
 import '../onboarding/onboarding_page.dart';
 import '../../providers/auth_provider.dart';
@@ -235,6 +236,7 @@ class _DashboardPageState extends State<DashboardPage> {
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   children: [
                     _QuickChip(icon: Icons.access_time_filled_rounded, label: 'مواقيت الصلاة', color: Colors.blue, onTap: () => _to(const PrayerTimesPage())),
+                    _QuickChip(icon: Icons.volume_up_rounded, label: 'الأذان', color: Colors.teal, onTap: () => _to(const AzanSettingsPage())),
                     _QuickChip(icon: Icons.explore_rounded, label: 'اتجاة القبلة', color: Colors.green, onTap: () => _to(const QiblaPage())),
                     _QuickChip(icon: Icons.menu_book_rounded, label: 'المصحف الشريف', color: Colors.purple, onTap: () => _to(const QuranPage())),
                     _QuickChip(icon: Icons.location_on_rounded, label: 'المساجد', color: Colors.cyan, onTap: () => _to(const NearbyMosquesPage())),
