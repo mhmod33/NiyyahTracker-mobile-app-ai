@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../services/wird_service.dart';
 
 /// Centralized authentication provider that manages Firebase Auth state
 /// and user profile data from Firestore.
@@ -35,8 +36,12 @@ class AppAuthProvider extends ChangeNotifier {
       _user = user;
       if (user != null) {
         await _loadUserProfile();
+        // Scope WirdService data to this user
+        WirdService().setUserId(user.uid);
       } else {
         _userProfile = null;
+        // Clear user scope on logout
+        WirdService().setUserId('');
       }
       _isLoading = false;
       notifyListeners();

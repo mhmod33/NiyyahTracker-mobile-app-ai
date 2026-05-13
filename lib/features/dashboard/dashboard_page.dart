@@ -43,7 +43,7 @@ class DashboardPage extends StatefulWidget {
   State<DashboardPage> createState() => _DashboardPageState();
 }
 
-class _DashboardPageState extends State<DashboardPage> {
+class _DashboardPageState extends State<DashboardPage> with WidgetsBindingObserver {
   int _currentIndex = 0;
   bool _showAzkar = true;
   bool _fajrChecked = false;
@@ -61,12 +61,35 @@ class _DashboardPageState extends State<DashboardPage> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _checkTodayAccountability();
     _loadTodaySummary();
     _loadWirdData();
   }
 
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _loadWirdData();
+      _loadTodaySummary();
+    }
+  }
+
   Future<void> _loadWirdData() async {
+    final isGuest = !context.read<AppAuthProvider>().isAuthenticated;
+    if (isGuest) {
+      setState(() {
+        _wirdRecord = null;
+        _wirdStreak = 0;
+      });
+      return;
+    }
     await _wirdService.init();
     if (mounted) {
       setState(() {
@@ -74,6 +97,14 @@ class _DashboardPageState extends State<DashboardPage> {
         _wirdStreak = _wirdService.getCurrentStreak();
       });
     }
+  }
+
+  Future<void> _refreshAll() async {
+    await Future.wait([
+      _checkTodayAccountability(),
+      _loadTodaySummary(),
+      _loadWirdData(),
+    ]);
   }
 
   Future<void> _loadTodaySummary() async {
@@ -168,9 +199,13 @@ class _DashboardPageState extends State<DashboardPage> {
       textDirection: TextDirection.rtl,
       child: Scaffold(
         backgroundColor: bgColor,
-        body: CustomScrollView(
-          physics: const BouncingScrollPhysics(),
-          slivers: [
+        body: RefreshIndicator(
+          onRefresh: _refreshAll,
+          color: AppColors.darkGreen,
+          backgroundColor: isDark ? const Color(0xFF1A1F1C) : Colors.white,
+          child: CustomScrollView(
+            physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+            slivers: [
             // ── Modern Header ──
             SliverToBoxAdapter(
               child: Container(
@@ -244,7 +279,7 @@ class _DashboardPageState extends State<DashboardPage> {
 
             // ── Daily Wird Section ──
             SliverToBoxAdapter(child: _SectionTitle(title: 'الورد اليومي', icon: Icons.auto_stories_rounded)),
-            SliverToBoxAdapter(child: _buildWirdCard(isDark)),
+            SliverToBoxAdapter(child: _buildWirdCard(isDark, isGuest: isGuest)),
 
             // ── Quick Access Section ──
             SliverToBoxAdapter(child: _SectionTitle(title: 'الوصول السريع', icon: Icons.grid_view_rounded)),
@@ -307,6 +342,7 @@ class _DashboardPageState extends State<DashboardPage> {
 
             const SliverToBoxAdapter(child: SizedBox(height: 120)),
           ],
+        ),
         ),
         extendBody: true,
         bottomNavigationBar: Column(
@@ -455,9 +491,152 @@ class _DashboardPageState extends State<DashboardPage> {
     );
   }
 
-  Widget _buildWirdCard(bool isDark) {
+  Widget _buildWirdCard(bool isDark, {bool isGuest = false}) {
     final record = _wirdRecord;
     final streak = _wirdStreak;
+
+    // For guests: show a teaser card with a lock overlay
+    if (isGuest) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: GestureDetector(
+          onTap: () => _showLoginPrompt(),
+          child: Stack(
+            children: [
+              // Teaser card (blurred content)
+              Container(
+                padding: const EdgeInsets.all(18),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topRight,
+                    end: Alignment.bottomLeft,
+                    colors: isDark
+                        ? [const Color(0xFF1A3A28), const Color(0xFF0D2818)]
+                        : [AppColors.darkGreen, const Color(0xFF145A3A)],
+                  ),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Column(children: [
+                  Row(children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: const Icon(Icons.auto_stories_rounded, color: Colors.white, size: 26),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Text('الورد اليومي', style: _f(sz: 17, fw: FontWeight.w800, c: Colors.white)),
+                      Text('تابع تقدمك اليومي في القرآن', style: _f(sz: 12, c: Colors.white70)),
+                    ])),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      decoration: BoxDecoration(color: AppColors.gold, borderRadius: BorderRadius.circular(20)),
+                      child: Row(mainAxisSize: MainAxisSize.min, children: [
+                        const Icon(Icons.local_fire_department_rounded, size: 14, color: Colors.white),
+                        const SizedBox(width: 4),
+                        Text('7', style: _f(sz: 13, fw: FontWeight.w900, c: Colors.white)),
+                      ]),
+                    ),
+                  ]),
+                  const SizedBox(height: 14),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(6),
+                    child: LinearProgressIndicator(
+                      value: 0.6,
+                      minHeight: 8,
+                      backgroundColor: Colors.white.withValues(alpha: 0.2),
+                      valueColor: const AlwaysStoppedAnimation<Color>(AppColors.gold),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+                    Text('12 / 20 صفحة', style: _f(sz: 12, c: Colors.white70)),
+                    Row(children: WirdSession.all.map((s) => Padding(
+                      padding: const EdgeInsets.only(right: 6),
+                      child: Icon(WirdSession.iconData(s), size: 16, color: Colors.white.withValues(alpha: 0.5)),
+                    )).toList()),
+                  ]),
+                ]),
+              ),
+              // Lock overlay
+              Positioned.fill(
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(20),
+                  child: Container(
+                    color: Colors.black.withValues(alpha: 0.45),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: AppColors.gold,
+                            shape: BoxShape.circle,
+                            boxShadow: [BoxShadow(color: AppColors.gold.withValues(alpha: 0.4), blurRadius: 12)],
+                          ),
+                          child: const Icon(Icons.lock_rounded, color: Colors.white, size: 24),
+                        ),
+                        const SizedBox(height: 10),
+                        Text('سجل دخولك لتفعيل الورد اليومي',
+                            style: _f(sz: 13, fw: FontWeight.w700, c: Colors.white)),
+                        const SizedBox(height: 4),
+                        Text('تتبع تقدمك وحافظ على streak مواظبتك',
+                            style: _f(sz: 11, c: Colors.white70)),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    // Show shimmer-like placeholder while loading
+    if (record == null) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: GestureDetector(
+          onTap: () async {
+            await Navigator.push(context, MaterialPageRoute(builder: (_) => const DailyWirdPage()));
+            _loadWirdData();
+          },
+          child: Container(
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topRight,
+                end: Alignment.bottomLeft,
+                colors: isDark
+                    ? [const Color(0xFF1A3A28), const Color(0xFF0D2818)]
+                    : [AppColors.darkGreen, const Color(0xFF145A3A)],
+              ),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Row(children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: const Icon(Icons.auto_stories_rounded, color: Colors.white, size: 26),
+              ),
+              const SizedBox(width: 14),
+              Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text('الورد اليومي', style: _f(sz: 17, fw: FontWeight.w800, c: Colors.white)),
+                Text('اضغط لبدء وردك اليومي', style: _f(sz: 12, c: Colors.white70)),
+              ])),
+              const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white54, size: 16),
+            ]),
+          ),
+        ),
+      );
+    }
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -500,8 +679,8 @@ class _DashboardPageState extends State<DashboardPage> {
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   Text('الورد اليومي', style: _f(sz: 17, fw: FontWeight.w800, c: Colors.white)),
                   Text(
-                    record != null && record.isCompleted
-                        ? 'أتممت وردك اليوم! تقبل الله 🤍'
+                    record.isCompleted
+                        ? 'أتممت وردك اليوم! تقبل الله'
                         : 'اقرأ وردك اليومي من القرآن الكريم',
                     style: _f(sz: 12, c: Colors.white70),
                   ),
@@ -522,38 +701,35 @@ class _DashboardPageState extends State<DashboardPage> {
                 ),
             ]),
             const SizedBox(height: 14),
-            if (record != null) ...[
-              ClipRRect(
-                borderRadius: BorderRadius.circular(6),
-                child: LinearProgressIndicator(
-                  value: record.progress,
-                  minHeight: 8,
-                  backgroundColor: Colors.white.withValues(alpha: 0.2),
-                  valueColor: AlwaysStoppedAnimation<Color>(
-                    record.isCompleted ? AppColors.gold : Colors.white,
-                  ),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(6),
+              child: LinearProgressIndicator(
+                value: record.progress,
+                minHeight: 8,
+                backgroundColor: Colors.white.withValues(alpha: 0.2),
+                valueColor: AlwaysStoppedAnimation<Color>(
+                  record.isCompleted ? AppColors.gold : Colors.white,
                 ),
               ),
-              const SizedBox(height: 8),
-              Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                Text(
-                  '${record.pagesRead} / ${record.targetPages} صفحة',
-                  style: _f(sz: 12, c: Colors.white70),
-                ),
-                Row(children: WirdSession.all.map((s) {
-                  final done = record.sessionPages[s] != null && record.sessionPages[s]! >= 5;
-                  return Padding(
-                    padding: const EdgeInsets.only(right: 6),
-                    child: Icon(
-                      WirdSession.iconData(s),
-                      size: 18,
-                      color: done ? WirdSession.iconColor(s) : Colors.white.withValues(alpha: 0.3),
-                    ),
-                  );
-                }).toList()),
-              ]),
-            ] else
-              Text('اضغط لبدء وردك اليومي', style: _f(sz: 13, c: Colors.white60)),
+            ),
+            const SizedBox(height: 8),
+            Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+              Text(
+                '${record.pagesRead} / ${record.targetPages} صفحة',
+                style: _f(sz: 12, c: Colors.white70),
+              ),
+              Row(children: WirdSession.all.map((s) {
+                final done = (record.sessionPages[s] ?? 0) >= 5;
+                return Padding(
+                  padding: const EdgeInsets.only(right: 6),
+                  child: Icon(
+                    WirdSession.iconData(s),
+                    size: 18,
+                    color: done ? WirdSession.iconColor(s) : Colors.white.withValues(alpha: 0.3),
+                  ),
+                );
+              }).toList()),
+            ]),
           ]),
         ),
       ),

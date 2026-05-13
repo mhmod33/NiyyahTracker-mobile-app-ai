@@ -51,6 +51,13 @@ class _DailyWirdPageState extends State<DailyWirdPage> with TickerProviderStateM
 
   Future<void> _loadData() async {
     await _wirdService.init();
+    // Ensure userId is set before loading data
+    final userId = context.read<AppAuthProvider>().userId;
+    if (userId.isEmpty) {
+      setState(() => _loading = false);
+      return;
+    }
+    _wirdService.setUserId(userId);
     setState(() {
       _todayRecord = _wirdService.getTodayRecord();
       _streak = _wirdService.getCurrentStreak();
@@ -129,35 +136,54 @@ class _DailyWirdPageState extends State<DailyWirdPage> with TickerProviderStateM
   Widget _buildGuestBanner(bool isDark) {
     return Container(
       margin: const EdgeInsets.all(20),
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(28),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: isDark
               ? [const Color(0xFF1A2F23), const Color(0xFF0D2818)]
-              : [AppColors.paleGreen, AppColors.lightGreen.withOpacity(0.3)],
+              : [AppColors.paleGreen, AppColors.lightGreen.withValues(alpha: 0.3)],
         ),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.gold.withOpacity(0.4)),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: AppColors.gold.withValues(alpha: 0.4)),
       ),
       child: Column(children: [
-        const Icon(Icons.menu_book_rounded, color: AppColors.gold, size: 56),
-        const SizedBox(height: 16),
-        Text('الورد اليومي', style: _f(sz: 22, fw: FontWeight.w800, c: isDark ? Colors.white : AppColors.darkGreen)),
-        const SizedBox(height: 8),
-        Text('سجل دخولك لتتبع وردك اليومي والحفاظ على streak مواظبتك',
-            style: _f(sz: 14, c: isDark ? Colors.white70 : AppColors.gray), textAlign: TextAlign.center),
+        Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: AppColors.gold.withValues(alpha: 0.15),
+            shape: BoxShape.circle,
+          ),
+          child: const Icon(Icons.lock_outline_rounded, color: AppColors.gold, size: 48),
+        ),
         const SizedBox(height: 20),
+        Text('الورد اليومي',
+            style: _f(sz: 22, fw: FontWeight.w800, c: isDark ? Colors.white : AppColors.darkGreen)),
+        const SizedBox(height: 10),
+        Text(
+          'سجل دخولك لتتبع وردك اليومي\nوالحفاظ على streak مواظبتك',
+          style: _f(sz: 14, c: isDark ? Colors.white70 : AppColors.gray),
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 24),
         SizedBox(
           width: double.infinity,
-          child: ElevatedButton(
-            onPressed: _openQuranReader,
+          child: ElevatedButton.icon(
+            onPressed: () => Navigator.pop(context),
+            icon: const Icon(Icons.login_rounded, color: Colors.white),
+            label: Text('تسجيل الدخول أولاً',
+                style: _f(sz: 16, fw: FontWeight.bold, c: Colors.white)),
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.darkGreen,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
               padding: const EdgeInsets.symmetric(vertical: 14),
             ),
-            child: Text('ابدأ القراءة الآن', style: _f(sz: 16, fw: FontWeight.bold, c: Colors.white)),
           ),
+        ),
+        const SizedBox(height: 12),
+        Text(
+          'يمكنك قراءة القرآن بدون تسجيل دخول\nلكن لن يتم حفظ تقدمك',
+          style: _f(sz: 12, c: isDark ? Colors.white38 : AppColors.gray),
+          textAlign: TextAlign.center,
         ),
       ]),
     );

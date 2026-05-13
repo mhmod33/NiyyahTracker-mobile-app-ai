@@ -27,8 +27,12 @@ class Reciter {
   final String description;
   final ReciterType type;
 
-  /// For [ReciterType.full]: CDN identifier used in URL
+  /// For [ReciterType.full]: CDN identifier used in URL (alquran.cloud)
   final String? cdnId;
+
+  /// For [ReciterType.full]: mp3quran.net server base URL (fallback for streaming)
+  /// Format: 'https://server12.mp3quran.net/maher/' — surah appended as '001.mp3'
+  final String? mp3QuranServer;
 
   /// For [ReciterType.snippets]: list of tracks
   final List<SnippetTrack>? snippetTracks;
@@ -40,6 +44,7 @@ class Reciter {
     required this.description,
     required this.type,
     this.cdnId,
+    this.mp3QuranServer,
     this.snippetTracks,
   });
 }
@@ -134,6 +139,7 @@ class QuranAudioService extends ChangeNotifier {
       description: 'تلاوة كاملة للقرآن الكريم بصوت الشيخ مشاري العفاسي',
       type: ReciterType.full,
       cdnId: 'ar.alafasy',
+      mp3QuranServer: 'https://server8.mp3quran.net/afs/',
     ),
     Reciter(
       id: 'maher',
@@ -142,6 +148,7 @@ class QuranAudioService extends ChangeNotifier {
       description: 'تلاوة كاملة للقرآن الكريم بصوت الشيخ ماهر المعيقلي',
       type: ReciterType.full,
       cdnId: 'ar.mahermuaiqly',
+      mp3QuranServer: 'https://server12.mp3quran.net/maher/',
     ),
     Reciter(
       id: 'husary',
@@ -150,6 +157,7 @@ class QuranAudioService extends ChangeNotifier {
       description: 'تلاوة كاملة للقرآن الكريم بصوت الشيخ محمود خليل الحصري',
       type: ReciterType.full,
       cdnId: 'ar.husary',
+      mp3QuranServer: 'https://server13.mp3quran.net/husr/',
     ),
     Reciter(
       id: 'minshawi',
@@ -158,6 +166,7 @@ class QuranAudioService extends ChangeNotifier {
       description: 'تلاوة كاملة للقرآن الكريم بصوت الشيخ محمد صديق المنشاوي',
       type: ReciterType.full,
       cdnId: 'ar.minshawi',
+      mp3QuranServer: 'https://server10.mp3quran.net/minsh/',
     ),
   ];
 
@@ -318,8 +327,10 @@ class QuranAudioService extends ChangeNotifier {
       developer.log('📂 Playing from local: $localPath', name: 'QuranAudio');
       await _player.setFilePath(localPath);
     } else {
-      final url = _buildCdnUrl(reciter.cdnId!, surahNumber);
-      developer.log('🌐 Streaming from CDN: $url', name: 'QuranAudio');
+      // Prefer mp3quran.net server (more reliable for streaming)
+      // Fall back to cdn.islamic.network if no server defined
+      final url = _buildStreamUrl(reciter, surahNumber);
+      developer.log('🌐 Streaming: $url', name: 'QuranAudio');
       await _player.setUrl(url);
     }
     await _player.play();
@@ -383,6 +394,18 @@ class QuranAudioService extends ChangeNotifier {
   }
 
   // ── Helpers ───────────────────────────────────────────────────────────────
+
+  /// Build streaming URL — prefers mp3quran.net server, falls back to cdn.islamic.network.
+  /// mp3quran.net format: {server}{surah_padded_3}.mp3  e.g. 001.mp3
+  /// cdn.islamic.network format: audio-surah/128/{cdnId}/{surah}.mp3
+  String _buildStreamUrl(Reciter reciter, int surahNumber) {
+    if (reciter.mp3QuranServer != null) {
+      final padded = surahNumber.toString().padLeft(3, '0');
+      return '${reciter.mp3QuranServer}$padded.mp3';
+    }
+    // Fallback to alquran.cloud CDN
+    return _buildCdnUrl(reciter.cdnId!, surahNumber);
+  }
 
   String _buildCdnUrl(String cdnId, int surahNumber) {
     return 'https://cdn.islamic.network/quran/audio-surah/128/$cdnId/$surahNumber.mp3';

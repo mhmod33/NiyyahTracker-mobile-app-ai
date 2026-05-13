@@ -582,8 +582,14 @@ class _StatusBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (dlState.isDownloading) {
+      return _badge(
+        'جاري التحميل ${dlState.downloadedCount}/114 سورة...',
+        AppColors.darkGreen,
+      );
+    }
     if (isFullyDownloaded) {
-      return _badge('✓ محمّل بالكامل (114 سورة)', Colors.green);
+      return _badge('محمّل بالكامل — 114 سورة', Colors.green);
     }
     if (dlState.downloadedCount > 0) {
       return _badge(
@@ -620,41 +626,14 @@ class _DownloadProgress extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              'جاري تحميل سورة ${dlState.currentSurah ?? ''}...',
-              style: GoogleFonts.ibmPlexSansArabic(
-                fontSize: 11,
-                color: isDark ? Colors.white70 : AppColors.gray,
-              ),
-            ),
-            Text(
-              '${dlState.downloadedCount}/${dlState.totalCount}',
-              style: GoogleFonts.ibmPlexSansArabic(
-                fontSize: 11,
-                fontWeight: FontWeight.w600,
-                color: AppColors.darkGreen,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 6),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(4),
-          child: LinearProgressIndicator(
-            value: dlState.progress,
-            backgroundColor: isDark ? Colors.white12 : Colors.black12,
-            valueColor:
-                const AlwaysStoppedAnimation<Color>(AppColors.darkGreen),
-            minHeight: 6,
-          ),
-        ),
-      ],
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(4),
+      child: LinearProgressIndicator(
+        value: dlState.progress,
+        backgroundColor: isDark ? Colors.white12 : Colors.black12,
+        valueColor: const AlwaysStoppedAnimation<Color>(AppColors.darkGreen),
+        minHeight: 6,
+      ),
     );
   }
 }
@@ -745,14 +724,115 @@ class _ActionButtons extends StatelessWidget {
           icon: Icons.wifi_rounded,
           color: Colors.blue,
           outlined: true,
-          onTap: () async {
-            await audioService.setSelectedReciter(reciter.id);
-            final surah = surahToPlay ?? 1;
-            await audioService.playSurah(surah, reciterId: reciter.id);
-            if (context.mounted) Navigator.pop(context);
-          },
+          onTap: () => _showSurahPickerStream(context),
         ),
       ],
+    );
+  }
+
+  void _showSurahPickerStream(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: isDark ? const Color(0xFF1A1A1A) : Colors.white,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: DraggableScrollableSheet(
+          initialChildSize: 0.7,
+          maxChildSize: 0.95,
+          minChildSize: 0.4,
+          expand: false,
+          builder: (_, scrollCtrl) => Column(
+            children: [
+              const SizedBox(height: 12),
+              Container(
+                width: 40, height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey[400],
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                reciter.nameAr,
+                style: GoogleFonts.ibmPlexSansArabic(
+                  fontSize: 18, fontWeight: FontWeight.w800,
+                  color: isDark ? Colors.white : AppColors.darkGreen,
+                ),
+              ),
+              Text(
+                'اختر السورة للبث',
+                style: GoogleFonts.ibmPlexSansArabic(
+                  fontSize: 13, color: isDark ? Colors.white54 : AppColors.gray,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Expanded(
+                child: ListView.builder(
+                  controller: scrollCtrl,
+                  itemCount: 114,
+                  itemBuilder: (_, i) {
+                    final surahNum = i + 1;
+                    final isPlaying =
+                        audioService.state.currentSurah == surahNum &&
+                        audioService.state.currentReciterId == reciter.id &&
+                        audioService.state.isPlaying;
+                    return ListTile(
+                      leading: Container(
+                        width: 36, height: 36,
+                        decoration: BoxDecoration(
+                          color: isPlaying
+                              ? AppColors.darkGreen
+                              : AppColors.darkGreen.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Center(
+                          child: isPlaying
+                              ? const Icon(Icons.graphic_eq_rounded,
+                                  color: Colors.white, size: 16)
+                              : Text(
+                                  '$surahNum',
+                                  style: GoogleFonts.ibmPlexSansArabic(
+                                    color: AppColors.darkGreen,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                        ),
+                      ),
+                      title: Text(
+                        quran.getSurahNameArabic(surahNum),
+                        style: GoogleFonts.amiri(
+                          fontSize: 18,
+                          color: isDark ? Colors.white : AppColors.textPrimary,
+                          fontWeight: isPlaying ? FontWeight.w700 : FontWeight.w400,
+                        ),
+                      ),
+                      subtitle: Text(
+                        '${quran.getVerseCount(surahNum)} آية',
+                        style: GoogleFonts.ibmPlexSansArabic(
+                          fontSize: 11,
+                          color: isDark ? Colors.white38 : AppColors.gray,
+                        ),
+                      ),
+                      onTap: () async {
+                        Navigator.pop(ctx);
+                        await audioService.setSelectedReciter(reciter.id);
+                        await audioService.playSurah(surahNum, reciterId: reciter.id);
+                        if (context.mounted) Navigator.pop(context);
+                      },
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 

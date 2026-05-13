@@ -119,6 +119,7 @@ class WirdSession {
 }
 
 /// Service that manages daily wird tracking, streak calculation, and statistics.
+/// All data is scoped per userId — each account has completely separate records.
 class WirdService {
   static final WirdService _instance = WirdService._internal();
   factory WirdService() => _instance;
@@ -126,13 +127,14 @@ class WirdService {
 
   static const String _boxName = 'wird_tracking';
   static const String _settingsBoxName = 'wird_settings';
-  static const String _targetPagesKey = 'target_pages';
   static const String _activeSessionKey = 'active_session';
   static const String _sessionStartKey = 'session_start';
   static const String _sessionStartPageKey = 'session_start_page';
+  static const String _sessionUserKey = 'session_user';
 
   Box? _box;
   Box? _settingsBox;
+  String _currentUserId = '';
 
   Future<void> init() async {
     try {
@@ -152,6 +154,14 @@ class WirdService {
     }
   }
 
+  /// Must be called after login/logout to scope data to the correct user.
+  void setUserId(String userId) {
+    _currentUserId = userId;
+    developer.log('👤 WirdService userId set: $userId', name: 'WirdService');
+  }
+
+  bool get hasUser => _currentUserId.isNotEmpty;
+
   Box get _safeBox {
     if (_box == null || !_box!.isOpen) throw Exception('WirdService not initialized');
     return _box!;
@@ -164,12 +174,20 @@ class WirdService {
     return _settingsBox!;
   }
 
+  // ── User-scoped key helpers ───────────────────────────────────────────────
+
+  /// Prefix every storage key with userId so accounts never share data.
+  String _userKey(String key) => '${_currentUserId}_$key';
+
+  String _targetPagesKey() => _userKey('target_pages');
+
   // ── Settings ──────────────────────────────────────────────────────────────
 
-  int get targetPages => _settingsBox?.get(_targetPagesKey, defaultValue: 20) ?? 20;
+  int get targetPages =>
+      _settingsBox?.get(_targetPagesKey(), defaultValue: 20) ?? 20;
 
   Future<void> setTargetPages(int pages) async {
-    await _safeSettings.put(_targetPagesKey, pages);
+    await _safeSettings.put(_targetPagesKey(), pages);
   }
 
   // ── Date helpers ──────────────────────────────────────────────────────────
@@ -182,10 +200,12 @@ class WirdService {
   // ── Record access ─────────────────────────────────────────────────────────
 
   WirdDayRecord? getRecord(String dateKey) {
+    if (!hasUser) return null;
     try {
-      final raw = _safeBox.get(dateKey);
+      final raw = _safeBox.get(_userKey(dateKey));
       if (raw == null) return null;
-      return WirdDayRecord.fromJson(Map<String, dynamic>.from(jsonDecode(raw as String)));
+      return WirdDayRecord.fromJson(
+          Map<String, dynamic>.from(jsonDecode(raw as String)));
     } catch (e) {
       developer.log('❌ getRecord error: $e', name: 'WirdService');
       return null;
@@ -204,18 +224,22 @@ class WirdService {
   }
 
   Future<void> _saveRecord(WirdDayRecord record) async {
-    await _safeBox.put(record.date, jsonEncode(record.toJson()));
+    if (!hasUser) return;
+    await _safeBox.put(_userKey(record.date), jsonEncode(record.toJson()));
   }
 
   // ── Session tracking ──────────────────────────────────────────────────────
 
   /// Called when user enters the Quran reader page.
   Future<void> startReadingSession(int currentPage) async {
+    if (!hasUser) return;
     final now = DateTime.now().millisecondsSinceEpoch;
     await _safeSettings.put(_activeSessionKey, WirdSession.current);
     await _safeSettings.put(_sessionStartKey, now);
     await _safeSettings.put(_sessionStartPageKey, currentPage);
-    developer.log('📖 Wird session started at page $currentPage', name: 'WirdService');
+    await _safeSettings.put(_sessionUserKey, _currentUserId);
+    developer.log('📖 Wird session started at page $currentPage for user $_currentUserId',
+        name: 'WirdService');
   }
 
   /// Called when user leaves the Quran reader page.
@@ -225,34 +249,37 @@ class WirdService {
       final startMs = _settingsBox?.get(_sessionStartKey) as int?;
       final startPage = _settingsBox?.get(_sessionStartPageKey) as int?;
       final session = _settingsBox?.get(_activeSessionKey) as String?;
+      final sessionUser = _settingsBox?.get(_sessionUserKey) as String?;
 
       if (startMs == null || startPage == null || session == null) return 0;
+
+      // Don't credit if session belongs to a different user
+      if (sessionUser != null && sessionUser != _currentUserId) {
+        await _clearSessionData();
+        return 0;
+      }
 
       final durationMs = DateTime.now().millisecondsSinceEpoch - startMs;
       final durationMinutes = durationMs ~/ 60000;
 
-      // Clear session data
-      await _settingsBox?.delete(_activeSessionKey);
-      await _settingsBox?.delete(_sessionStartKey);
-      await _settingsBox?.delete(_sessionStartPageKey);
+      await _clearSessionData();
 
-      // Only credit if user spent at least 1 minute
       if (durationMinutes < 1) {
-        developer.log('⏱️ Session too short (${durationMinutes}min), not credited', name: 'WirdService');
+        developer.log('⏱️ Session too short (${durationMinutes}min), not credited',
+            name: 'WirdService');
         return 0;
       }
 
-      // Pages moved forward = pages read
       final pagesRead = (currentPage - startPage).abs();
       if (pagesRead <= 0) {
         developer.log('📄 No pages advanced, not credited', name: 'WirdService');
         return 0;
       }
 
-      // Update today's record
       final today = getTodayRecord();
       final updatedSessionPages = Map<String, int>.from(today.sessionPages);
-      updatedSessionPages[session] = (updatedSessionPages[session] ?? 0) + pagesRead;
+      updatedSessionPages[session] =
+          (updatedSessionPages[session] ?? 0) + pagesRead;
 
       final updated = today.copyWith(
         pagesRead: today.pagesRead + pagesRead,
@@ -271,8 +298,16 @@ class WirdService {
     }
   }
 
+  Future<void> _clearSessionData() async {
+    await _settingsBox?.delete(_activeSessionKey);
+    await _settingsBox?.delete(_sessionStartKey);
+    await _settingsBox?.delete(_sessionStartPageKey);
+    await _settingsBox?.delete(_sessionUserKey);
+  }
+
   /// Manually add pages (e.g., from a manual input).
   Future<void> addPages(int pages, {String? session}) async {
+    if (!hasUser) return;
     final today = getTodayRecord();
     final s = session ?? WirdSession.current;
     final updatedSessionPages = Map<String, int>.from(today.sessionPages);
@@ -287,23 +322,19 @@ class WirdService {
 
   // ── Streak calculation ────────────────────────────────────────────────────
 
-  /// Returns the current consecutive-day streak.
   int getCurrentStreak() {
+    if (!hasUser) return 0;
     int streak = 0;
     var date = DateTime.now();
 
-    // Check today first — if today is complete, count it
-    // If today is not complete yet, start checking from yesterday
     final todayRecord = getRecord(todayKey);
     if (todayRecord != null && todayRecord.isCompleted) {
       streak = 1;
       date = date.subtract(const Duration(days: 1));
     } else {
-      // Today not complete — check if yesterday was complete to show streak
       date = date.subtract(const Duration(days: 1));
     }
 
-    // Walk backwards
     for (int i = 0; i < 365; i++) {
       final key = _dateKey(date);
       final record = getRecord(key);
@@ -318,9 +349,16 @@ class WirdService {
     return streak;
   }
 
-  /// Returns the longest streak ever.
   int getLongestStreak() {
-    final keys = _safeBox.keys.cast<String>().toList()..sort();
+    if (!hasUser) return 0;
+    // Only iterate keys that belong to this user
+    final prefix = '${_currentUserId}_';
+    final keys = _safeBox.keys
+        .cast<String>()
+        .where((k) => k.startsWith(prefix))
+        .map((k) => k.substring(prefix.length))
+        .toList()
+      ..sort();
     if (keys.isEmpty) return 0;
 
     int longest = 0;
@@ -342,11 +380,7 @@ class WirdService {
         current = 1;
       } else {
         final diff = date.difference(prevDate).inDays;
-        if (diff == 1) {
-          current++;
-        } else {
-          current = 1;
-        }
+        current = diff == 1 ? current + 1 : 1;
       }
 
       if (current > longest) longest = current;
@@ -358,82 +392,69 @@ class WirdService {
 
   // ── Statistics ────────────────────────────────────────────────────────────
 
-  /// Total pages read across all time.
+  Iterable<String> get _userDateKeys {
+    if (!hasUser) return [];
+    final prefix = '${_currentUserId}_';
+    return _safeBox.keys
+        .cast<String>()
+        .where((k) => k.startsWith(prefix))
+        .map((k) => k.substring(prefix.length));
+  }
+
   int getTotalPagesRead() {
     int total = 0;
-    for (final key in _safeBox.keys) {
-      final record = getRecord(key as String);
-      if (record != null) total += record.pagesRead;
+    for (final key in _userDateKeys) {
+      total += getRecord(key)?.pagesRead ?? 0;
     }
     return total;
   }
 
-  /// Total minutes spent reading.
   int getTotalMinutes() {
     int total = 0;
-    for (final key in _safeBox.keys) {
-      final record = getRecord(key as String);
-      if (record != null) total += record.totalMinutes;
+    for (final key in _userDateKeys) {
+      total += getRecord(key)?.totalMinutes ?? 0;
     }
     return total;
   }
 
-  /// Total completed days.
   int getTotalCompletedDays() {
     int count = 0;
-    for (final key in _safeBox.keys) {
-      final record = getRecord(key as String);
-      if (record != null && record.isCompleted) count++;
+    for (final key in _userDateKeys) {
+      if (getRecord(key)?.isCompleted == true) count++;
     }
     return count;
   }
 
-  /// Pages read in the last N days (for chart).
   List<int> getLastNDayPages(int n) {
-    final result = <int>[];
-    for (int i = n - 1; i >= 0; i--) {
-      final date = DateTime.now().subtract(Duration(days: i));
-      final record = getRecord(_dateKey(date));
-      result.add(record?.pagesRead ?? 0);
-    }
-    return result;
+    return List.generate(n, (i) {
+      final date = DateTime.now().subtract(Duration(days: n - 1 - i));
+      return getRecord(_dateKey(date))?.pagesRead ?? 0;
+    });
   }
 
-  /// Total Quran parts (أجزاء) read — 1 juz = 20 pages.
   double getTotalJuzRead() => getTotalPagesRead() / 20.0;
-
-  /// Total hours spent reading.
   double getTotalHours() => getTotalMinutes() / 60.0;
 
-  /// Returns records for the last N days.
   List<WirdDayRecord> getLastNDayRecords(int n) {
-    final result = <WirdDayRecord>[];
-    for (int i = n - 1; i >= 0; i--) {
-      final date = DateTime.now().subtract(Duration(days: i));
+    return List.generate(n, (i) {
+      final date = DateTime.now().subtract(Duration(days: n - 1 - i));
       final key = _dateKey(date);
-      result.add(
-        getRecord(key) ??
-            WirdDayRecord(
-              date: key,
-              pagesRead: 0,
-              targetPages: targetPages,
-              sessionPages: {},
-              totalMinutes: 0,
-            ),
-      );
-    }
-    return result;
+      return getRecord(key) ??
+          WirdDayRecord(
+            date: key,
+            pagesRead: 0,
+            targetPages: targetPages,
+            sessionPages: {},
+            totalMinutes: 0,
+          );
+    });
   }
 
-  /// Check if a specific session has been completed today.
   bool isSessionDoneToday(String session) {
-    final today = getTodayRecord();
-    final sessionPages = today.sessionPages[session] ?? 0;
-    return sessionPages >= 5; // 5 pages per session = done
+    if (!hasUser) return false;
+    return (getTodayRecord().sessionPages[session] ?? 0) >= 5;
   }
 
-  /// How many sessions are done today.
-  int completedSessionsToday() {
-    return WirdSession.all.where(isSessionDoneToday).length;
-  }
+  int completedSessionsToday() =>
+      WirdSession.all.where(isSessionDoneToday).length;
 }

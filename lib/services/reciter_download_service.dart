@@ -174,8 +174,20 @@ class ReciterDownloadService extends ChangeNotifier {
     int surahNumber,
     CancelToken cancelToken,
   ) async {
-    final url =
-        'https://cdn.islamic.network/quran/audio-surah/128/$cdnId/$surahNumber.mp3';
+    // Use mp3quran.net server if available (more reliable than cdn.islamic.network)
+    final reciter = QuranAudioService.reciters.firstWhere(
+      (r) => r.id == reciterId,
+      orElse: () => QuranAudioService.reciters.first,
+    );
+
+    final String url;
+    if (reciter.mp3QuranServer != null) {
+      final padded = surahNumber.toString().padLeft(3, '0');
+      url = '${reciter.mp3QuranServer}$padded.mp3';
+    } else {
+      url = 'https://cdn.islamic.network/quran/audio-surah/128/$cdnId/$surahNumber.mp3';
+    }
+
     final savePath = await _getLocalPath(reciterId, surahNumber);
 
     // Ensure directory exists
@@ -232,10 +244,14 @@ class ReciterDownloadService extends ChangeNotifier {
   }
 
   /// Refresh download state from disk (call on app start).
+  /// Does NOT overwrite an active download state.
   Future<void> refreshState(String reciterId) async {
     final reciter = QuranAudioService.reciters
         .firstWhere((r) => r.id == reciterId, orElse: () => QuranAudioService.reciters.first);
     if (reciter.type == ReciterType.snippets) return;
+
+    // Don't overwrite an active download — it has the live count
+    if (stateFor(reciterId).isDownloading) return;
 
     int count = 0;
     for (int i = 1; i <= 114; i++) {

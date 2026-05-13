@@ -61,7 +61,146 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
 
   Future<void> _startWirdSession() async {
     await _wirdService.init();
-    await _wirdService.startReadingSession(_currentPage + 1);
+    if (_wirdService.hasUser) {
+      await _wirdService.startReadingSession(_currentPage + 1);
+    }
+  }
+
+  /// Manual wird log — shows a bottom sheet to record pages read.
+  void _showWirdLogSheet() {
+    if (!_wirdService.hasUser) return;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final today = _wirdService.getTodayRecord();
+    int pagesToAdd = 1;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: isDark ? const Color(0xFF1A1F1C) : Colors.white,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSheet) => Directionality(
+          textDirection: TextDirection.rtl,
+          child: Padding(
+            padding: EdgeInsets.only(
+              left: 24, right: 24, top: 20,
+              bottom: MediaQuery.of(ctx).viewInsets.bottom + 24,
+            ),
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              Container(
+                width: 40, height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Row(children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppColors.darkGreen.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(Icons.auto_stories_rounded,
+                      color: AppColors.darkGreen, size: 20),
+                ),
+                const SizedBox(width: 12),
+                Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text('تسجيل الورد اليومي',
+                      style: GoogleFonts.ibmPlexSansArabic(
+                          fontSize: 16, fontWeight: FontWeight.w800,
+                          color: isDark ? Colors.white : AppColors.darkGreen)),
+                  Text('قرأت ${today.pagesRead}/${today.targetPages} صفحة اليوم',
+                      style: GoogleFonts.ibmPlexSansArabic(
+                          fontSize: 12,
+                          color: isDark ? Colors.white54 : AppColors.gray)),
+                ])),
+              ]),
+              const SizedBox(height: 20),
+              Text('كم صفحة قرأت الآن؟',
+                  style: GoogleFonts.ibmPlexSansArabic(
+                      fontSize: 14, fontWeight: FontWeight.w600,
+                      color: isDark ? Colors.white : AppColors.textPrimary)),
+              const SizedBox(height: 14),
+              Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                _stepBtn(Icons.remove_rounded, isDark, () {
+                  if (pagesToAdd > 1) setSheet(() => pagesToAdd--);
+                }),
+                const SizedBox(width: 20),
+                Text('$pagesToAdd',
+                    style: GoogleFonts.ibmPlexSansArabic(
+                        fontSize: 36, fontWeight: FontWeight.w900,
+                        color: isDark ? Colors.white : AppColors.darkGreen)),
+                const SizedBox(width: 20),
+                _stepBtn(Icons.add_rounded, isDark, () {
+                  setSheet(() => pagesToAdd++);
+                }),
+              ]),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                children: [1, 2, 3, 5, 10].map((n) => ActionChip(
+                  label: Text('$n',
+                      style: GoogleFonts.ibmPlexSansArabic(
+                          fontSize: 13, fontWeight: FontWeight.w700,
+                          color: pagesToAdd == n ? Colors.white : null)),
+                  backgroundColor: pagesToAdd == n
+                      ? AppColors.darkGreen
+                      : (isDark ? Colors.white.withValues(alpha: 0.08) : AppColors.paleGreen),
+                  onPressed: () => setSheet(() => pagesToAdd = n),
+                )).toList(),
+              ),
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                height: 50,
+                child: ElevatedButton.icon(
+                  onPressed: () async {
+                    await _wirdService.addPages(pagesToAdd);
+                    if (ctx.mounted) Navigator.pop(ctx);
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                        content: Text(
+                          'تم تسجيل $pagesToAdd صفحة في وردك اليومي',
+                          style: GoogleFonts.ibmPlexSansArabic(color: Colors.white),
+                        ),
+                        backgroundColor: AppColors.darkGreen,
+                        duration: const Duration(seconds: 2),
+                      ));
+                    }
+                  },
+                  icon: const Icon(Icons.check_rounded, color: Colors.white),
+                  label: Text('تسجيل $pagesToAdd صفحة',
+                      style: GoogleFonts.ibmPlexSansArabic(
+                          fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.darkGreen,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  ),
+                ),
+              ),
+            ]),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _stepBtn(IconData icon, bool isDark, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 40, height: 40,
+        decoration: BoxDecoration(
+          color: isDark ? Colors.white.withValues(alpha: 0.1) : AppColors.paleGreen,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: AppColors.darkGreen.withValues(alpha: 0.3)),
+        ),
+        child: Icon(icon, color: AppColors.darkGreen, size: 22),
+      ),
+    );
   }
 
   @override
@@ -74,6 +213,7 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
   }
 
   void _endWirdSession() {
+    if (!_wirdService.hasUser) return;
     _wirdService.endReadingSession(_currentPage + 1).then((pagesRead) async {
       if (pagesRead >= 5) {
         final session = WirdSession.current;
@@ -81,7 +221,6 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
         if (!wasAlreadyDone) {
           await WirdNotificationService().showSessionCompletedNotification(session);
         }
-        // Check streak milestone
         final streak = _wirdService.getCurrentStreak();
         await WirdNotificationService().showStreakMilestone(streak);
       }
@@ -176,6 +315,23 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
               ),
             ),
           ),
+          // Wird log button — only for logged-in users
+          if (_wirdService.hasUser)
+            GestureDetector(
+              onTap: _showWirdLogSheet,
+              child: Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: AppColors.gold.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(
+                  Icons.auto_stories_rounded,
+                  color: AppColors.gold,
+                  size: 18,
+                ),
+              ),
+            ),
         ],
       ),
     );
