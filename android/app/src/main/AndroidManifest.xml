@@ -64,6 +64,17 @@
             android:name="com.ryanheise.audioservice.AudioService"
             android:foregroundServiceType="mediaPlayback"
             android:exported="false" />
+
+        <!-- Native Azan alarm receiver -->
+        <receiver
+            android:name=".AzanAlarmReceiver"
+            android:exported="false" />
+
+        <!-- Native Azan player foreground service -->
+        <service
+            android:name=".AzanPlayerService"
+            android:foregroundServiceType="mediaPlayback"
+            android:exported="false" />
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and

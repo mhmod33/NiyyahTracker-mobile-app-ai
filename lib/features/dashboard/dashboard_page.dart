@@ -719,7 +719,7 @@ class _DashboardPageState extends State<DashboardPage> with WidgetsBindingObserv
                 style: _f(sz: 12, c: Colors.white70),
               ),
               Row(children: WirdSession.all.map((s) {
-                final done = (record.sessionPages[s] ?? 0) >= 5;
+                final done = (record.sessionPages[s] ?? 0) >= record.pagesPerSession;
                 return Padding(
                   padding: const EdgeInsets.only(right: 6),
                   child: Icon(

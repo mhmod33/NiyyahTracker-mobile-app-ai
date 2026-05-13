@@ -215,7 +215,7 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
   void _endWirdSession() {
     if (!_wirdService.hasUser) return;
     _wirdService.endReadingSession(_currentPage + 1).then((pagesRead) async {
-      if (pagesRead >= 5) {
+      if (pagesRead >= _wirdService.getTodayRecord().pagesPerSession) {
         final session = WirdSession.current;
         final wasAlreadyDone = _wirdService.isSessionDoneToday(session);
         if (!wasAlreadyDone) {

@@ -402,12 +402,12 @@ class _DailyWirdPageState extends State<DailyWirdPage> with TickerProviderStateM
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Text('جلسات الورد اليومي', style: _f(sz: 15, fw: FontWeight.w800, c: isDark ? Colors.white : AppColors.darkGreen)),
-        Text('5 صفحات لكل جلسة', style: _f(sz: 12, c: isDark ? Colors.white54 : AppColors.gray)),
+        Text('${record.pagesPerSession} صفحات لكل جلسة', style: _f(sz: 12, c: isDark ? Colors.white54 : AppColors.gray)),
         const SizedBox(height: 14),
         Row(
           children: WirdSession.all.map((session) {
             final pages = record.sessionPages[session] ?? 0;
-            final isDone = pages >= 5;
+            final isDone = pages >= record.pagesPerSession;
             final isCurrent = WirdSession.current == session;
             return Expanded(
               child: GestureDetector(
@@ -460,7 +460,7 @@ class _DailyWirdPageState extends State<DailyWirdPage> with TickerProviderStateM
                     isDone
                         ? const Icon(Icons.check_rounded, size: 14, color: Colors.white70)
                         : Text(
-                            '$pages/5',
+                            '$pages/${record.pagesPerSession}',
                             style: _f(
                               sz: 10,
                               fw: FontWeight.w600,
@@ -622,7 +622,7 @@ class _DailyWirdPageState extends State<DailyWirdPage> with TickerProviderStateM
   }
 
   void _showSettingsSheet(bool isDark) {
-    final targetOptions = [5, 10, 15, 20, 25, 30];
+    final targetOptions = [5, 10, 20, 30, 40, 60];
     int selectedTarget = _wirdService.targetPages;
     bool notifsEnabled = WirdNotificationService().notificationsEnabled;
     final TextEditingController customController = TextEditingController();

@@ -20,7 +20,11 @@ class WirdDayRecord {
     required this.totalMinutes,
   });
 
-  bool get isCompleted => pagesRead >= targetPages;
+  int get pagesPerSession => (targetPages / WirdSession.all.length).ceil();
+
+  bool get isCompleted =>
+      pagesRead >= targetPages &&
+      WirdSession.all.every((s) => (sessionPages[s] ?? 0) >= pagesPerSession);
 
   double get progress => targetPages > 0 ? (pagesRead / targetPages).clamp(0.0, 1.0) : 0.0;
 
@@ -452,7 +456,8 @@ class WirdService {
 
   bool isSessionDoneToday(String session) {
     if (!hasUser) return false;
-    return (getTodayRecord().sessionPages[session] ?? 0) >= 5;
+    final today = getTodayRecord();
+    return (today.sessionPages[session] ?? 0) >= today.pagesPerSession;
   }
 
   int completedSessionsToday() =>

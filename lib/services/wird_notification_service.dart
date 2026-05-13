@@ -83,7 +83,7 @@ class WirdNotificationService {
       hour: 5,
       minute: 30,
       title: 'وقت ورد الصبح',
-      body: 'ابدأ يومك بقراءة 5 صفحات من القرآن الكريم',
+      body: 'ابدأ يومك بقراءة ${WirdService().getTodayRecord().pagesPerSession} صفحات من القرآن الكريم',
     );
 
     await _scheduleSessionReminder(
