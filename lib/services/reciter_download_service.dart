@@ -94,7 +94,7 @@ class ReciterDownloadService extends ChangeNotifier {
     // Count already downloaded surahs
     int alreadyDone = 0;
     for (int i = 1; i <= 114; i++) {
-      if (await QuranAudioService().isSurahDownloaded(reciterId, i)) alreadyDone++;
+      if (await _isSurahValid(reciterId, i)) alreadyDone++;
     }
 
     _states[reciterId] = ReciterDownloadState(
@@ -120,7 +120,7 @@ class ReciterDownloadService extends ChangeNotifier {
       }
 
       // Skip already downloaded
-      if (await QuranAudioService().isSurahDownloaded(reciterId, surah)) continue;
+      if (await _isSurahValid(reciterId, surah)) continue;
 
       _states[reciterId] = _states[reciterId]!.copyWith(
         currentSurah: surah,
@@ -208,6 +208,15 @@ class ReciterDownloadService extends ChangeNotifier {
     return '${dir.path}/quran_audio/$reciterId/$paddedNum.mp3';
   }
 
+  /// Check if a surah file exists and is non-empty (> 10 KB).
+  Future<bool> _isSurahValid(String reciterId, int surahNumber) async {
+    final path = await _getLocalPath(reciterId, surahNumber);
+    final file = File(path);
+    if (!await file.exists()) return false;
+    final size = await file.length();
+    return size > 10240; // > 10 KB — rules out empty/corrupt files
+  }
+
   // ── Cancel ────────────────────────────────────────────────────────────────
 
   void cancelDownload(String reciterId) {
@@ -255,7 +264,7 @@ class ReciterDownloadService extends ChangeNotifier {
 
     int count = 0;
     for (int i = 1; i <= 114; i++) {
-      if (await QuranAudioService().isSurahDownloaded(reciterId, i)) count++;
+      if (await _isSurahValid(reciterId, i)) count++;
     }
     _states[reciterId] = ReciterDownloadState(
       downloadedCount: count,

@@ -459,8 +459,7 @@ class _FullReciterCard extends StatelessWidget {
     final isSelected = audioService.selectedReciterId == reciter.id;
     final isPlaying = audioService.state.currentReciterId == reciter.id &&
         audioService.state.isPlaying;
-    // Consider "ready" if at least 1 surah is downloaded (partial is still usable)
-    final isFullyDownloaded = dlState.downloadedCount == 114;
+    final isFullyDownloaded = !dlState.isDownloading && dlState.downloadedCount == 114;
     final hasAnyDownloaded = dlState.downloadedCount > 0;
     final estimatedMb = ReciterDownloadService.estimatedSizeMb[reciter.id] ?? 650;
 
@@ -582,9 +581,10 @@ class _StatusBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Priority: downloading > fully done > partial > not started
     if (dlState.isDownloading) {
       return _badge(
-        'جاري التحميل ${dlState.downloadedCount}/114 سورة...',
+        'جاري التحميل ${dlState.downloadedCount}/114...',
         AppColors.darkGreen,
       );
     }
