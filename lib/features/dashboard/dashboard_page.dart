@@ -2,6 +2,7 @@ import 'dart:math';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart' as uuid;
 import '../../core/app_colors.dart';
@@ -32,6 +33,8 @@ import '../../widgets/mini_player.dart';
 import '../quran/reciter_library_page.dart';
 import '../wird/daily_wird_page.dart';
 import '../../services/wird_service.dart';
+import '../hajj/hajj_page.dart';
+import '../ramadan/ramadan_page.dart';
 
 TextStyle _f({double sz = 14, FontWeight fw = FontWeight.w400, Color? c, double? h}) =>
     GoogleFonts.ibmPlexSansArabic(fontSize: sz, fontWeight: fw, color: c, height: h);
@@ -44,6 +47,7 @@ class DashboardPage extends StatefulWidget {
 }
 
 class _DashboardPageState extends State<DashboardPage> with WidgetsBindingObserver {
+  static const String _showAzkarPrefKey = 'show_dashboard_azkar';
   int _currentIndex = 0;
   bool _showAzkar = true;
   bool _fajrChecked = false;
@@ -62,9 +66,35 @@ class _DashboardPageState extends State<DashboardPage> with WidgetsBindingObserv
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _loadAzkarPref();
     _checkTodayAccountability();
     _loadTodaySummary();
     _loadWirdData();
+  }
+
+  Future<void> _loadAzkarPref() async {
+    try {
+      final box = Hive.isBoxOpen('user_preferences')
+          ? Hive.box('user_preferences')
+          : await Hive.openBox('user_preferences');
+      if (mounted) {
+        setState(() {
+          _showAzkar = box.get(_showAzkarPrefKey, defaultValue: true) as bool;
+        });
+      }
+    } catch (_) {
+      // Fall back to default true if Hive isn't ready
+    }
+  }
+
+  Future<void> _setShowAzkar(bool value) async {
+    setState(() => _showAzkar = value);
+    try {
+      final box = Hive.isBoxOpen('user_preferences')
+          ? Hive.box('user_preferences')
+          : await Hive.openBox('user_preferences');
+      await box.put(_showAzkarPrefKey, value);
+    } catch (_) {}
   }
 
   @override
@@ -91,6 +121,11 @@ class _DashboardPageState extends State<DashboardPage> with WidgetsBindingObserv
       return;
     }
     await _wirdService.init();
+    // Scope wird storage to the current user so reads/writes hit the right keys.
+    final userId = context.read<AppAuthProvider>().userId;
+    if (userId.isNotEmpty) {
+      _wirdService.setUserId(userId);
+    }
     if (mounted) {
       setState(() {
         _wirdRecord = _wirdService.getTodayRecord();
@@ -263,7 +298,8 @@ class _DashboardPageState extends State<DashboardPage> with WidgetsBindingObserv
             if (_showAzkar) ...[
               SliverToBoxAdapter(child: _SectionTitle(title: 'ذكر اليوم', icon: Icons.auto_awesome_rounded)),
               SliverToBoxAdapter(child: _buildRotatingAzkar(isDark)),
-            ],
+            ] else
+              SliverToBoxAdapter(child: _buildAzkarSettingsButton(isDark)),
 
             // ── Today's Focus Section (only for logged-in users) ──
             if (!isGuest) ...[
@@ -318,6 +354,8 @@ class _DashboardPageState extends State<DashboardPage> with WidgetsBindingObserv
                   _FeatureCard(icon: Icons.analytics_rounded, label: 'التحليلات', color: Colors.deepPurple, isDark: isDark, onTap: () => _toProtected(const AnalyticsPage())),
                   _FeatureCard(icon: Icons.emoji_events_rounded, label: 'التحديات', color: Colors.orange, isDark: isDark, onTap: () => _toProtected(const ChallengesPage())),
                   _FeatureCard(icon: Icons.description_rounded, label: 'التقارير', color: Colors.blueGrey, isDark: isDark, onTap: () => _toProtected(const ReportsPage())),
+                  _FeatureCard(icon: Icons.nights_stay_rounded, label: 'مود رمضان', color: Colors.indigo, isDark: isDark, onTap: () => _to(const RamadanPage())),
+                  _FeatureCard(icon: Icons.mosque_rounded, label: 'مود الحج', color: const Color(0xFF8D6E00), isDark: isDark, onTap: () => _to(const HajjPage())),
                 ],
               ),
             ),
@@ -413,6 +451,59 @@ class _DashboardPageState extends State<DashboardPage> with WidgetsBindingObserv
     );
   }
 
+  Widget _buildAzkarSettingsButton(bool isDark) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        decoration: BoxDecoration(
+          color: isDark
+              ? Colors.white.withValues(alpha: 0.05)
+              : AppColors.paleGreen.withValues(alpha: 0.5),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+              color: AppColors.gold.withValues(alpha: 0.35), width: 1),
+        ),
+        child: Row(children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: AppColors.gold.withValues(alpha: 0.15),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.auto_awesome_rounded,
+                color: AppColors.gold, size: 18),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('ذكر اليوم مخفي',
+                    style: _f(
+                        sz: 14,
+                        fw: FontWeight.w800,
+                        c: isDark ? Colors.white : AppColors.darkGreen)),
+                Text('يمكنك إظهار الأذكار المقترحة في الصفحة الرئيسية',
+                    style: _f(
+                        sz: 11,
+                        c: isDark ? Colors.white60 : AppColors.gray)),
+              ],
+            ),
+          ),
+          TextButton.icon(
+            onPressed: () => _setShowAzkar(true),
+            icon: const Icon(Icons.visibility_rounded, size: 16),
+            label: Text('إظهار',
+                style:
+                    _f(sz: 13, fw: FontWeight.w700, c: AppColors.darkGreen)),
+            style: TextButton.styleFrom(foregroundColor: AppColors.darkGreen),
+          ),
+        ]),
+      ),
+    );
+  }
+
   Widget _buildRotatingAzkar(bool isDark) {
     // Pick random azkar that change on each app open
     final allAzkar = <Dhikr>[
@@ -481,7 +572,7 @@ class _DashboardPageState extends State<DashboardPage> with WidgetsBindingObserv
               left: -10,
               child: IconButton(
                 icon: Icon(Icons.close_rounded, size: 20, color: isDark ? Colors.white54 : AppColors.darkGreen.withOpacity(0.5)),
-                onPressed: () => setState(() => _showAzkar = false),
+                onPressed: () => _setShowAzkar(false),
                 splashRadius: 20,
               ),
             ),

@@ -13,7 +13,36 @@ class SnippetTrack {
   final String title;
   final String assetPath;
 
-  const SnippetTrack({required this.title, required this.assetPath});
+  /// Optional absolute file path (for user-uploaded tracks).
+  /// When non-null this takes precedence over [assetPath].
+  final String? filePath;
+
+  /// Optional reciter id for tracks that the user uploaded under a custom
+  /// reciter name. Used to group tracks by reciter at runtime.
+  final String? reciterId;
+
+  const SnippetTrack({
+    required this.title,
+    required this.assetPath,
+    this.filePath,
+    this.reciterId,
+  });
+
+  bool get isUserUploaded => filePath != null;
+
+  Map<String, dynamic> toJson() => {
+        'title': title,
+        'assetPath': assetPath,
+        'filePath': filePath,
+        'reciterId': reciterId,
+      };
+
+  factory SnippetTrack.fromJson(Map<String, dynamic> json) => SnippetTrack(
+        title: json['title'] as String,
+        assetPath: (json['assetPath'] as String?) ?? '',
+        filePath: json['filePath'] as String?,
+        reciterId: json['reciterId'] as String?,
+      );
 }
 
 // ─── Reciter Model ───────────────────────────────────────────────────────────
@@ -107,7 +136,8 @@ class QuranAudioService extends ChangeNotifier {
 
   // ── Available Reciters ────────────────────────────────────────────────────
 
-  static const List<Reciter> reciters = [
+  /// Built-in reciters bundled with the app.
+  static const List<Reciter> _builtInReciters = [
     // ── Snippets (bundled in assets — available immediately) ──
     Reciter(
       id: 'snippets_ahmed_fouad',
@@ -170,10 +200,17 @@ class QuranAudioService extends ChangeNotifier {
     ),
   ];
 
+  /// User-added custom reciters (loaded from Hive).
+  static List<Reciter> _customReciters = const [];
+
+  /// All reciters: built-in + custom.
+  static List<Reciter> get reciters => [..._builtInReciters, ..._customReciters];
+
   // ── Settings Keys ─────────────────────────────────────────────────────────
 
   static const String _selectedReciterKey = 'quran_selected_reciter';
   static const String _lastSurahKey = 'quran_last_surah';
+  static const String _customRecitersKey = 'quran_custom_reciters';
 
   // ── Init ──────────────────────────────────────────────────────────────────
 
@@ -210,6 +247,9 @@ class QuranAudioService extends ChangeNotifier {
     } else {
       _settingsBox = Hive.box('quran_audio_settings');
     }
+
+    // Load any user-uploaded custom snippet reciters from storage.
+    _loadCustomReciters();
 
     // Subscribe to player streams
     _playerStateSub = _player.playerStateStream.listen((ps) {
@@ -314,8 +354,13 @@ class QuranAudioService extends ChangeNotifier {
     }
     final safeIndex = trackIndex.clamp(0, tracks.length - 1);
     final track = tracks[safeIndex];
-    developer.log('▶️ Playing snippet: ${track.assetPath}', name: 'QuranAudio');
-    await _player.setAsset(track.assetPath);
+    if (track.isUserUploaded) {
+      developer.log('▶️ Playing user snippet: ${track.filePath}', name: 'QuranAudio');
+      await _player.setFilePath(track.filePath!);
+    } else {
+      developer.log('▶️ Playing snippet: ${track.assetPath}', name: 'QuranAudio');
+      await _player.setAsset(track.assetPath);
+    }
     await _player.play();
   }
 
@@ -450,6 +495,196 @@ class QuranAudioService extends ChangeNotifier {
     }
     notifyListeners();
   }
+
+  // ── Custom (user-uploaded) snippet reciters ──────────────────────────────
+
+  /// Returns a stable id for a custom reciter built from the user-supplied name.
+  String _customReciterId(String name) {
+    final slug = name
+        .trim()
+        .toLowerCase()
+        .replaceAll(RegExp(r'\s+'), '_')
+        .replaceAll(RegExp(r"[^a-z0-9_\u0600-\u06FF]"), '');
+    return 'custom_${slug.isEmpty ? DateTime.now().millisecondsSinceEpoch.toString() : slug}';
+  }
+
+  /// Load custom reciters from Hive into [_customReciters].
+  void _loadCustomReciters() {
+    try {
+      final raw =
+          _settingsBox.get(_customRecitersKey, defaultValue: <dynamic>[]);
+      final list = (raw as List).map((e) {
+        final m = Map<String, dynamic>.from(e as Map);
+        final tracksRaw = (m['tracks'] as List?) ?? const [];
+        final tracks = tracksRaw
+            .map((t) =>
+                SnippetTrack.fromJson(Map<String, dynamic>.from(t as Map)))
+            .toList();
+        return Reciter(
+          id: m['id'] as String,
+          nameAr: m['nameAr'] as String,
+          nameEn: (m['nameEn'] as String?) ?? '',
+          description:
+              (m['description'] as String?) ?? 'مقتطفات من رفع المستخدم',
+          type: ReciterType.snippets,
+          snippetTracks: tracks,
+        );
+      }).toList();
+      _customReciters = list;
+      developer.log('📚 Loaded ${list.length} custom reciters',
+          name: 'QuranAudio');
+    } catch (e) {
+      developer.log('⚠️ Failed to load custom reciters: $e',
+          name: 'QuranAudio');
+      _customReciters = const [];
+    }
+  }
+
+  Future<void> _persistCustomReciters() async {
+    final list = _customReciters
+        .map((r) => {
+              'id': r.id,
+              'nameAr': r.nameAr,
+              'nameEn': r.nameEn,
+              'description': r.description,
+              'tracks': (r.snippetTracks ?? const [])
+                  .map((t) => t.toJson())
+                  .toList(),
+            })
+        .toList();
+    await _settingsBox.put(_customRecitersKey, list);
+    await _settingsBox.flush();
+  }
+
+  /// Add a user-uploaded snippet track. The mp3 at [sourceFilePath] is copied
+  /// into the app's documents directory under the reciter's folder.
+  /// If a reciter with [reciterName] doesn't exist, it's created.
+  Future<Reciter> addUserSnippet({
+    required String reciterName,
+    required String trackTitle,
+    required String sourceFilePath,
+  }) async {
+    if (!_initialized) await init();
+
+    final id = _customReciterId(reciterName);
+    final dir = await getApplicationDocumentsDirectory();
+    final reciterDir = Directory('${dir.path}/quran_audio/snippets/$id');
+    if (!await reciterDir.exists()) {
+      await reciterDir.create(recursive: true);
+    }
+
+    // Copy the source file into our managed directory.
+    final src = File(sourceFilePath);
+    final ext = sourceFilePath.contains('.')
+        ? sourceFilePath.split('.').last.toLowerCase()
+        : 'mp3';
+    final fileName =
+        '${DateTime.now().millisecondsSinceEpoch}_${trackTitle.replaceAll(RegExp(r"\s+"), '_')}.$ext';
+    final destPath = '${reciterDir.path}/$fileName';
+    await src.copy(destPath);
+
+    final newTrack = SnippetTrack(
+      title: trackTitle,
+      assetPath: '',
+      filePath: destPath,
+      reciterId: id,
+    );
+
+    // Either append to existing custom reciter or create a new one.
+    final existingIdx = _customReciters.indexWhere((r) => r.id == id);
+    if (existingIdx >= 0) {
+      final existing = _customReciters[existingIdx];
+      final tracks = [...?existing.snippetTracks, newTrack];
+      _customReciters[existingIdx] = Reciter(
+        id: existing.id,
+        nameAr: existing.nameAr,
+        nameEn: existing.nameEn,
+        description: existing.description,
+        type: ReciterType.snippets,
+        snippetTracks: tracks,
+      );
+    } else {
+      _customReciters = [
+        ..._customReciters,
+        Reciter(
+          id: id,
+          nameAr: reciterName,
+          nameEn: '',
+          description: 'مقتطفات من رفع المستخدم',
+          type: ReciterType.snippets,
+          snippetTracks: [newTrack],
+        ),
+      ];
+    }
+
+    await _persistCustomReciters();
+    notifyListeners();
+    return _customReciters.firstWhere((r) => r.id == id);
+  }
+
+  /// Remove a single track from a custom reciter (and delete its file).
+  Future<void> removeUserSnippet(String reciterId, int trackIndex) async {
+    final idx = _customReciters.indexWhere((r) => r.id == reciterId);
+    if (idx < 0) return;
+    final reciter = _customReciters[idx];
+    final tracks = [...?reciter.snippetTracks];
+    if (trackIndex < 0 || trackIndex >= tracks.length) return;
+
+    final removed = tracks.removeAt(trackIndex);
+    if (removed.filePath != null) {
+      try {
+        final f = File(removed.filePath!);
+        if (await f.exists()) await f.delete();
+      } catch (_) {}
+    }
+
+    if (tracks.isEmpty) {
+      _customReciters = [..._customReciters]..removeAt(idx);
+    } else {
+      _customReciters[idx] = Reciter(
+        id: reciter.id,
+        nameAr: reciter.nameAr,
+        nameEn: reciter.nameEn,
+        description: reciter.description,
+        type: ReciterType.snippets,
+        snippetTracks: tracks,
+      );
+    }
+
+    await _persistCustomReciters();
+    notifyListeners();
+  }
+
+  /// Remove an entire custom reciter and all of its files.
+  Future<void> removeCustomReciter(String reciterId) async {
+    final idx = _customReciters.indexWhere((r) => r.id == reciterId);
+    if (idx < 0) return;
+    final reciter = _customReciters[idx];
+    for (final t in reciter.snippetTracks ?? const []) {
+      if (t.filePath != null) {
+        try {
+          final f = File(t.filePath!);
+          if (await f.exists()) await f.delete();
+        } catch (_) {}
+      }
+    }
+    final dir = await getApplicationDocumentsDirectory();
+    final folder = Directory('${dir.path}/quran_audio/snippets/$reciterId');
+    if (await folder.exists()) {
+      try {
+        await folder.delete(recursive: true);
+      } catch (_) {}
+    }
+    _customReciters = [..._customReciters]..removeAt(idx);
+    await _persistCustomReciters();
+    notifyListeners();
+  }
+
+  /// Names of existing custom reciters (used for the "select reciter" picker).
+  List<String> get customReciterNames =>
+      _customReciters.map((r) => r.nameAr).toList();
+
+  bool get hasCustomReciters => _customReciters.isNotEmpty;
 
   @override
   void dispose() {

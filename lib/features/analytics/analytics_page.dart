@@ -125,7 +125,8 @@ class _AnalyticsPageState extends State<AnalyticsPage> with SingleTickerProvider
         _summaryCards(isDark),
         const SizedBox(height: 20),
         _chartCard(
-          title: '🕌 الصلوات اليومية (من ٥)',
+          title: 'الصلوات اليومية (من ٥)',
+          titleIcon: Icons.mosque_rounded,
           data: _prayerData,
           maxY: 5,
           color: AppColors.lightGreen,
@@ -133,7 +134,8 @@ class _AnalyticsPageState extends State<AnalyticsPage> with SingleTickerProvider
         ),
         const SizedBox(height: 16),
         _chartCard(
-          title: '📖 صفحات القرآن اليومية',
+          title: 'صفحات القرآن اليومية',
+          titleIcon: Icons.menu_book_rounded,
           data: _quranData,
           maxY: 25,
           color: AppColors.gold,
@@ -141,7 +143,8 @@ class _AnalyticsPageState extends State<AnalyticsPage> with SingleTickerProvider
         ),
         const SizedBox(height: 16),
         _chartCard(
-          title: '📿 الأذكار (يوم مكتمل = ١)',
+          title: 'الأذكار (يوم مكتمل = ١)',
+          titleIcon: Icons.front_hand_rounded,
           data: _dhikrData,
           maxY: 1,
           color: AppColors.midGreen,
@@ -165,16 +168,16 @@ class _AnalyticsPageState extends State<AnalyticsPage> with SingleTickerProvider
   Widget _summaryCards(bool isDark) {
     return Row(
       children: [
-        Expanded(child: _miniStat(label: 'إجمالي الصلوات', value: '$_completedPrayers', icon: '🕌', isDark: isDark)),
+        Expanded(child: _miniStat(label: 'إجمالي الصلوات', value: '$_completedPrayers', icon: Icons.mosque_rounded, isDark: isDark)),
         const SizedBox(width: 10),
-        Expanded(child: _miniStat(label: 'صفحات القرآن', value: '$_totalQuranPages', icon: '📖', isDark: isDark)),
+        Expanded(child: _miniStat(label: 'صفحات القرآن', value: '$_totalQuranPages', icon: Icons.menu_book_rounded, isDark: isDark)),
         const SizedBox(width: 10),
-        Expanded(child: _miniStat(label: 'أيام النشاط', value: '$_streak يوم', icon: '🔥', isDark: isDark)),
+        Expanded(child: _miniStat(label: 'أيام النشاط', value: '$_streak يوم', icon: Icons.local_fire_department_rounded, isDark: isDark)),
       ],
     );
   }
 
-  Widget _miniStat({required String label, required String value, required String icon, required bool isDark}) {
+  Widget _miniStat({required String label, required String value, required IconData icon, required bool isDark}) {
     final cardBg = isDark ? const Color(0xFF1E1E1E) : Colors.white;
     final borderColor = isDark ? Colors.white12 : AppColors.paleGreen;
     final valueColor = isDark ? Colors.white : AppColors.darkGreen;
@@ -189,7 +192,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> with SingleTickerProvider
       ),
       child: Column(
         children: [
-          Text(icon, style: const TextStyle(fontSize: 20)),
+          Icon(icon, color: AppColors.gold, size: 22),
           const SizedBox(height: 4),
           Text(value, style: GoogleFonts.ibmPlexSansArabic(fontWeight: FontWeight.bold, fontSize: 14, color: valueColor)),
           Text(label, style: GoogleFonts.ibmPlexSansArabic(fontSize: 10, color: labelColor), textAlign: TextAlign.center),
@@ -198,7 +201,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> with SingleTickerProvider
     );
   }
 
-  Widget _chartCard({required String title, required List<double> data, required double maxY, required Color color, required bool isDark}) {
+  Widget _chartCard({required String title, required IconData titleIcon, required List<double> data, required double maxY, required Color color, required bool isDark}) {
     const days = ['إث', 'ثل', 'أر', 'خم', 'جم', 'سب', 'أح'];
     final cardBg = isDark ? const Color(0xFF1E1E1E) : Colors.white;
     final borderColor = isDark ? Colors.white12 : AppColors.paleGreen;
@@ -215,7 +218,13 @@ class _AnalyticsPageState extends State<AnalyticsPage> with SingleTickerProvider
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: GoogleFonts.ibmPlexSansArabic(fontWeight: FontWeight.bold, color: titleColor)),
+          Row(
+            children: [
+              Icon(titleIcon, color: titleColor, size: 20),
+              const SizedBox(width: 8),
+              Text(title, style: GoogleFonts.ibmPlexSansArabic(fontWeight: FontWeight.bold, color: titleColor)),
+            ],
+          ),
           const SizedBox(height: 16),
           SizedBox(
             height: 150,

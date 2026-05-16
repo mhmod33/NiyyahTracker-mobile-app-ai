@@ -580,10 +580,16 @@ class NotificationService {
         }
         final tzScheduledTime = tz.TZDateTime.from(prayerTime, tz.local);
 
+        // "الصلاة خير من النوم" is recited only in the Fajr azan (Tathweeb).
+        final bool isFajr = prayer['name'] == 'الفجر';
+        final String prayerBody = isFajr
+            ? 'الصلاة خير من النوم - حان وقت صلاة ${prayer['name']}'
+            : 'حي على الصلاة - حان وقت صلاة ${prayer['name']}';
+
         await _scheduleZoned(
           id: prayer['id'] as int,
           title: 'حان وقت صلاة ${prayer['name']}',
-          body: 'الصلاة خير من النوم - حان وقت صلاة ${prayer['name']}',
+          body: prayerBody,
           scheduledTime: tzScheduledTime,
           details: const NotificationDetails(
             android: AndroidNotificationDetails(

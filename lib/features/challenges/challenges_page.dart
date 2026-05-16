@@ -23,6 +23,18 @@ class _ChallengesPageState extends State<ChallengesPage> {
   bool _isLoading = true;
   List<Challenge> _challenges = [];
 
+  // Suggested challenges for the user to pick from
+  static const List<Map<String, dynamic>> _suggestions = [
+    {'title': 'صيام الاثنين والخميس', 'desc': 'سنة مؤكدة عن النبي ﷺ', 'icon': 'nights_stay', 'gradient': ['#1A237E', '#3949AB'], 'target': 8},
+    {'title': 'قيام الليل', 'desc': 'شرف المؤمن', 'icon': 'star', 'gradient': ['#0D47A1', '#1976D2'], 'target': 30},
+    {'title': 'صلاة الضحى', 'desc': 'صلاة الأوابين', 'icon': 'wb_sunny', 'gradient': ['#E65100', '#FF9800'], 'target': 30},
+    {'title': 'صدقة يومية', 'desc': 'باب من أبواب الجنة', 'icon': 'favorite', 'gradient': ['#880E4F', '#C2185B'], 'target': 30},
+    {'title': 'أذكار الصباح والمساء', 'desc': 'حصن المسلم', 'icon': 'shield', 'gradient': ['#1B5E20', '#388E3C'], 'target': 30},
+    {'title': 'حفظ القرآن', 'desc': 'حفظ آيات يومياً', 'icon': 'book', 'gradient': ['#4A148C', '#7B1FA2'], 'target': 30},
+    {'title': 'بر الوالدين', 'desc': 'من أحب الأعمال إلى الله', 'icon': 'people', 'gradient': ['#006064', '#00897B'], 'target': 30},
+    {'title': 'ركعتي السنن الرواتب', 'desc': '12 ركعة في اليوم', 'icon': 'mosque', 'gradient': ['#263238', '#455A64'], 'target': 30},
+  ];
+
   @override
   void initState() {
     super.initState();
@@ -40,10 +52,9 @@ class _ChallengesPageState extends State<ChallengesPage> {
       final challenges = await _firebaseService.getChallenges(userId);
       
       if (challenges.isEmpty) {
-        // Add default challenges if none exist
+        // Add default challenges if none exist (removed الورد القرآني)
         _challenges = [
           Challenge(id: '1', title: 'صيام الاثنين والخميس', desc: 'سنة مؤكدة عن النبي ﷺ', icon: 'nights_stay', gradient: ['#1A237E', '#3949AB'], target: 8, current: 0),
-          Challenge(id: '2', title: 'الورد القرآني', desc: 'استمرار قراءة القرآن', icon: 'auto_stories', gradient: ['#4A148C', '#7B1FA2'], target: 30, current: 0),
           Challenge(id: '3', title: 'قيام الليل', desc: 'شرف المؤمن', icon: 'star', gradient: ['#0D47A1', '#1976D2'], target: 30, current: 0),
         ];
         for (var c in _challenges) {
@@ -52,9 +63,9 @@ class _ChallengesPageState extends State<ChallengesPage> {
       } else {
         _challenges = challenges;
       }
-      setState(() => _isLoading = false);
+      if (mounted) setState(() => _isLoading = false);
     } catch (e) {
-      setState(() => _isLoading = false);
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -100,6 +111,51 @@ class _ChallengesPageState extends State<ChallengesPage> {
               ),
             ),
 
+            // ── Suggestions Section ──
+            SliverToBoxAdapter(child: Padding(padding: const EdgeInsets.fromLTRB(20, 24, 20, 12), child: Text('مقترحات التحديات', style: _f(sz: 18, fw: FontWeight.w800, c: textColor)))),
+            SliverToBoxAdapter(
+              child: SizedBox(
+                height: 110,
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  physics: const BouncingScrollPhysics(),
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  itemCount: _suggestions.length,
+                  itemBuilder: (ctx, i) {
+                    final s = _suggestions[i];
+                    final gradient = (s['gradient'] as List<String>);
+                    final color = Color(int.parse(gradient[0].replaceFirst('#', '0xFF')));
+                    final alreadyAdded = _challenges.any((c) => c.title == s['title']);
+                    return GestureDetector(
+                      onTap: alreadyAdded ? null : () => _addSuggestion(s),
+                      child: Container(
+                        width: 140,
+                        margin: const EdgeInsets.only(left: 10),
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(colors: [color, color.withOpacity(0.7)]),
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Icon(_getIconData(s['icon'] as String), color: Colors.white, size: 24),
+                            const Spacer(),
+                            Text(s['title'] as String, style: _f(sz: 12, fw: FontWeight.w700, c: Colors.white), maxLines: 2, overflow: TextOverflow.ellipsis),
+                            const SizedBox(height: 2),
+                            if (alreadyAdded)
+                              Text('✓ مضاف', style: _f(sz: 10, c: Colors.white70))
+                            else
+                              Text('+ إضافة', style: _f(sz: 10, c: Colors.white70, fw: FontWeight.w600)),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ),
+
             SliverToBoxAdapter(child: Padding(padding: const EdgeInsets.fromLTRB(20, 24, 20, 12), child: Text('تحدياتك النشطة', style: _f(sz: 18, fw: FontWeight.w800, c: textColor)))),
 
             // ── Challenge List ──
@@ -117,6 +173,61 @@ class _ChallengesPageState extends State<ChallengesPage> {
         ),
       ),
     );
+  }
+
+  Future<void> _addSuggestion(Map<String, dynamic> suggestion) async {
+    final userId = context.read<AppAuthProvider>().userId;
+    if (userId.isEmpty) return;
+
+    final title = suggestion['title'] as String;
+
+    // Check for Monday/Thursday fasting
+    if (title == 'صيام الاثنين والخميس') {
+      final now = DateTime.now();
+      final dayOfWeek = now.weekday; // 1=Monday, 4=Thursday
+      final isMonday = dayOfWeek == 1;
+      final isThursday = dayOfWeek == 4;
+      
+      if (isMonday || isThursday) {
+        final dayName = isMonday ? 'الاثنين' : 'الخميس';
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('اليوم يوم $dayName! لا تنسَ صيامك 🌙', style: GoogleFonts.ibmPlexSansArabic(color: Colors.white)),
+              backgroundColor: const Color(0xFF1A237E),
+              duration: const Duration(seconds: 3),
+            ),
+          );
+        }
+      }
+    }
+
+    try {
+      final newChallenge = Challenge(
+        id: const Uuid().v4(),
+        title: title,
+        desc: suggestion['desc'] as String,
+        icon: suggestion['icon'] as String,
+        target: suggestion['target'] as int,
+        current: 0,
+        gradient: List<String>.from(suggestion['gradient']),
+      );
+
+      await _firebaseService.saveChallenge(userId, newChallenge);
+      setState(() => _challenges.add(newChallenge));
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('تم إضافة التحدي: $title 🎯', style: GoogleFonts.ibmPlexSansArabic(color: Colors.white)), backgroundColor: AppColors.darkGreen),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('حدث خطأ أثناء إضافة التحدي', style: GoogleFonts.ibmPlexSansArabic()), backgroundColor: Colors.red),
+        );
+      }
+    }
   }
 
   void _showAddChallengeDialog(bool isDark) {
@@ -175,6 +286,27 @@ class _ChallengesPageState extends State<ChallengesPage> {
       return;
     }
 
+    // Check for Monday/Thursday fasting
+    if (title.trim().contains('الاثنين') && title.trim().contains('الخميس')) {
+      final now = DateTime.now();
+      final dayOfWeek = now.weekday;
+      final isMonday = dayOfWeek == 1;
+      final isThursday = dayOfWeek == 4;
+      
+      if (isMonday || isThursday) {
+        final dayName = isMonday ? 'الاثنين' : 'الخميس';
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('اليوم يوم $dayName! لا تنسَ صيامك 🌙', style: GoogleFonts.ibmPlexSansArabic(color: Colors.white)),
+              backgroundColor: const Color(0xFF1A237E),
+              duration: const Duration(seconds: 3),
+            ),
+          );
+        }
+      }
+    }
+
     try {
       final newChallenge = Challenge(
         id: const Uuid().v4(),
@@ -188,7 +320,7 @@ class _ChallengesPageState extends State<ChallengesPage> {
 
       await _firebaseService.saveChallenge(userId, newChallenge);
       Navigator.pop(context);
-      _loadChallenges();
+      setState(() => _challenges.add(newChallenge));
       
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('تم إضافة التحدي بنجاح 🎯', style: GoogleFonts.ibmPlexSansArabic(color: Colors.white)), backgroundColor: AppColors.darkGreen),
@@ -202,9 +334,71 @@ class _ChallengesPageState extends State<ChallengesPage> {
 
   Future<void> _updateProgress(Challenge c) async {
     if (c.current >= c.target) return;
+
+    // Check for Monday/Thursday fasting
+    if (c.title.contains('صيام') && (c.title.contains('الاثنين') || c.title.contains('الخميس'))) {
+      final now = DateTime.now();
+      final dayOfWeek = now.weekday;
+      final isMonday = dayOfWeek == 1;
+      final isThursday = dayOfWeek == 4;
+      
+      if (!isMonday && !isThursday) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('⚠️ اليوم ليس يوم الاثنين أو الخميس', style: GoogleFonts.ibmPlexSansArabic(color: Colors.white)),
+              backgroundColor: Colors.orange,
+              duration: const Duration(seconds: 3),
+            ),
+          );
+        }
+        return;
+      } else {
+        final dayName = isMonday ? 'الاثنين' : 'الخميس';
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('بارك الله فيك! اليوم يوم $dayName 🌙', style: GoogleFonts.ibmPlexSansArabic(color: Colors.white)),
+              backgroundColor: const Color(0xFF1A237E),
+              duration: const Duration(seconds: 2),
+            ),
+          );
+        }
+      }
+    }
+
     final userId = context.read<AppAuthProvider>().userId;
-    await _firebaseService.updateChallengeProgress(userId, c.id, c.current + 1);
-    _loadChallenges();
+    final newCurrent = c.current + 1;
+    await _firebaseService.updateChallengeProgress(userId, c.id, newCurrent);
+    // Update locally immediately
+    setState(() {
+      final index = _challenges.indexWhere((ch) => ch.id == c.id);
+      if (index != -1) {
+        _challenges[index] = Challenge(
+          id: c.id,
+          title: c.title,
+          desc: c.desc,
+          icon: c.icon,
+          gradient: c.gradient,
+          target: c.target,
+          current: newCurrent,
+        );
+      }
+    });
+  }
+
+  IconData _getIconData(String name) {
+    switch (name) {
+      case 'nights_stay': return Icons.nights_stay_rounded;
+      case 'star': return Icons.star_rounded;
+      case 'wb_sunny': return Icons.wb_sunny_rounded;
+      case 'favorite': return Icons.favorite_rounded;
+      case 'shield': return Icons.shield_rounded;
+      case 'book': return Icons.menu_book_rounded;
+      case 'people': return Icons.people_rounded;
+      case 'mosque': return Icons.mosque_rounded;
+      default: return Icons.star_rounded;
+    }
   }
 }
 
@@ -284,5 +478,17 @@ class _ChallengeCard extends StatelessWidget {
   }
 
   Color _parseColor(String hex) => Color(int.parse(hex.replaceFirst('#', '0xFF')));
-  IconData _getIcon(String name) => name == 'nights_stay' ? Icons.nights_stay_rounded : name == 'auto_stories' ? Icons.auto_stories_rounded : Icons.star_rounded;
+  IconData _getIcon(String name) {
+    switch (name) {
+      case 'nights_stay': return Icons.nights_stay_rounded;
+      case 'star': return Icons.star_rounded;
+      case 'wb_sunny': return Icons.wb_sunny_rounded;
+      case 'favorite': return Icons.favorite_rounded;
+      case 'shield': return Icons.shield_rounded;
+      case 'book': return Icons.menu_book_rounded;
+      case 'people': return Icons.people_rounded;
+      case 'mosque': return Icons.mosque_rounded;
+      default: return Icons.star_rounded;
+    }
+  }
 }

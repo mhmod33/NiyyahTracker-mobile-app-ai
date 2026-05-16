@@ -60,7 +60,7 @@ class _GoalsPageState extends State<GoalsPage> {
         backgroundColor: bg,
         appBar: AppBar(
           backgroundColor: isDark ? const Color(0xFF0D2818) : AppColors.darkGreen,
-          title: Text('الأهداف الروحية الشهرية', style: GoogleFonts.ibmPlexSansArabic(color: Colors.white, fontWeight: FontWeight.bold)),
+          title: Text('الأهداف الروحية', style: GoogleFonts.ibmPlexSansArabic(color: Colors.white, fontWeight: FontWeight.bold)),
           centerTitle: true,
         ),
         body: _isLoading 
@@ -94,6 +94,15 @@ class _GoalsPageState extends State<GoalsPage> {
                         goal: g,
                         isDark: isDark,
                         onUpdate: _loadGoals,
+                        onLocalUpdate: (updatedGoal) {
+                          setState(() {
+                            final index = _goals.indexWhere((goal) => goal.id == updatedGoal.id);
+                            if (index != -1) {
+                              _goals[index] = updatedGoal;
+                              _statistics = GoalsStatisticsService.instance.calculateGoalsStatistics(_goals);
+                            }
+                          });
+                        },
                       )),
                       const SizedBox(height: 16),
                       _addGoalButton(context, isDark),
@@ -407,7 +416,8 @@ class _GoalCard extends StatefulWidget {
   final MonthlyGoal goal;
   final bool isDark;
   final VoidCallback onUpdate;
-  const _GoalCard({required this.goal, required this.isDark, required this.onUpdate});
+  final ValueChanged<MonthlyGoal>? onLocalUpdate;
+  const _GoalCard({required this.goal, required this.isDark, required this.onUpdate, this.onLocalUpdate});
 
   @override
   State<_GoalCard> createState() => _GoalCardState();
@@ -426,7 +436,12 @@ class _GoalCardState extends State<_GoalCard> {
       if (userId.isEmpty) return;
       
       await FirebaseService().updateMonthlyGoalProgress(userId, widget.goal.id, newValue);
-      widget.onUpdate();
+      // Immediately update local state
+      final updatedGoal = widget.goal.copyWith(
+        currentValue: newValue,
+        isCompleted: newValue >= widget.goal.targetValue,
+      );
+      widget.onLocalUpdate?.call(updatedGoal);
       
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -507,13 +522,13 @@ class _GoalCardState extends State<_GoalCard> {
   @override
   Widget build(BuildContext context) {
     final pct = (widget.goal.progress * 100).toInt();
-    final daysLeft = widget.goal.endDate.difference(DateTime.now()).inDays.clamp(0, 365);
+    final remaining = widget.goal.targetValue - widget.goal.currentValue;
     final cardBg = widget.isDark ? const Color(0xFF1A1F1C) : Colors.white;
     final textColor = widget.isDark ? Colors.white : AppColors.textPrimary;
     final subColor = widget.isDark ? Colors.white54 : AppColors.gray;
     final greenColor = widget.isDark ? AppColors.lightGreen : AppColors.darkGreen;
     
-    final icon = GoalCategory.getCategoryIcon(widget.goal.category);
+    final iconData = _getCategoryIcon(widget.goal.category);
     final categoryLabel = GoalCategory.getCategoryLabel(
       widget.goal.category,
       customLabel: widget.goal.customCategoryLabel,
@@ -528,7 +543,14 @@ class _GoalCardState extends State<_GoalCard> {
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(children: [
-          Text(icon, style: const TextStyle(fontSize: 28)),
+          Container(
+            width: 44, height: 44,
+            decoration: BoxDecoration(
+              color: greenColor.withOpacity(0.12),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(iconData, color: greenColor, size: 24),
+          ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -626,7 +648,10 @@ class _GoalCardState extends State<_GoalCard> {
                 ],
               ],
             ),
-            Text('تبقى $daysLeft يوم', style: GoogleFonts.ibmPlexSansArabic(color: subColor, fontSize: 13)),
+            if (remaining > 0)
+              Text('تبقى $remaining من ${widget.goal.targetValue}', style: GoogleFonts.ibmPlexSansArabic(color: subColor, fontSize: 13))
+            else
+              Text('✓ مكتمل', style: GoogleFonts.ibmPlexSansArabic(color: greenColor, fontSize: 13, fontWeight: FontWeight.bold)),
           ],
         ),
       ]),
@@ -707,6 +732,19 @@ class _GoalCardState extends State<_GoalCard> {
       ),
     );
   }
+
+  IconData _getCategoryIcon(String category) {
+    switch (category) {
+      case 'quran': return Icons.menu_book_rounded;
+      case 'fajr': return Icons.wb_twilight_rounded;
+      case 'charity': return Icons.volunteer_activism_rounded;
+      case 'fastingDays': return Icons.nights_stay_rounded;
+      case 'nightPrayer': return Icons.star_rounded;
+      case 'memorization': return Icons.psychology_rounded;
+      case 'custom': return Icons.track_changes_rounded;
+      default: return Icons.track_changes_rounded;
+    }
+  }
 }
 
 class _AddGoalSheet extends StatefulWidget {
@@ -771,7 +809,7 @@ class _AddGoalSheetState extends State<_AddGoalSheet> {
       targetValue: target,
       currentValue: 0,
       startDate: DateTime.now(),
-      endDate: DateTime.now().add(const Duration(days: 30)),
+      endDate: DateTime.now().add(Duration(days: target)),
       category: _isCustomCategory ? GoalCategory.custom : _selectedCategory,
       customCategoryLabel: _isCustomCategory ? _customCategoryController.text.trim() : null,
     );

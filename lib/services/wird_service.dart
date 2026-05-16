@@ -230,6 +230,8 @@ class WirdService {
   Future<void> _saveRecord(WirdDayRecord record) async {
     if (!hasUser) return;
     await _safeBox.put(_userKey(record.date), jsonEncode(record.toJson()));
+    // Force flush to disk so data persists even if app is killed quickly.
+    await _safeBox.flush();
   }
 
   // ── Session tracking ──────────────────────────────────────────────────────
@@ -238,6 +240,8 @@ class WirdService {
   Future<void> startReadingSession(int currentPage) async {
     if (!hasUser) return;
     final now = DateTime.now().millisecondsSinceEpoch;
+    // Capture the session at *start* time so a session that spans into a new
+    // window is still credited to where it began.
     await _safeSettings.put(_activeSessionKey, WirdSession.current);
     await _safeSettings.put(_sessionStartKey, now);
     await _safeSettings.put(_sessionStartPageKey, currentPage);
@@ -247,7 +251,7 @@ class WirdService {
   }
 
   /// Called when user leaves the Quran reader page.
-  /// Returns pages credited if session was valid (≥ 1 minute).
+  /// Returns pages credited if session was valid (≥ 1 minute and pages advanced).
   Future<int> endReadingSession(int currentPage) async {
     try {
       final startMs = _settingsBox?.get(_sessionStartKey) as int?;
@@ -264,19 +268,21 @@ class WirdService {
       }
 
       final durationMs = DateTime.now().millisecondsSinceEpoch - startMs;
-      final durationMinutes = durationMs ~/ 60000;
+      // Reading rate: ~30 seconds per page. Use floor so we don't over-credit.
+      final durationMinutes = (durationMs / 60000).floor();
 
       await _clearSessionData();
-
-      if (durationMinutes < 1) {
-        developer.log('⏱️ Session too short (${durationMinutes}min), not credited',
-            name: 'WirdService');
-        return 0;
-      }
 
       final pagesRead = (currentPage - startPage).abs();
       if (pagesRead <= 0) {
         developer.log('📄 No pages advanced, not credited', name: 'WirdService');
+        return 0;
+      }
+
+      // Require at least 30 seconds total — i.e., proven reading time.
+      if (durationMs < 30000) {
+        developer.log('⏱️ Session too short (${durationMs}ms), not credited',
+            name: 'WirdService');
         return 0;
       }
 
@@ -285,15 +291,21 @@ class WirdService {
       updatedSessionPages[session] =
           (updatedSessionPages[session] ?? 0) + pagesRead;
 
+      // If duration is shorter than 30s/page, fall back to 30s/page estimate
+      // so totalMinutes never under-counts when user reads quickly.
+      final estimatedMinutes = (pagesRead * 0.5).ceil();
+      final creditedMinutes =
+          durationMinutes >= estimatedMinutes ? durationMinutes : estimatedMinutes;
+
       final updated = today.copyWith(
         pagesRead: today.pagesRead + pagesRead,
         sessionPages: updatedSessionPages,
-        totalMinutes: today.totalMinutes + durationMinutes,
+        totalMinutes: today.totalMinutes + creditedMinutes,
       );
 
       await _saveRecord(updated);
       developer.log(
-          '✅ Wird session ended: +$pagesRead pages, ${durationMinutes}min, session=$session',
+          '✅ Wird session ended: +$pagesRead pages, ${creditedMinutes}min, session=$session',
           name: 'WirdService');
       return pagesRead;
     } catch (e) {
@@ -310,18 +322,48 @@ class WirdService {
   }
 
   /// Manually add pages (e.g., from a manual input).
-  Future<void> addPages(int pages, {String? session}) async {
+  /// Optionally includes minutes spent reading. If [minutes] is null,
+  /// it auto-estimates based on a reading rate of ~30 seconds per page.
+  Future<void> addPages(int pages, {String? session, int? minutes}) async {
     if (!hasUser) return;
     final today = getTodayRecord();
     final s = session ?? WirdSession.current;
     final updatedSessionPages = Map<String, int>.from(today.sessionPages);
     updatedSessionPages[s] = (updatedSessionPages[s] ?? 0) + pages;
 
+    // Estimate minutes if not provided: 30 seconds per page → 0.5 min per page.
+    // Round up so 1 page is at least 1 minute (so streak counting still works).
+    final addedMinutes = minutes ?? ((pages * 0.5).ceil());
+
     final updated = today.copyWith(
       pagesRead: today.pagesRead + pages,
       sessionPages: updatedSessionPages,
+      totalMinutes: today.totalMinutes + addedMinutes,
     );
     await _saveRecord(updated);
+    developer.log(
+        '✏️ Manual log: +$pages pages, +${addedMinutes}min, session=$s',
+        name: 'WirdService');
+  }
+
+  /// Records a single page completion in real-time as the user reads.
+  /// Each page counts as 30 seconds of reading time.
+  Future<void> markPageRead({String? session}) async {
+    if (!hasUser) return;
+    final today = getTodayRecord();
+    final s = session ?? WirdSession.current;
+    final updatedSessionPages = Map<String, int>.from(today.sessionPages);
+    updatedSessionPages[s] = (updatedSessionPages[s] ?? 0) + 1;
+
+    final updated = today.copyWith(
+      pagesRead: today.pagesRead + 1,
+      sessionPages: updatedSessionPages,
+      // 30 seconds per completed page → represented as 1 minute (rounded up)
+      // so durations remain integer-friendly across the app.
+      totalMinutes: today.totalMinutes + 1,
+    );
+    await _saveRecord(updated);
+    developer.log('📄 Page marked read, session=$s', name: 'WirdService');
   }
 
   // ── Streak calculation ────────────────────────────────────────────────────

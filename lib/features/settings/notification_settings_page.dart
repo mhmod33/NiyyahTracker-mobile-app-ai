@@ -333,24 +333,6 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
                           ],
                         ),
 
-                        const SizedBox(height: 24),
-
-                        // Permissions Section
-                        _SettingsSection(
-                          title: 'الأذونات',
-                          icon: Icons.security_rounded,
-                          isDark: isDark,
-                          children: [
-                            _TestTile(
-                              title: 'فحص الأذونات',
-                              subtitle: 'تأكد من تفعيل أذونات الإشعارات',
-                              icon: Icons.verified_user_rounded,
-                              onTap: _checkPermissions,
-                              isDark: isDark,
-                            ),
-                          ],
-                        ),
-
                         const SizedBox(height: 32),
                       ]),
                     ),

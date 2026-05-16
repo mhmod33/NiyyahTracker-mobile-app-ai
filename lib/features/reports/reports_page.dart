@@ -387,17 +387,17 @@ class _ReportsPageState extends State<ReportsPage> {
           ),
           child: Column(
             children: [
-              _statRow('📖', 'صفحات القرآن', '$_totalQuranPages صفحة'),
+              _statRow(Icons.menu_book_rounded, 'صفحات القرآن', '$_totalQuranPages صفحة'),
               const Padding(padding: EdgeInsets.symmetric(vertical: 8), child: Divider(color: Colors.white12, height: 1)),
-              _statRow('🕌', 'الصلوات المكتملة', '$_totalPrayers صلاة'),
+              _statRow(Icons.mosque_rounded, 'الصلوات المكتملة', '$_totalPrayers صلاة'),
               const Padding(padding: EdgeInsets.symmetric(vertical: 8), child: Divider(color: Colors.white12, height: 1)),
-              _statRow('📿', 'أيام الأذكار', '$_remembranceDays يوم'),
+              _statRow(Icons.front_hand_rounded, 'أيام الأذكار', '$_remembranceDays يوم'),
               const Padding(padding: EdgeInsets.symmetric(vertical: 8), child: Divider(color: Colors.white12, height: 1)),
-              _statRow('🔥', 'أطول ستريك', '$_maxStreak يوم متواصل'),
+              _statRow(Icons.local_fire_department_rounded, 'أطول ستريك', '$_maxStreak يوم متواصل'),
               const Padding(padding: EdgeInsets.symmetric(vertical: 8), child: Divider(color: Colors.white12, height: 1)),
-              _statRow('🎯', 'الأهداف المكتملة', '$_completedGoals/${_monthlyGoals.length}'),
+              _statRow(Icons.track_changes_rounded, 'الأهداف المكتملة', '$_completedGoals/${_monthlyGoals.length}'),
               const Padding(padding: EdgeInsets.symmetric(vertical: 8), child: Divider(color: Colors.white12, height: 1)),
-              _statRow('⚡', 'التحديات النشطة', '$_activeChallenges تحدي'),
+              _statRow(Icons.bolt_rounded, 'التحديات النشطة', '$_activeChallenges تحدي'),
             ],
           ),
         ),
@@ -414,9 +414,9 @@ class _ReportsPageState extends State<ReportsPage> {
     );
   }
 
-  Widget _statRow(String icon, String label, String value) {
+  Widget _statRow(IconData icon, String label, String value) {
     return Row(children: [
-      Text(icon, style: const TextStyle(fontSize: 18)),
+      Icon(icon, color: AppColors.goldLight, size: 20),
       const SizedBox(width: 12),
       Expanded(child: Text(label, style: GoogleFonts.ibmPlexSansArabic(color: Colors.white70, fontSize: 14))),
       Text(value, style: GoogleFonts.ibmPlexSansArabic(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),

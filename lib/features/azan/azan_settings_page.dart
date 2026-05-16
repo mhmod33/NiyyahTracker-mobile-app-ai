@@ -281,51 +281,6 @@ class _AzanSettingsPageState extends State<AzanSettingsPage> {
 
                         const SizedBox(height: 20),
 
-                        // Debug Test Button
-                        _SettingsSection(
-                          title: 'اختبار الأذان',
-                          icon: Icons.bug_report_rounded,
-                          isDark: isDark,
-                          children: [
-                            Padding(
-                              padding: const EdgeInsets.all(16),
-                              child: Column(
-                                children: [
-                                  Text(
-                                    'اضغط لجدولة أذان تجريبي بعد 10 ثوانٍ\n(يعمل حتى لو أغلقت التطبيق)',
-                                    textAlign: TextAlign.center,
-                                    style: _f(sz: 13, c: isDark ? Colors.white60 : Colors.black54),
-                                  ),
-                                  const SizedBox(height: 12),
-                                  SizedBox(
-                                    width: double.infinity,
-                                    child: ElevatedButton.icon(
-                                      onPressed: () async {
-                                        await _azanService.debugTestAzan();
-                                        if (!mounted) return;
-                                        ScaffoldMessenger.of(context).showSnackBar(
-                                          const SnackBar(
-                                            content: Text('🧪 تم جدولة أذان تجريبي - سيعمل بعد 10 ثوانٍ'),
-                                            backgroundColor: Color(0xFF1B7A4E),
-                                          ),
-                                        );
-                                      },
-                                      icon: const Icon(Icons.play_arrow_rounded),
-                                      label: Text('تجربة الأذان (10 ثوانٍ)', style: _f(sz: 14, fw: FontWeight.w600, c: Colors.white)),
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: const Color(0xFF1B7A4E),
-                                        foregroundColor: Colors.white,
-                                        padding: const EdgeInsets.symmetric(vertical: 14),
-                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-
                         const SizedBox(height: 32),
                       ]),
                     ),

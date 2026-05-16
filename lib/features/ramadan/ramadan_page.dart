@@ -7,9 +7,8 @@ class RamadanPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Days until next Ramadan (approximate)
-    final daysUntilLaylatAlQadr = 27 - DateTime.now().day;
-
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
@@ -19,172 +18,74 @@ class RamadanPage extends StatelessWidget {
           title: Text('🌙 مود رمضان', style: GoogleFonts.ibmPlexSansArabic(color: Colors.white, fontWeight: FontWeight.bold)),
           centerTitle: true,
         ),
-        body: ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            // Laylat Al-Qadr Countdown
-            _laylatAlQadrCard(daysUntilLaylatAlQadr),
-            const SizedBox(height: 16),
-            // Suhoor & Iftar Times
-            _timesCard(),
-            const SizedBox(height: 16),
-            // 30-Day Plan Progress
-            _thirtyDayPlan(),
-            const SizedBox(height: 16),
-            // Taraweeh tracker
-            _taraweehCard(),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _laylatAlQadrCard(int days) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF1A237E), Color(0xFF311B92)],
-          begin: Alignment.topRight,
-          end: Alignment.bottomLeft,
-        ),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Column(
-        children: [
-          Text('⭐', style: const TextStyle(fontSize: 40)),
-          const SizedBox(height: 8),
-          Text('العد التنازلي لليلة القدر', style: GoogleFonts.ibmPlexSansArabic(color: Colors.white70, fontSize: 14)),
-          const SizedBox(height: 4),
-          Text('${days.abs()} يوم', style: GoogleFonts.ibmPlexSansArabic(color: Colors.white, fontSize: 38, fontWeight: FontWeight.bold)),
-          Text('ليلة ٢٧ رمضان', style: GoogleFonts.ibmPlexSansArabic(color: AppColors.goldLight, fontSize: 13)),
-        ],
-      ),
-    );
-  }
-
-  Widget _timesCard() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(0xFF151929),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('مواعيد اليوم', style: GoogleFonts.ibmPlexSansArabic(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
-          const SizedBox(height: 12),
-          Row(
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Expanded(child: _timeBox('السحور', '٣:٤٥ ص', '🌅')),
-              const SizedBox(width: 12),
-              Expanded(child: _timeBox('الإفطار', '٦:٢٨ م', '🌆')),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _timeBox(String label, String time, String emoji) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.07),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        children: [
-          Text(emoji, style: const TextStyle(fontSize: 24)),
-          const SizedBox(height: 6),
-          Text(label, style: GoogleFonts.ibmPlexSansArabic(color: Colors.white70, fontSize: 12)),
-          Text(time, style: GoogleFonts.ibmPlexSansArabic(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
-        ],
-      ),
-    );
-  }
-
-  Widget _thirtyDayPlan() {
-    final today = 15; // mock current day in Ramadan
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(0xFF151929),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('خطة الـ ٣٠ يوم', style: GoogleFonts.ibmPlexSansArabic(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: 6,
-            runSpacing: 6,
-            children: List.generate(30, (i) {
-              final day = i + 1;
-              final isDone = day < today;
-              final isToday = day == today;
-              return Container(
-                width: 36,
-                height: 36,
+              Container(
+                padding: const EdgeInsets.all(32),
+                margin: const EdgeInsets.symmetric(horizontal: 32),
                 decoration: BoxDecoration(
-                  color: isDone ? AppColors.lightGreen : isToday ? AppColors.gold : Colors.white.withOpacity(0.08),
-                  borderRadius: BorderRadius.circular(8),
-                  border: isToday ? Border.all(color: AppColors.gold, width: 2) : null,
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF1A237E), Color(0xFF311B92)],
+                    begin: Alignment.topRight,
+                    end: Alignment.bottomLeft,
+                  ),
+                  borderRadius: BorderRadius.circular(32),
+                  border: Border.all(color: AppColors.gold.withOpacity(0.3)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFF1A237E).withOpacity(0.3),
+                      blurRadius: 24,
+                      offset: const Offset(0, 8),
+                    ),
+                  ],
                 ),
-                child: Center(
-                  child: Text('$day',
+                child: Column(
+                  children: [
+                    const Text('🌙', style: TextStyle(fontSize: 64)),
+                    const SizedBox(height: 20),
+                    Text(
+                      'قريباً',
                       style: GoogleFonts.ibmPlexSansArabic(
-                          color: isDone || isToday ? Colors.white : Colors.white54,
-                          fontSize: 11,
-                          fontWeight: isToday ? FontWeight.bold : FontWeight.normal)),
+                        color: Colors.white,
+                        fontSize: 36,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      'مود رمضان قيد التطوير\nسيتم إطلاقه في رمضان القادم إن شاء الله',
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.ibmPlexSansArabic(
+                        color: Colors.white70,
+                        fontSize: 15,
+                        height: 1.8,
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: AppColors.gold.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: AppColors.gold.withOpacity(0.4)),
+                      ),
+                      child: Text(
+                        '⭐ ترقبوا التحديث',
+                        style: GoogleFonts.ibmPlexSansArabic(
+                          color: AppColors.goldLight,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-              );
-            }),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _taraweehCard() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(0xFF151929),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('🕌 التراويح', style: GoogleFonts.ibmPlexSansArabic(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
-          const SizedBox(height: 12),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text('صليت التراويح الليلة؟', style: GoogleFonts.ibmPlexSansArabic(color: Colors.white70)),
-              ElevatedButton(
-                onPressed: () {},
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.lightGreen,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                ),
-                child: Text('نعم ✓', style: GoogleFonts.ibmPlexSansArabic(color: Colors.white, fontWeight: FontWeight.bold)),
               ),
             ],
           ),
-          const SizedBox(height: 10),
-          LinearProgressIndicator(
-            value: 14 / 30,
-            backgroundColor: Colors.white12,
-            color: AppColors.gold,
-            minHeight: 8,
-            borderRadius: BorderRadius.circular(4),
-          ),
-          const SizedBox(height: 6),
-          Text('١٤ / ٣٠ ليلة', style: GoogleFonts.ibmPlexSansArabic(color: Colors.white54, fontSize: 12)),
-        ],
+        ),
       ),
     );
   }

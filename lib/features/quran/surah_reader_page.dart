@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/rendering.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 import 'package:quran/quran.dart' as quran;
 import 'package:share_plus/share_plus.dart';
 import 'package:path_provider/path_provider.dart';
@@ -13,6 +14,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'dart:async';
 import '../../core/app_colors.dart';
 import '../../core/directional_icon.dart';
+import '../../providers/auth_provider.dart';
 import '../../services/quran_audio_service.dart';
 import '../../services/wird_service.dart';
 import '../../services/wird_notification_service.dart';
@@ -61,6 +63,14 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
 
   Future<void> _startWirdSession() async {
     await _wirdService.init();
+    // Make sure the wird service is scoped to the current authenticated user
+    // before starting a session — otherwise pages won't be saved.
+    if (mounted) {
+      final userId = context.read<AppAuthProvider>().userId;
+      if (userId.isNotEmpty) {
+        _wirdService.setUserId(userId);
+      }
+    }
     if (_wirdService.hasUser) {
       await _wirdService.startReadingSession(_currentPage + 1);
     }
@@ -72,6 +82,7 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final today = _wirdService.getTodayRecord();
     int pagesToAdd = 1;
+    String selectedSession = WirdSession.current;
 
     showModalBottomSheet(
       context: context,
@@ -140,6 +151,7 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
               ]),
               const SizedBox(height: 8),
               Wrap(
+                alignment: WrapAlignment.center,
                 spacing: 8,
                 children: [1, 2, 3, 5, 10].map((n) => ActionChip(
                   label: Text('$n',
@@ -153,17 +165,87 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
                 )).toList(),
               ),
               const SizedBox(height: 20),
+              // ── Session picker ──
+              Align(
+                alignment: AlignmentDirectional.centerStart,
+                child: Text('في أي فترة قرأت؟',
+                    style: GoogleFonts.ibmPlexSansArabic(
+                        fontSize: 14, fontWeight: FontWeight.w600,
+                        color: isDark ? Colors.white : AppColors.textPrimary)),
+              ),
+              const SizedBox(height: 10),
+              Row(
+                children: WirdSession.all.map((s) {
+                  final selected = s == selectedSession;
+                  return Expanded(
+                    child: GestureDetector(
+                      onTap: () => setSheet(() => selectedSession = s),
+                      child: Container(
+                        margin: const EdgeInsets.symmetric(horizontal: 4),
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                        decoration: BoxDecoration(
+                          color: selected
+                              ? AppColors.darkGreen
+                              : (isDark
+                                  ? Colors.white.withValues(alpha: 0.06)
+                                  : AppColors.paleGreen),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: selected
+                                ? AppColors.darkGreen
+                                : Colors.transparent,
+                            width: 1.5,
+                          ),
+                        ),
+                        child: Column(children: [
+                          Icon(
+                            WirdSession.iconData(s),
+                            size: 20,
+                            color: selected
+                                ? Colors.white
+                                : WirdSession.iconColor(s),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            WirdSession.label(s),
+                            style: GoogleFonts.ibmPlexSansArabic(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                              color: selected
+                                  ? Colors.white
+                                  : (isDark
+                                      ? Colors.white70
+                                      : AppColors.darkGreen),
+                            ),
+                          ),
+                        ]),
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'سيُحسب الوقت تلقائياً (${(pagesToAdd * 0.5).ceil()} دقيقة)',
+                style: GoogleFonts.ibmPlexSansArabic(
+                    fontSize: 11, color: AppColors.gold,
+                    fontWeight: FontWeight.w600),
+              ),
+              const SizedBox(height: 18),
               SizedBox(
                 width: double.infinity,
                 height: 50,
                 child: ElevatedButton.icon(
                   onPressed: () async {
-                    await _wirdService.addPages(pagesToAdd);
+                    await _wirdService.addPages(
+                      pagesToAdd,
+                      session: selectedSession,
+                    );
                     if (ctx.mounted) Navigator.pop(ctx);
                     if (mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                         content: Text(
-                          'تم تسجيل $pagesToAdd صفحة في وردك اليومي',
+                          'تم تسجيل $pagesToAdd صفحة في فترة ${WirdSession.label(selectedSession)}',
                           style: GoogleFonts.ibmPlexSansArabic(color: Colors.white),
                         ),
                         backgroundColor: AppColors.darkGreen,
@@ -227,6 +309,38 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
     });
   }
 
+  /// Marks the current page as completed (reading rate: 30 sec/page).
+  /// Updates the wird record live, restarts the session anchor at the next
+  /// page so subsequent swipes don't double-count, and shows a confirmation.
+  Future<void> _markCurrentPageComplete() async {
+    if (!_wirdService.hasUser) return;
+    final pageNumber = _currentPage + 1;
+    await _wirdService.markPageRead();
+    // Re-anchor the session so the dispose() crediting won't count this page
+    // again. Keep the same session key by resetting start info.
+    await _wirdService.startReadingSession(pageNumber + 1);
+
+    final today = _wirdService.getTodayRecord();
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        backgroundColor: AppColors.darkGreen,
+        duration: const Duration(seconds: 2),
+        content: Row(children: [
+          const Icon(Icons.check_circle_rounded, color: Colors.white),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              'تم احتساب صفحة $pageNumber في الورد · ${today.pagesRead}/${today.targetPages}',
+              style: GoogleFonts.ibmPlexSansArabic(
+                  color: Colors.white, fontWeight: FontWeight.w700),
+            ),
+          ),
+        ]),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -247,7 +361,7 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
               child: PageView.builder(
                 controller: _pageController,
                 itemCount: 604,
-                allowImplicitScrolling: true,
+                physics: const _SinglePagePhysics(),
                 onPageChanged: (i) {
                   setState(() => _currentPage = i);
                 },
@@ -316,7 +430,23 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
             ),
           ),
           // Wird log button — only for logged-in users
-          if (_wirdService.hasUser)
+          if (_wirdService.hasUser) ...[
+            GestureDetector(
+              onTap: _markCurrentPageComplete,
+              child: Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: AppColors.lightGreen.withValues(alpha: 0.18),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(
+                  Icons.task_alt_rounded,
+                  color: AppColors.darkGreen,
+                  size: 18,
+                ),
+              ),
+            ),
+            const SizedBox(width: 4),
             GestureDetector(
               onTap: _showWirdLogSheet,
               child: Container(
@@ -332,6 +462,7 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
                 ),
               ),
             ),
+          ],
         ],
       ),
     );
@@ -407,40 +538,47 @@ class _MushafPageWidgetState extends State<_MushafPageWidget> with AutomaticKeep
     super.build(context); // required for AutomaticKeepAliveClientMixin
     final pageData = quran.getPageData(pageNumber);
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final availableW = constraints.maxWidth;
-        final availableH = constraints.maxHeight;
-        final fontSize = _computeFontSize(pageData, availableW, availableH);
+    return Padding(
+      padding: const EdgeInsets.all(8),
+      child: _DecoratedMushafFrame(
+        isDark: isDark,
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final availableW = constraints.maxWidth;
+            final availableH = constraints.maxHeight;
+            final fontSize = _computeFontSize(pageData, availableW, availableH);
 
-        return SizedBox(
-          width: availableW,
-          height: availableH,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: _hPad, vertical: _vPad),
-            child: Column(
-              mainAxisAlignment: pageData.length > 1
-                  ? MainAxisAlignment.spaceBetween
-                  : MainAxisAlignment.start,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: pageData.map((data) {
-                final surah = data['surah'] as int;
-                final start = data['start'] as int;
-                final end   = data['end']   as int;
-                return Column(
-                  mainAxisSize: MainAxisSize.min,
+            return SizedBox(
+              width: availableW,
+              height: availableH,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: _hPad, vertical: _vPad),
+                child: Column(
+                  mainAxisAlignment: pageData.length > 1
+                      ? MainAxisAlignment.spaceBetween
+                      : MainAxisAlignment.start,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    if (start == 1) _buildSurahHeader(context, surah, fontSize),
-                    if (start == 1 && surah != 1 && surah != 9) _buildBasmala(fontSize),
-                    _buildVersesBlock(context, surah, start, end, fontSize),
-                  ],
-                );
-              }).toList(),
-            ),
-          ),
-        );
-      },
+                  children: pageData.map((data) {
+                    final surah = data['surah'] as int;
+                    final start = data['start'] as int;
+                    final end = data['end'] as int;
+                    return Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        if (start == 1) _buildSurahHeader(context, surah, fontSize),
+                        if (start == 1 && surah != 1 && surah != 9) _buildBasmala(fontSize),
+                        _buildVersesBlock(context, surah, start, end, fontSize),
+                      ],
+                    );
+                  }).toList(),
+                ),
+              ),
+            );
+          },
+        ),
+      ),
     );
   }
 
@@ -926,12 +1064,198 @@ class _AyahEndMark extends StatelessWidget {
 
 
 
+// ─── Decorated Mushaf Frame ──────────────────────────────────────────────────
+// Provides an ornamental double-border around each mushaf page,
+// reminiscent of classic printed Qur'an pages.
+class _DecoratedMushafFrame extends StatelessWidget {
+  final bool isDark;
+  final Widget child;
+
+  const _DecoratedMushafFrame({required this.isDark, required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    final outerColor = isDark
+        ? AppColors.gold.withValues(alpha: 0.55)
+        : AppColors.darkGreen.withValues(alpha: 0.55);
+    final innerColor = isDark
+        ? AppColors.gold.withValues(alpha: 0.95)
+        : AppColors.darkGreen.withValues(alpha: 0.85);
+    final cornerColor = isDark ? AppColors.gold : AppColors.darkGreen;
+    final fillStart = isDark
+        ? const Color(0xFF11150F)
+        : const Color(0xFFFAF6EC);
+    final fillEnd = isDark
+        ? const Color(0xFF0A0D08)
+        : const Color(0xFFF1EAD6);
+
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topRight,
+          end: Alignment.bottomLeft,
+          colors: [fillStart, fillEnd],
+        ),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: outerColor, width: 2),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: isDark ? 0.45 : 0.10),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.all(4),
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: innerColor, width: 1),
+        ),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            // Inner content
+            Padding(padding: const EdgeInsets.all(2), child: child),
+            // Decorative corners
+            Positioned(
+              top: 4, right: 4,
+              child: _Corner(color: cornerColor, alignment: Alignment.topRight),
+            ),
+            Positioned(
+              top: 4, left: 4,
+              child: _Corner(color: cornerColor, alignment: Alignment.topLeft),
+            ),
+            Positioned(
+              bottom: 4, right: 4,
+              child: _Corner(color: cornerColor, alignment: Alignment.bottomRight),
+            ),
+            Positioned(
+              bottom: 4, left: 4,
+              child: _Corner(color: cornerColor, alignment: Alignment.bottomLeft),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _Corner extends StatelessWidget {
+  final Color color;
+  final Alignment alignment;
+  const _Corner({required this.color, required this.alignment});
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 18,
+      height: 18,
+      child: CustomPaint(
+        painter: _CornerPainter(color: color, alignment: alignment),
+      ),
+    );
+  }
+}
+
+class _CornerPainter extends CustomPainter {
+  final Color color;
+  final Alignment alignment;
+  _CornerPainter({required this.color, required this.alignment});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.4
+      ..strokeCap = StrokeCap.round;
+    final path = Path();
+
+    final isLeft = alignment.x < 0;
+    final isTop = alignment.y < 0;
+    final dx = isLeft ? 0.0 : size.width;
+    final dy = isTop ? 0.0 : size.height;
+
+    // Two short strokes meeting at the corner with a small ornamental dot
+    path.moveTo(dx, isTop ? size.height : 0);
+    path.lineTo(dx, dy);
+    path.lineTo(isLeft ? size.width : 0, dy);
+
+    canvas.drawPath(path, paint);
+
+    final dotPaint = Paint()..color = color;
+    canvas.drawCircle(Offset(dx, dy), 1.6, dotPaint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _CornerPainter old) =>
+      old.color != color || old.alignment != alignment;
+}
+
 // ─── Verse Range helper ───
 class _VerseRange {
   final int startOffset;
   final int endOffset;
   final int verse;
   const _VerseRange(this.startOffset, this.endOffset, this.verse);
+}
+
+// ─── Single Page Physics ─────────────────────────────────────────────────────
+// Restricts every fling/swipe to exactly one page advance.
+// Without this, a fast horizontal flick can carry the simulation
+// far enough to skip a page (the "double-swipe" problem).
+class _SinglePagePhysics extends ScrollPhysics {
+  const _SinglePagePhysics({super.parent});
+
+  @override
+  _SinglePagePhysics applyTo(ScrollPhysics? ancestor) =>
+      _SinglePagePhysics(parent: buildParent(ancestor));
+
+  double _page(ScrollPosition position) =>
+      position.pixels / position.viewportDimension;
+
+  double _targetPixels(ScrollPosition position, double velocity) {
+    final current = _page(position);
+    // Determine which page to settle on based on direction + small threshold.
+    final base = current.floor().toDouble();
+    double target;
+    if (velocity.abs() < 200) {
+      // Slow drag: snap to nearest page.
+      target = current.roundToDouble();
+    } else if (velocity > 0) {
+      target = base + 1;
+    } else {
+      target = base;
+    }
+    final maxIndex =
+        (position.maxScrollExtent / position.viewportDimension).round();
+    target = target.clamp(0.0, maxIndex.toDouble());
+    return target * position.viewportDimension;
+  }
+
+  @override
+  Simulation? createBallisticSimulation(
+      ScrollMetrics position, double velocity) {
+    if (position is! ScrollPosition) return super.createBallisticSimulation(position, velocity);
+    final tolerance = toleranceFor(position);
+
+    final target = _targetPixels(position, velocity);
+    if ((target - position.pixels).abs() < tolerance.distance) {
+      return null;
+    }
+
+    return ScrollSpringSimulation(
+      spring,
+      position.pixels,
+      target,
+      // Cap velocity so the spring never overshoots into the next page.
+      velocity.clamp(-2000.0, 2000.0),
+      tolerance: tolerance,
+    );
+  }
+
+  @override
+  bool get allowImplicitScrolling => false;
 }
 
 // ─── Tappable RichText ───

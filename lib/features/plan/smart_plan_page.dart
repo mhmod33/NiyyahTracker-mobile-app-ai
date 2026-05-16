@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
 import '../../core/app_colors.dart';
 import '../../models/weekly_plan_model.dart';
+import '../../models/monthly_goal_model.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/firebase_service.dart';
 
@@ -18,6 +19,7 @@ class _SmartPlanPageState extends State<SmartPlanPage> {
   final FirebaseService _firebaseService = FirebaseService();
   WeeklyPlan? _currentPlan;
   bool _isLoading = true;
+  List<MonthlyGoal> _goals = [];
 
   @override
   void initState() {
@@ -33,14 +35,16 @@ class _SmartPlanPageState extends State<SmartPlanPage> {
     }
 
     try {
+      // Load goals for auto-verification
+      _goals = await _firebaseService.getAllMonthlyGoals(userId);
+      
       var plan = await _firebaseService.getCurrentWeeklyPlan(userId);
       
       if (plan == null) {
-        final goals = await _firebaseService.getAllMonthlyGoals(userId);
         final goalId = 'all_active_goals';
         
-        final allTasks = goals.isNotEmpty ? goals.map((g) => '• ${g.goalTitle}').join('\n') : 'الورد اليومي (اقرأ القرآن)';
-        final allDesc = goals.isNotEmpty ? 'أهداف: ${goals.map((g) => g.category).toSet().join('، ')}' : 'قم بإضافة أهدافك الشهرية';
+        final allTasks = _goals.isNotEmpty ? _goals.map((g) => '• ${g.goalTitle}').join('\n') : 'الورد اليومي (اقرأ القرآن)';
+        final allDesc = _goals.isNotEmpty ? 'أهداف: ${_goals.map((g) => g.category).toSet().join('، ')}' : 'قم بإضافة أهدافك';
 
         final today = DateTime.now();
         // Calculate days to subtract to get to the previous Saturday.
@@ -48,14 +52,13 @@ class _SmartPlanPageState extends State<SmartPlanPage> {
         if (today.weekday == 6) daysSinceSaturday = 0;
         final weekStart = today.subtract(Duration(days: daysSinceSaturday));
 
-        final days = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
         final dailyPlans = List.generate(7, (i) {
           final date = weekStart.add(Duration(days: i));
           return DailyPlan(
             date: date,
             task: allTasks,
             description: allDesc,
-            targetAmount: goals.isNotEmpty ? goals.length : 1,
+            targetAmount: _goals.isNotEmpty ? _goals.length : 1,
             isCompleted: false,
           );
         });
@@ -72,6 +75,9 @@ class _SmartPlanPageState extends State<SmartPlanPage> {
         await _firebaseService.saveWeeklyPlan(userId, plan);
       }
 
+      // Auto-verify: check which days have been achieved based on goals progress
+      plan = _autoVerifyPlan(plan);
+
       setState(() {
         _currentPlan = plan;
         _isLoading = false;
@@ -79,6 +85,41 @@ class _SmartPlanPageState extends State<SmartPlanPage> {
     } catch (e) {
       setState(() => _isLoading = false);
     }
+  }
+
+  WeeklyPlan _autoVerifyPlan(WeeklyPlan plan) {
+    if (_goals.isEmpty) return plan;
+    
+    // Calculate how many goals have progress > 0
+    final goalsWithProgress = _goals.where((g) => g.currentValue > 0).length;
+    final totalGoals = _goals.length;
+    final progressRatio = totalGoals > 0 ? goalsWithProgress / totalGoals : 0.0;
+    
+    // Auto-complete past days if goals have progress
+    final now = DateTime.now();
+    final updatedPlans = List<DailyPlan>.from(plan.dailyPlans);
+    
+    for (int i = 0; i < updatedPlans.length; i++) {
+      final dayDate = updatedPlans[i].date;
+      // Only auto-verify past days (not today or future)
+      if (dayDate.isBefore(DateTime(now.year, now.month, now.day)) && progressRatio > 0.3) {
+        if (!updatedPlans[i].isCompleted) {
+          updatedPlans[i] = updatedPlans[i].copyWith(
+            isCompleted: true,
+            actualAmount: updatedPlans[i].targetAmount,
+          );
+        }
+      }
+    }
+    
+    return WeeklyPlan(
+      id: plan.id,
+      userId: plan.userId,
+      monthlyGoalId: plan.monthlyGoalId,
+      weekStartDate: plan.weekStartDate,
+      dailyPlans: updatedPlans,
+      createdAt: plan.createdAt,
+    );
   }
 
   Future<void> _toggleDayCompletion(int index, bool newValue) async {
@@ -144,7 +185,14 @@ class _SmartPlanPageState extends State<SmartPlanPage> {
                     borderRadius: BorderRadius.circular(16),
                   ),
                   child: Row(children: [
-                    const Text('🎯', style: TextStyle(fontSize: 30)),
+                    Container(
+                      width: 48, height: 48,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: const Icon(Icons.track_changes_rounded, color: Colors.white, size: 26),
+                    ),
                     const SizedBox(width: 12),
                     Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                       Text('هدفك النشط', style: GoogleFonts.ibmPlexSansArabic(color: Colors.white70, fontSize: 12)),
@@ -206,7 +254,11 @@ class _DayCard extends StatelessWidget {
         child: ListTile(
           leading: CircleAvatar(
             backgroundColor: done ? (isDark ? AppColors.darkGreen.withOpacity(0.3) : AppColors.lightGreen) : (isDark ? Colors.white10 : Colors.grey[200]),
-            child: const Text('🎯', style: TextStyle(fontSize: 18)),
+            child: Icon(
+              done ? Icons.check_rounded : Icons.calendar_today_rounded,
+              color: done ? Colors.white : (isDark ? Colors.white54 : AppColors.gray),
+              size: 20,
+            ),
           ),
           title: Text('$dayName — ${plan.date.day}/${plan.date.month}', style: GoogleFonts.ibmPlexSansArabic(fontSize: 12, color: subColor)),
           subtitle: Text(plan.task, style: GoogleFonts.ibmPlexSansArabic(fontWeight: FontWeight.w600, color: greenColor)),

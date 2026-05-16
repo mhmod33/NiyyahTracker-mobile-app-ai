@@ -491,64 +491,132 @@ class _DailyWirdPageState extends State<DailyWirdPage> with TickerProviderStateM
         border: Border.all(color: isDark ? Colors.white.withOpacity(0.05) : Colors.black.withOpacity(0.04)),
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text('آخر 7 أيام', style: _f(sz: 15, fw: FontWeight.w800, c: isDark ? Colors.white : AppColors.darkGreen)),
-        const SizedBox(height: 16),
-        SizedBox(
-          height: 80,
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: List.generate(7, (i) {
-              final record = _last7Days[i];
-              final ratio = record.targetPages > 0
-                  ? (record.pagesRead / record.targetPages).clamp(0.0, 1.0)
-                  : 0.0;
-              final dayDate = now.subtract(Duration(days: 6 - i));
-              final dayLabel = days[dayDate.weekday % 7];
-              final isToday = i == 6;
-              final isCompleted = record.isCompleted;
+        Row(children: [
+          Text('آخر 7 أيام', style: _f(sz: 15, fw: FontWeight.w800, c: isDark ? Colors.white : AppColors.darkGreen)),
+          const Spacer(),
+          Text('الأجزاء والساعات لكل يوم',
+              style: _f(sz: 11, c: isDark ? Colors.white38 : AppColors.gray)),
+        ]),
+        const SizedBox(height: 12),
+        ...List.generate(7, (i) {
+          final record = _last7Days[i];
+          final dayDate = now.subtract(Duration(days: 6 - i));
+          final dayLabel = days[dayDate.weekday % 7];
+          final isToday = i == 6;
+          final isCompleted = record.isCompleted;
+          final juz = record.pagesRead / 20.0;
+          final hours = record.totalMinutes / 60.0;
+          final ratio = record.targetPages > 0
+              ? (record.pagesRead / record.targetPages).clamp(0.0, 1.0)
+              : 0.0;
 
-              return Expanded(
-                child: AnimatedBuilder(
-                  animation: _progressAnim,
-                  builder: (_, __) => Column(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      Container(
-                        height: (60 * ratio * _progressAnim.value).clamp(4.0, 60.0),
-                        margin: const EdgeInsets.symmetric(horizontal: 3),
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.bottomCenter,
-                            end: Alignment.topCenter,
-                            colors: isCompleted
-                                ? [AppColors.darkGreen, AppColors.midGreen]
-                                : ratio > 0
-                                    ? [AppColors.gold.withOpacity(0.7), AppColors.gold]
-                                    : [
-                                        isDark ? Colors.white12 : AppColors.paleGreen,
-                                        isDark ? Colors.white12 : AppColors.paleGreen,
-                                      ],
-                          ),
-                          borderRadius: BorderRadius.circular(6),
-                          border: isToday ? Border.all(color: AppColors.gold, width: 2) : null,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        dayLabel,
-                        style: _f(
-                          sz: 10,
-                          fw: isToday ? FontWeight.w800 : FontWeight.w400,
-                          c: isToday ? AppColors.gold : (isDark ? Colors.white54 : AppColors.gray),
-                        ),
-                      ),
-                    ],
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Row(children: [
+              SizedBox(
+                width: 38,
+                child: Text(
+                  dayLabel,
+                  style: _f(
+                    sz: 12,
+                    fw: isToday ? FontWeight.w800 : FontWeight.w600,
+                    c: isToday ? AppColors.gold : (isDark ? Colors.white60 : AppColors.gray),
                   ),
                 ),
-              );
-            }),
-          ),
-        ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(6),
+                  child: Stack(children: [
+                    Container(
+                      height: 22,
+                      color: isDark ? Colors.white12 : AppColors.paleGreen,
+                    ),
+                    AnimatedBuilder(
+                      animation: _progressAnim,
+                      builder: (_, __) => FractionallySizedBox(
+                        widthFactor: (ratio * _progressAnim.value).clamp(0.0, 1.0),
+                        child: Container(
+                          height: 22,
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: isCompleted
+                                  ? [AppColors.darkGreen, AppColors.midGreen]
+                                  : [
+                                      AppColors.gold.withOpacity(0.7),
+                                      AppColors.gold,
+                                    ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    Positioned.fill(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Row(children: [
+                              const Icon(Icons.auto_stories_rounded,
+                                  size: 12, color: Colors.white70),
+                              const SizedBox(width: 4),
+                              Text(
+                                '${juz.toStringAsFixed(juz < 1 ? 2 : 1)} جزء',
+                                style: _f(
+                                    sz: 10,
+                                    fw: FontWeight.w700,
+                                    c: ratio > 0.15
+                                        ? Colors.white
+                                        : (isDark
+                                            ? Colors.white60
+                                            : AppColors.darkGreen)),
+                              ),
+                            ]),
+                            Row(children: [
+                              const Icon(Icons.timer_rounded,
+                                  size: 12, color: Colors.white70),
+                              const SizedBox(width: 4),
+                              Text(
+                                hours >= 1
+                                    ? '${hours.toStringAsFixed(1)} س'
+                                    : '${record.totalMinutes} د',
+                                style: _f(
+                                    sz: 10,
+                                    fw: FontWeight.w700,
+                                    c: ratio > 0.15
+                                        ? Colors.white
+                                        : (isDark
+                                            ? Colors.white60
+                                            : AppColors.darkGreen)),
+                              ),
+                            ]),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ]),
+                ),
+              ),
+              const SizedBox(width: 6),
+              SizedBox(
+                width: 36,
+                child: Text(
+                  '${record.pagesRead}',
+                  textAlign: TextAlign.end,
+                  style: _f(
+                    sz: 12,
+                    fw: FontWeight.w700,
+                    c: isToday
+                        ? AppColors.gold
+                        : (isDark ? Colors.white70 : AppColors.darkGreen),
+                  ),
+                ),
+              ),
+            ]),
+          );
+        }),
       ]),
     );
   }
