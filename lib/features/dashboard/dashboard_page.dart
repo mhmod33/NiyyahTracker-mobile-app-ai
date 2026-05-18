@@ -35,6 +35,9 @@ import '../wird/daily_wird_page.dart';
 import '../../services/wird_service.dart';
 import '../hajj/hajj_page.dart';
 import '../ramadan/ramadan_page.dart';
+import '../study_tracker/study_tracker_page.dart';
+import '../../models/study_track_model.dart';
+import '../../services/study_track_service.dart';
 
 TextStyle _f({double sz = 14, FontWeight fw = FontWeight.w400, Color? c, double? h}) =>
     GoogleFonts.ibmPlexSansArabic(fontSize: sz, fontWeight: fw, color: c, height: h);
@@ -61,6 +64,8 @@ class _DashboardPageState extends State<DashboardPage> with WidgetsBindingObserv
   final WirdService _wirdService = WirdService();
   WirdDayRecord? _wirdRecord;
   int _wirdStreak = 0;
+  final StudyTrackService _studyService = StudyTrackService();
+  List<StudyPlaylist> _studyPlaylists = [];
 
   @override
   void initState() {
@@ -70,6 +75,7 @@ class _DashboardPageState extends State<DashboardPage> with WidgetsBindingObserv
     _checkTodayAccountability();
     _loadTodaySummary();
     _loadWirdData();
+    _loadStudyData();
   }
 
   Future<void> _loadAzkarPref() async {
@@ -140,6 +146,14 @@ class _DashboardPageState extends State<DashboardPage> with WidgetsBindingObserv
       _loadTodaySummary(),
       _loadWirdData(),
     ]);
+    _loadStudyData();
+  }
+
+  Future<void> _loadStudyData() async {
+    await _studyService.init();
+    if (mounted) {
+      setState(() => _studyPlaylists = _studyService.getAllPlaylists());
+    }
   }
 
   Future<void> _loadTodaySummary() async {
@@ -316,6 +330,10 @@ class _DashboardPageState extends State<DashboardPage> with WidgetsBindingObserv
             // ── Daily Wird Section ──
             SliverToBoxAdapter(child: _SectionTitle(title: 'الورد اليومي', icon: Icons.auto_stories_rounded)),
             SliverToBoxAdapter(child: _buildWirdCard(isDark, isGuest: isGuest)),
+
+            // ── Study Tracker Section ──
+            SliverToBoxAdapter(child: _SectionTitle(title: 'متابعة الدراسة', icon: Icons.school_rounded)),
+            SliverToBoxAdapter(child: _buildStudyTrackerSection(isDark)),
 
             // ── Quick Access Section ──
             SliverToBoxAdapter(child: _SectionTitle(title: 'الوصول السريع', icon: Icons.grid_view_rounded)),
@@ -824,6 +842,153 @@ class _DashboardPageState extends State<DashboardPage> with WidgetsBindingObserv
           ]),
         ),
       ),
+    );
+  }
+
+  Widget _buildStudyTrackerSection(bool isDark) {
+    if (_studyPlaylists.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: GestureDetector(
+          onTap: () async {
+            await Navigator.push(context, MaterialPageRoute(builder: (_) => const StudyTrackerPage()));
+            _loadStudyData();
+          },
+          child: Container(
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF151C17) : Colors.white,
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(
+                color: AppColors.darkGreen.withValues(alpha: isDark ? 0.3 : 0.15),
+              ),
+              boxShadow: isDark ? [] : [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8, offset: const Offset(0, 3))],
+            ),
+            child: Row(children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppColors.darkGreen.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: const Icon(Icons.school_rounded, color: AppColors.darkGreen, size: 26),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text('ابدأ متابعة دراستك', style: _f(sz: 15, fw: FontWeight.w800, c: isDark ? Colors.white : AppColors.darkGreen)),
+                  Text('أضف سلسلة علمية أو يوتيوب لتتابع تقدمك', style: _f(sz: 12, c: AppColors.gray)),
+                ]),
+              ),
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppColors.darkGreen,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.add_rounded, color: Colors.white, size: 18),
+              ),
+            ]),
+          ),
+        ),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          height: 120,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            physics: const BouncingScrollPhysics(),
+            itemCount: _studyPlaylists.length > 4 ? 5 : _studyPlaylists.length + 1,
+            separatorBuilder: (context, index) => const SizedBox(width: 12),
+            itemBuilder: (ctx, i) {
+              if (i == (_studyPlaylists.length > 4 ? 4 : _studyPlaylists.length)) {
+                return GestureDetector(
+                  onTap: () async {
+                    await Navigator.push(context, MaterialPageRoute(builder: (_) => const StudyTrackerPage()));
+                    _loadStudyData();
+                  },
+                  child: Container(
+                    width: 90,
+                    decoration: BoxDecoration(
+                      color: isDark ? const Color(0xFF151C17) : Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: AppColors.darkGreen.withValues(alpha: 0.2)),
+                    ),
+                    child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: AppColors.darkGreen.withValues(alpha: 0.1),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.grid_view_rounded, color: AppColors.darkGreen, size: 20),
+                      ),
+                      const SizedBox(height: 6),
+                      Text('عرض الكل', style: _f(sz: 11, fw: FontWeight.w700, c: AppColors.darkGreen), textAlign: TextAlign.center),
+                    ]),
+                  ),
+                );
+              }
+              final p = _studyPlaylists[i];
+              final isYt = p.type == StudySourceType.youtube;
+              return GestureDetector(
+                onTap: () async {
+                  await Navigator.push(context, MaterialPageRoute(builder: (_) => const StudyTrackerPage()));
+                  _loadStudyData();
+                },
+                child: Container(
+                  width: 140,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topRight,
+                      end: Alignment.bottomLeft,
+                      colors: isYt
+                          ? [const Color(0xFFB71C1C), const Color(0xFFE53935)]
+                          : isDark
+                              ? [const Color(0xFF1A3A28), const Color(0xFF0D2818)]
+                              : [AppColors.darkGreen, const Color(0xFF145A3A)],
+                    ),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(children: [
+                        Icon(isYt ? Icons.smart_display_rounded : Icons.menu_book_rounded, color: Colors.white, size: 16),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(p.title, style: _f(sz: 11, fw: FontWeight.w800, c: Colors.white), maxLines: 1, overflow: TextOverflow.ellipsis),
+                        ),
+                      ]),
+                      const Spacer(),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(4),
+                        child: LinearProgressIndicator(
+                          value: p.progress,
+                          minHeight: 5,
+                          backgroundColor: Colors.white.withValues(alpha: 0.25),
+                          valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
+                        ),
+                      ),
+                      const SizedBox(height: 5),
+                      Text(
+                        p.totalCount == 0 ? 'لا توجد حلقات' : '${p.watchedCount}/${p.totalCount} • ${(p.progress * 100).round()}%',
+                        style: _f(sz: 10, c: Colors.white70),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      ],
     );
   }
 
