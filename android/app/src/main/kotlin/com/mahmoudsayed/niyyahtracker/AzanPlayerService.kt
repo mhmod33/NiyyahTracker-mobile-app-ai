@@ -19,7 +19,8 @@ class AzanPlayerService : Service() {
     companion object {
         const val TAG = "AzanPlayerService"
         const val CHANNEL_ID = "azan_playback_channel"
-        const val NOTIFICATION_ID = 4000
+        const val NOTIFICATION_ID = 4006
+        const val NOTIFICATION_ID_FLUTTER = 4000
         const val ACTION_STOP = "com.mahmoudsayed.niyyahtracker.STOP_AZAN"
     }
 
@@ -110,6 +111,11 @@ class AzanPlayerService : Service() {
         }
         mediaPlayer = null
         releaseWakeLock()
+        // Cancel Flutter's notification 4000 so its stop monitor triggers
+        try {
+            val nm = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            nm.cancel(NOTIFICATION_ID_FLUTTER)
+        } catch (_: Exception) {}
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
             stopForeground(STOP_FOREGROUND_REMOVE)
         } else {

@@ -724,57 +724,39 @@ class AzanService {
 
 
   /// Check if current time matches any prayer time and play azan.
-
   Future<void> _checkAndPlayAzan() async {
-
     if (!azanEnabled) return;
 
-
-
     try {
+      // Skip if native service is already playing (notification ID 4006)
+      try {
+        final active = await _notificationsPlugin.getActiveNotifications();
+        if (active.any((n) => n.id == 4006)) {
+          return;
+        }
+      } catch (_) {}
 
       final pt = await _getPrayerTimes();
-
       final now = DateTime.now();
 
-
-
       final prayers = [
-
         {'name': 'الفجر', 'time': pt.fajr, 'isFajr': true},
-
         {'name': 'الظهر', 'time': pt.dhuhr, 'isFajr': false},
-
         {'name': 'العصر', 'time': pt.asr, 'isFajr': false},
-
         {'name': 'المغرب', 'time': pt.maghrib, 'isFajr': false},
-
         {'name': 'العشاء', 'time': pt.isha, 'isFajr': false},
-
       ];
 
-
-
       for (final prayer in prayers) {
-
         final prayerTime = prayer['time'] as DateTime;
-
         final prayerName = prayer['name'] as String;
-
         final isFajr = prayer['isFajr'] as bool;
 
-
-
         // Check if we're within 30 seconds of prayer time
-
         final diff = now.difference(prayerTime).inSeconds.abs();
-
         if (diff <= 30 && isPrayerAzanEnabled(prayerName)) {
-
           // Avoid playing if already playing
-
           if (!_audioPlayer.playing) {
-
             // Dedup: skip if background alarm already played recently
             final lastPlayedMs = _settingsBox.get('last_azan_played_ms', defaultValue: 0) as int;
             final nowMs = DateTime.now().millisecondsSinceEpoch;
@@ -791,20 +773,14 @@ class AzanService {
             await playAzan(isFajr: isFajr);
 
           }
-
           break;
-
         }
-
       }
-
     } catch (e, st) {
-
       developer.log('❌ Error in _checkAndPlayAzan', name: 'AzanService', error: e, stackTrace: st);
-
     }
-
   }
+
 
 
 
@@ -864,7 +840,7 @@ class AzanService {
 
               contentTitle: '🕌 حان وقت صلاة $prayerName',
 
-              summaryText: 'النية - أوقات الصلاة',
+              summaryText: 'بصائر - أوقات الصلاة',
 
               htmlFormatBigText: false,
 
@@ -933,67 +909,36 @@ class AzanService {
 
 
   /// Polls every 500ms to check if the azan notification was dismissed.
-
   /// If dismissed while audio is still playing, it means user pressed "Stop".
-
   void _startStopMonitor() {
-
     _stopMonitor?.cancel();
-
     _stopMonitor = Timer.periodic(const Duration(milliseconds: 500), (timer) async {
-
       if (!_audioPlayer.playing) {
-
         timer.cancel();
-
         _stopMonitor = null;
-
         return;
-
       }
-
-
 
       try {
-
         final pending = await _notificationsPlugin.getActiveNotifications();
-
-        final azanNotifExists = pending.any((n) => n.id == 4000);
-
-
+        // Check both Flutter notification (4000) and native service notification (4006)
+        final azanNotifExists = pending.any((n) => n.id == 4000 || n.id == 4006);
 
         if (!azanNotifExists) {
-
           // Notification was dismissed (user pressed stop button)
-
           developer.log('⏹️ Notification dismissed, stopping audio', name: 'AzanService');
-
           await _audioPlayer.pause();
-
           await _audioPlayer.stop();
-
           _volumeSubscription?.cancel();
-
           _volumeSubscription = null;
-
           timer.cancel();
-
           _stopMonitor = null;
-
         }
-
       } catch (e) {
-
         developer.log('⚠️ Stop monitor error: $e', name: 'AzanService');
-
       }
-
     });
-
   }
-
-
-
   /// Get the file path for a prayer's azan audio (from extracted app storage).
   Future<String> _getAzanFilePath({required bool isFajr}) async {
     final muazzin = selectedMuazzin;
@@ -1082,7 +1027,7 @@ class AzanService {
               styleInformation: BigTextStyleInformation(
                 'الله أكبر الله أكبر\nأشهد أن لا إله إلا الله\nحان الآن موعد أذان $prayerName',
                 contentTitle: '🕌 حان وقت صلاة $prayerName',
-                summaryText: 'النية - أوقات الصلاة',
+                summaryText: 'بصائر - أوقات الصلاة',
               ),
               timeoutAfter: 60000,
               colorized: true,

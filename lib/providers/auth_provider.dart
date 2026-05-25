@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../config/admin_config.dart';
 import '../services/wird_service.dart';
 
 /// Centralized authentication provider that manages Firebase Auth state
@@ -23,9 +24,11 @@ class AppAuthProvider extends ChangeNotifier {
   bool get isAuthenticated => _user != null;
   String? get errorMessage => _errorMessage;
   String get userId => _user?.uid ?? '';
-  String get displayName => _userProfile?['name'] ?? _user?.displayName ?? 'مستخدم النية';
+  String get displayName => _userProfile?['name'] ?? _user?.displayName ?? 'مستخدم بصائر';
   String get email => _user?.email ?? '';
   String get phone => _user?.phoneNumber ?? '';
+  bool get isAdmin => _userProfile?['role'] == 'admin';
+  bool get canUpload => isAdmin || _userProfile?['canUpload'] == true;
 
   AppAuthProvider() {
     _init();
@@ -56,8 +59,48 @@ class AppAuthProvider extends ChangeNotifier {
       if (doc.exists) {
         _userProfile = doc.data();
       }
+      await _bootstrapAdminIfNeeded();
     } catch (e) {
       // Silently fail
+    }
+  }
+
+  /// Promotes emails listed in [kBootstrapAdminEmails] to admin on sign-in.
+  Future<void> _bootstrapAdminIfNeeded() async {
+    if (_user == null) return;
+    final email = (_user!.email ?? _userProfile?['email'] as String?)?.trim();
+    if (!isBootstrapAdminEmail(email)) return;
+    if (_userProfile?['role'] == 'admin') return;
+
+    try {
+      await _db.collection('users').doc(_user!.uid).set({
+        'role': 'admin',
+        'canUpload': true,
+        if (email != null && email.isNotEmpty) 'email': email,
+        if (_userProfile?['name'] == null && _user!.displayName != null)
+          'name': _user!.displayName,
+      }, SetOptions(merge: true));
+      await _loadUserProfileOnly();
+      notifyListeners();
+    } catch (_) {
+      // Firestore rules may block until rules are deployed
+    }
+  }
+
+  Future<void> _loadUserProfileOnly() async {
+    if (_user == null) return;
+    final doc = await _db.collection('users').doc(_user!.uid).get();
+    if (doc.exists) _userProfile = doc.data();
+  }
+
+  /// Admin: grant or revoke upload permission for another user (مزامير القرآن).
+  Future<bool> setUserCanUpload(String userId, bool canUpload) async {
+    if (!isAdmin || _user == null) return false;
+    try {
+      await _db.collection('users').doc(userId).update({'canUpload': canUpload});
+      return true;
+    } catch (_) {
+      return false;
     }
   }
 
@@ -89,6 +132,8 @@ class AppAuthProvider extends ChangeNotifier {
           'lastLogin': FieldValue.serverTimestamp(),
           'streakDays': 0,
           'totalWorships': 0,
+          'role': 'user',
+          'canUpload': false,
           'settings': {
             'notificationsEnabled': true,
             'language': 'ar',

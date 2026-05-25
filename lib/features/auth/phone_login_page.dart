@@ -186,7 +186,7 @@ class _PhoneLoginPageState extends State<PhoneLoginPage> {
 
                 // Logo/Title
                 Text(
-                  '🤍 NiyyahTracker',
+                  '🤍 بصائر',
                   style: GoogleFonts.ibmPlexSansArabic(
                     fontSize: 28,
                     fontWeight: FontWeight.w900,

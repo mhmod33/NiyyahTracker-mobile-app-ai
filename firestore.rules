@@ -1,0 +1,42 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isSignedIn()
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    match /users/{userId} {
+      // Owner reads own profile; admins read all profiles (manage uploads page).
+      allow read: if isSignedIn() && (request.auth.uid == userId || isAdmin());
+
+      // Owner creates/updates own doc; admins may update any user (e.g. canUpload).
+      allow create: if isSignedIn() && request.auth.uid == userId;
+      allow update: if isSignedIn() && (request.auth.uid == userId || isAdmin());
+
+      match /{document=**} {
+        allow read, write: if isSignedIn() && request.auth.uid == userId;
+      }
+    }
+
+    match /admin_notifications/{notificationId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    // Shared audio library — Firestore chunks only (no Storage / Blaze)
+    match /library_snippets/{trackId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isAdmin();
+
+      match /chunks/{chunkId} {
+        allow read: if isSignedIn();
+        allow create, update, delete: if isAdmin();
+      }
+    }
+  }
+}

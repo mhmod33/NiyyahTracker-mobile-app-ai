@@ -848,7 +848,7 @@ class _MushafPageWidgetState extends State<_MushafPageWidget> with AutomaticKeep
             _actionTile(Icons.copy_rounded, 'نسخ الآية', () { Navigator.pop(ctx); Clipboard.setData(ClipboardData(text: verseText)); _snack(context, 'تم نسخ الآية'); }),
             _actionTile(Icons.menu_book_rounded, 'التفسير الميسر', () { Navigator.pop(ctx); _showTafseer(context, surah, verse, 'ar.muyassar', 'التفسير الميسر'); }),
             _actionTile(Icons.auto_stories_rounded, 'تفسير الجلالين', () { Navigator.pop(ctx); _showTafseer(context, surah, verse, 'ar.jalalayn', 'تفسير الجلالين'); }),
-            _actionTile(Icons.share_rounded, 'مشاركة نص', () { Navigator.pop(ctx); Share.share('﴿$verse﴾ $verseText\n\n- سورة $surahName -\n\nNiyyah Tracker'); }),
+            _actionTile(Icons.share_rounded, 'مشاركة نص', () { Navigator.pop(ctx); Share.share('﴿$verse﴾ $verseText\n\n- سورة $surahName -\n\nبصائر'); }),
             _actionTile(Icons.image_rounded, 'مشاركة كصورة', () { Navigator.pop(ctx); _shareAsImage(context, surah, verse); }),
             _actionTile(Icons.bookmark_border_rounded, 'إضافة علامة', () async { 
               Navigator.pop(ctx); 
@@ -990,7 +990,7 @@ class _MushafPageWidgetState extends State<_MushafPageWidget> with AutomaticKeep
                   Row(mainAxisAlignment: MainAxisAlignment.center, children: [
                     Icon(Icons.eco_rounded, color: AppColors.lightGreen.withValues(alpha: 0.7), size: 16),
                     const SizedBox(width: 6),
-                    Text('Niyyah Tracker', style: GoogleFonts.inter(color: AppColors.lightGreen.withValues(alpha: 0.7), fontSize: 12, fontWeight: FontWeight.w600)),
+                    Text('بصائر', style: GoogleFonts.inter(color: AppColors.lightGreen.withValues(alpha: 0.7), fontSize: 12, fontWeight: FontWeight.w600)),
                   ]),
                 ]),
               ),
@@ -1016,7 +1016,7 @@ class _MushafPageWidgetState extends State<_MushafPageWidget> with AutomaticKeep
                         await file.writeAsBytes(bytes);
                         if (!ctx.mounted) return;
                         Navigator.pop(ctx);
-                        await Share.shareXFiles([XFile(file.path)], text: 'سورة $surahName - آية $verse\nNiyyah Tracker');
+                        await Share.shareXFiles([XFile(file.path)], text: 'سورة $surahName - آية $verse\nبصائر');
                       } catch (e) {
                         if (!ctx.mounted) return;
                         Navigator.pop(ctx);

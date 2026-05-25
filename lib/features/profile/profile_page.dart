@@ -6,8 +6,6 @@ import '../../core/app_colors.dart';
 import '../../core/directional_icon.dart';
 import '../../core/theme_provider.dart';
 import '../../providers/auth_provider.dart';
-import '../ramadan/ramadan_page.dart';
-import '../hajj/hajj_page.dart';
 import '../auth/login_page.dart';
 import '../settings/notification_settings_page.dart';
 
@@ -162,30 +160,7 @@ class ProfilePage extends StatelessWidget {
                     ),
 
                     const SizedBox(height: 24),
-                    _SectionHeader(title: 'الأنماط الخاصة', isDark: isDark),
-                    _ProfileCard(
-                      isDark: isDark,
-                      children: [
-                        _ModernSettingsTile(
-                          icon: Icons.nights_stay_rounded,
-                          color: Colors.indigo,
-                          title: 'مود رمضان',
-                          subtitle: 'متابعة الصيام والقيام',
-                          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const RamadanPage())),
-                        ),
-                        const _Divider(),
-                        _ModernSettingsTile(
-                          icon: Icons.mosque_rounded,
-                          color: Colors.green,
-                          title: 'مود الحج والعمرة',
-                          subtitle: 'دليل المناسك الكامل',
-                          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const HajjPage())),
-                        ),
-                      ],
-                    ),
-
-                    const SizedBox(height: 24),
-                    _SectionHeader(title: 'عن النية', isDark: isDark),
+                    _SectionHeader(title: 'عن بصائر', isDark: isDark),
                     _ProfileCard(
                       isDark: isDark,
                       children: [

@@ -111,7 +111,7 @@ class NiyyahTrackerApp extends StatelessWidget {
     final themeProvider = context.watch<ThemeProvider>();
 
     return MaterialApp(
-      title: 'النية',
+      title: 'بصائر',
       debugShowCheckedModeBanner: false,
       locale: const Locale('ar', 'SA'),
       supportedLocales: const [Locale('ar', 'SA'), Locale('en', 'US')],

@@ -15,12 +15,12 @@ import '../reports/reports_page.dart';
 import '../map/nearby_mosques_page.dart';
 import '../profile/profile_page.dart';
 import '../friday/friday_tips_page.dart';
-import '../azkar/azkar_counter_page.dart';
 import '../prayer_times/prayer_times_page.dart';
 import '../qibla/qibla_page.dart';
 import '../challenges/challenges_page.dart';
 import '../quran/quran_page.dart';
 import '../azkar/azkar_library_page.dart';
+import '../azkar/azkar_counter_page.dart';
 import '../settings/notification_settings_page.dart';
 import '../azan/azan_settings_page.dart';
 import '../auth/login_page.dart';
@@ -33,11 +33,11 @@ import '../../widgets/mini_player.dart';
 import '../quran/reciter_library_page.dart';
 import '../wird/daily_wird_page.dart';
 import '../../services/wird_service.dart';
-import '../hajj/hajj_page.dart';
-import '../ramadan/ramadan_page.dart';
 import '../study_tracker/study_tracker_page.dart';
 import '../../models/study_track_model.dart';
 import '../../services/study_track_service.dart';
+import '../admin/admin_panel_page.dart';
+import '../../services/admin_notification_service.dart';
 
 TextStyle _f({double sz = 14, FontWeight fw = FontWeight.w400, Color? c, double? h}) =>
     GoogleFonts.ibmPlexSansArabic(fontSize: sz, fontWeight: fw, color: c, height: h);
@@ -76,6 +76,9 @@ class _DashboardPageState extends State<DashboardPage> with WidgetsBindingObserv
     _loadTodaySummary();
     _loadWirdData();
     _loadStudyData();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) AdminNotificationService().startListening(context);
+    });
   }
 
   Future<void> _loadAzkarPref() async {
@@ -105,6 +108,7 @@ class _DashboardPageState extends State<DashboardPage> with WidgetsBindingObserv
 
   @override
   void dispose() {
+    AdminNotificationService().stopListening();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
@@ -284,7 +288,7 @@ class _DashboardPageState extends State<DashboardPage> with WidgetsBindingObserv
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text('السلام عليكم، ${userName.split(' ').first}', style: _f(sz: 13, c: Colors.white70)),
-                              Text('مرحباً بك في النية', style: _f(sz: 20, fw: FontWeight.w800, c: Colors.white)),
+                              Text('مرحباً بك في بصائر', style: _f(sz: 20, fw: FontWeight.w800, c: Colors.white)),
                             ],
                           ),
                         ),
@@ -349,9 +353,9 @@ class _DashboardPageState extends State<DashboardPage> with WidgetsBindingObserv
                     _QuickChip(icon: Icons.volume_up_rounded, label: 'الأذان', color: Colors.teal, onTap: () => _to(const AzanSettingsPage())),
                     _QuickChip(icon: Icons.explore_rounded, label: 'اتجاة القبلة', color: Colors.green, onTap: () => _to(const QiblaPage())),
                     _QuickChip(icon: Icons.menu_book_rounded, label: 'المصحف الشريف', color: Colors.purple, onTap: () => _to(const QuranPage())),
-                    _QuickChip(icon: Icons.headphones_rounded, label: 'مكتبة القراء', color: const Color(0xFF1B7A4E), onTap: () => _to(const ReciterLibraryPage())),
+                    _QuickChip(icon: Icons.headphones_rounded, label: 'مزامير القرآن', color: const Color(0xFF1B7A4E), onTap: () => _to(const ReciterLibraryPage())),
                     _QuickChip(icon: Icons.location_on_rounded, label: 'المساجد', color: Colors.cyan, onTap: () => _to(const NearbyMosquesPage())),
-                    _QuickChip(icon: Icons.front_hand_rounded, label: 'الأذكار اليومية', color: Colors.orange, onTap: () => _to(const AzkarCounterPage())),
+                    _QuickChip(icon: Icons.import_contacts_rounded, label: 'مكتبة الأذكار', color: Colors.orange, onTap: () => _to(const AzkarLibraryPage())),
                   ],
                 ),
               ),
@@ -372,8 +376,6 @@ class _DashboardPageState extends State<DashboardPage> with WidgetsBindingObserv
                   _FeatureCard(icon: Icons.analytics_rounded, label: 'التحليلات', color: Colors.deepPurple, isDark: isDark, onTap: () => _toProtected(const AnalyticsPage())),
                   _FeatureCard(icon: Icons.emoji_events_rounded, label: 'التحديات', color: Colors.orange, isDark: isDark, onTap: () => _toProtected(const ChallengesPage())),
                   _FeatureCard(icon: Icons.description_rounded, label: 'التقارير', color: Colors.blueGrey, isDark: isDark, onTap: () => _toProtected(const ReportsPage())),
-                  _FeatureCard(icon: Icons.nights_stay_rounded, label: 'مود رمضان', color: Colors.indigo, isDark: isDark, onTap: () => _to(const RamadanPage())),
-                  _FeatureCard(icon: Icons.mosque_rounded, label: 'مود الحج', color: const Color(0xFF8D6E00), isDark: isDark, onTap: () => _to(const HajjPage())),
                 ],
               ),
             ),
@@ -389,9 +391,10 @@ class _DashboardPageState extends State<DashboardPage> with WidgetsBindingObserv
                   _FeatureCard(icon: Icons.today_rounded, label: 'سنن الجمعة', color: Colors.teal, isDark: isDark, onTap: () => _to(const FridayTipsPage())),
                   _FeatureCard(icon: Icons.import_contacts_rounded, label: 'مكتبة الأذكار', color: Colors.green, isDark: isDark, onTap: () => _to(const AzkarLibraryPage())),
                   _FeatureCard(icon: Icons.mosque_rounded, label: 'المساجد', color: Colors.blueAccent, isDark: isDark, onTap: () => _to(const NearbyMosquesPage())),
-                  _FeatureCard(icon: Icons.headphones_rounded, label: 'مكتبة القراء', color: const Color(0xFF1B5E20), isDark: isDark, onTap: () => _to(const ReciterLibraryPage())),
-                  _FeatureCard(icon: Icons.wb_sunny_outlined, label: 'الأذكار اليومية', color: Colors.amber.shade700, isDark: isDark, onTap: () => _to(const AzkarLibraryPage())),
+                  _FeatureCard(icon: Icons.headphones_rounded, label: 'مزامير القرآن', color: const Color(0xFF1B5E20), isDark: isDark, onTap: () => _to(const ReciterLibraryPage())),
                   _FeatureCard(icon: Icons.volume_up_rounded, label: 'إعدادات الأذان', color: Colors.indigo, isDark: isDark, onTap: () => _to(const AzanSettingsPage())),
+                  if (context.watch<AppAuthProvider>().isAdmin)
+                    _FeatureCard(icon: Icons.shield_rounded, label: 'لوحة الإدارة', color: AppColors.gold, isDark: isDark, onTap: () => _to(const AdminPanelPage())),
                 ],
               ),
             ),

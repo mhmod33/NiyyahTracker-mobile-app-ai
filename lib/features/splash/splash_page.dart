@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../core/app_colors.dart';
@@ -17,6 +18,8 @@ class SplashPage extends StatefulWidget {
 class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
   late AnimationController _fadeController;
   late AnimationController _slideController;
+  late AnimationController _mosqueRiseController;
+  late AnimationController _patternController;
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
 
@@ -31,6 +34,15 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
       vsync: this,
       duration: const Duration(milliseconds: 1200),
     );
+    _mosqueRiseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2600),
+    )..forward();
+    _patternController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 40),
+    )..repeat();
+
     _fadeAnimation = CurvedAnimation(parent: _fadeController, curve: Curves.easeIn);
     _slideAnimation = Tween<Offset>(
       begin: const Offset(0, 0.3),
@@ -39,10 +51,9 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
 
     _fadeController.forward();
     Future.delayed(const Duration(milliseconds: 400), () {
-      _slideController.forward();
+      if (mounted) _slideController.forward();
     });
 
-    // Navigate after splash delay, checking auth state
     Timer(const Duration(seconds: 3), () {
       if (!mounted) return;
       _navigateBasedOnAuth();
@@ -51,21 +62,17 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
 
   void _navigateBasedOnAuth() {
     final authProvider = context.read<AppAuthProvider>();
-
-    // If still loading auth state, wait a bit more
     if (authProvider.isLoading) {
       Future.delayed(const Duration(milliseconds: 500), () {
         if (mounted) _navigateBasedOnAuth();
       });
       return;
     }
-
     if (authProvider.isAuthenticated) {
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (_) => const DashboardPage()),
       );
     } else {
-      // Go to Onboarding (which leads to Login) if not authenticated
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (_) => const OnboardingPage()),
       );
@@ -76,13 +83,21 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
   void dispose() {
     _fadeController.dispose();
     _slideController.dispose();
+    _mosqueRiseController.dispose();
+    _patternController.dispose();
     super.dispose();
+  }
+
+  Color _lineColor(bool isDark, double opacity) {
+    return (isDark ? AppColors.gold : AppColors.darkGreen)
+        .withValues(alpha: opacity);
   }
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    
+    final size = MediaQuery.sizeOf(context);
+
     return Scaffold(
       body: Container(
         width: double.infinity,
@@ -91,96 +106,145 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: isDark 
-              ? [const Color(0xFF0A1912), const Color(0xFF143023)]
-              : [const Color(0xFFE8F8EF), const Color(0xFFD1F2DF), const Color(0xFFFFFFFF)],
+            colors: isDark
+                ? [const Color(0xFF040E0A), const Color(0xFF0A1A14), const Color(0xFF122A20)]
+                : [const Color(0xFFF0FAF4), const Color(0xFFE0F4E8), const Color(0xFFFFFFFF)],
           ),
         ),
         child: Stack(
+          fit: StackFit.expand,
           children: [
-            // Islamic Pattern Background (Optional texture effect)
-            Positioned.fill(
-              child: Opacity(
-                opacity: isDark ? 0.05 : 0.03,
-                child: CustomPaint(
-                  painter: _IslamicPatternPainter(),
+            // Background — does not block touches on foreground
+            IgnorePointer(
+              child: AnimatedBuilder(
+                animation: Listenable.merge([_mosqueRiseController, _patternController]),
+                builder: (_, __) => Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    _IslamicPatternLayer(
+                      isDark: isDark,
+                      drift: _patternController.value,
+                      color: _lineColor(isDark, isDark ? 0.06 : 0.05),
+                    ),
+                    _RisingMosqueSvg(
+                      rise: _mosqueRiseController.value,
+                      delay: 0.0,
+                      xFactor: 0.2,
+                      scale: 0.62,
+                      screenWidth: size.width,
+                      screenHeight: size.height,
+                      color: _lineColor(isDark, isDark ? 0.32 : 0.24),
+                    ),
+                    _RisingMosqueSvg(
+                      rise: _mosqueRiseController.value,
+                      delay: 0.14,
+                      xFactor: 0.5,
+                      scale: 0.88,
+                      screenWidth: size.width,
+                      screenHeight: size.height,
+                      color: _lineColor(isDark, isDark ? 0.42 : 0.32),
+                    ),
+                    _RisingMosqueSvg(
+                      rise: _mosqueRiseController.value,
+                      delay: 0.28,
+                      xFactor: 0.8,
+                      scale: 0.7,
+                      screenWidth: size.width,
+                      screenHeight: size.height,
+                      color: _lineColor(isDark, isDark ? 0.32 : 0.24),
+                    ),
+                  ],
                 ),
               ),
             ),
-            Center(
-              child: FadeTransition(
-                opacity: _fadeAnimation,
-                child: SlideTransition(
-                  position: _slideAnimation,
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      // Logo with Gold Border
-                      Container(
-                        width: 140,
-                        height: 140,
-                        padding: const EdgeInsets.all(4),
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(color: AppColors.gold, width: 2),
-                          boxShadow: [
-                            BoxShadow(
-                              color: AppColors.darkGreen.withOpacity(0.3),
-                              blurRadius: 40,
-                              offset: const Offset(0, 10),
+            SafeArea(
+              child: Center(
+                child: FadeTransition(
+                  opacity: _fadeAnimation,
+                  child: SlideTransition(
+                    position: _slideAnimation,
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Container(
+                          width: 120,
+                          height: 120,
+                          padding: const EdgeInsets.all(3),
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: AppColors.gold.withValues(alpha: 0.85),
+                              width: 2,
                             ),
-                          ],
-                        ),
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(70),
-                          child: Image.asset(
-                            'assets/logo.png',
-                            fit: BoxFit.cover,
+                            boxShadow: [
+                              BoxShadow(
+                                color: AppColors.darkGreen.withValues(alpha: 0.25),
+                                blurRadius: 32,
+                                offset: const Offset(0, 8),
+                              ),
+                            ],
+                          ),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(60),
+                            child: Image.asset('assets/logo.png', fit: BoxFit.cover),
                           ),
                         ),
-                      ),
-                      const SizedBox(height: 36),
-                      // App Name
-                      Text(
-                        'النية',
-                        style: GoogleFonts.ibmPlexSansArabic(
-                          fontSize: 48,
-                          fontWeight: FontWeight.w900,
-                          color: isDark ? Colors.white : AppColors.darkGreen,
-                          letterSpacing: 1.5,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      // Slogan with Islamic arch-like decoration
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
-                        decoration: BoxDecoration(
-                          color: isDark ? Colors.white.withOpacity(0.05) : AppColors.darkGreen.withOpacity(0.05),
-                          borderRadius: BorderRadius.circular(30),
-                          border: Border.all(
-                            color: isDark ? AppColors.gold.withOpacity(0.3) : AppColors.gold.withOpacity(0.5),
-                          ),
-                        ),
-                        child: Text(
-                          'وإنما لكل امرئ ما نوى',
+                        const SizedBox(height: 28),
+                        Text(
+                          'بصائر',
                           style: GoogleFonts.ibmPlexSansArabic(
-                            fontSize: 18,
-                            color: isDark ? Colors.white70 : AppColors.darkGreen,
-                            fontWeight: FontWeight.w700,
+                            fontSize: 44,
+                            fontWeight: FontWeight.w900,
+                            color: isDark ? Colors.white : AppColors.darkGreen,
+                            letterSpacing: 1.5,
                           ),
                         ),
-                      ),
-                      const SizedBox(height: 60),
-                      // Loading indicator
-                      SizedBox(
-                        width: 36,
-                        height: 36,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 3,
-                          color: AppColors.gold,
+                        const SizedBox(height: 6),
+                        Text(
+                          'Basair',
+                          style: GoogleFonts.ibmPlexSansArabic(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: isDark
+                                ? AppColors.gold.withValues(alpha: 0.9)
+                                : AppColors.gold,
+                            letterSpacing: 5,
+                          ),
                         ),
-                      ),
-                    ],
+                        const SizedBox(height: 18),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 11),
+                          decoration: BoxDecoration(
+                            color: isDark
+                                ? Colors.white.withValues(alpha: 0.06)
+                                : Colors.white.withValues(alpha: 0.72),
+                            borderRadius: BorderRadius.circular(28),
+                            border: Border.all(
+                              color: AppColors.gold.withValues(alpha: isDark ? 0.22 : 0.35),
+                            ),
+                          ),
+                          child: Text(
+                            'فمن أبصر فلنفسه',
+                            style: GoogleFonts.ibmPlexSansArabic(
+                              fontSize: 17,
+                              color: isDark
+                                  ? Colors.white.withValues(alpha: 0.88)
+                                  : AppColors.darkGreen,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 48),
+                        SizedBox(
+                          width: 32,
+                          height: 32,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2.5,
+                            color: AppColors.gold.withValues(alpha: 0.9),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -192,29 +256,88 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
   }
 }
 
-class _IslamicPatternPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = Colors.black
-      ..strokeWidth = 1.0
-      ..style = PaintingStyle.stroke;
+class _IslamicPatternLayer extends StatelessWidget {
+  final bool isDark;
+  final double drift;
+  final Color color;
 
-    final double step = 60.0;
-    for (double x = 0; x < size.width + step; x += step) {
-      for (double y = 0; y < size.height + step; y += step) {
-        // Draw 8-point stars (simple representation)
-        canvas.drawLine(Offset(x - 10, y), Offset(x + 10, y), paint);
-        canvas.drawLine(Offset(x, y - 10), Offset(x, y + 10), paint);
-        canvas.drawLine(Offset(x - 7, y - 7), Offset(x + 7, y + 7), paint);
-        canvas.drawLine(Offset(x - 7, y + 7), Offset(x + 7, y - 7), paint);
-        
-        // Connect them
-        canvas.drawRect(Rect.fromCenter(center: Offset(x, y), width: step, height: step), paint);
-      }
-    }
+  const _IslamicPatternLayer({
+    required this.isDark,
+    required this.drift,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Transform.translate(
+      offset: Offset(drift * 12 - 6, drift * 8 - 4),
+      child: Opacity(
+        opacity: isDark ? 0.45 : 0.55,
+        child: GridView.builder(
+          physics: const NeverScrollableScrollPhysics(),
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 5,
+            mainAxisSpacing: 8,
+            crossAxisSpacing: 8,
+          ),
+          itemCount: 40,
+          itemBuilder: (_, __) => SvgPicture.asset(
+            'assets/splash/islamic_pattern.svg',
+            fit: BoxFit.contain,
+            colorFilter: ColorFilter.mode(color, BlendMode.srcIn),
+          ),
+        ),
+      ),
+    );
   }
+}
+
+class _RisingMosqueSvg extends StatelessWidget {
+  final double rise;
+  final double delay;
+  final double xFactor;
+  final double scale;
+  final double screenWidth;
+  final double screenHeight;
+  final Color color;
+
+  const _RisingMosqueSvg({
+    required this.rise,
+    required this.delay,
+    required this.xFactor,
+    required this.scale,
+    required this.screenWidth,
+    required this.screenHeight,
+    required this.color,
+  });
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+  Widget build(BuildContext context) {
+    final t = rise <= delay
+        ? 0.0
+        : ((rise - delay) / (1 - delay)).clamp(0.0, 1.0);
+    final curve = Curves.easeOutCubic.transform(t);
+    final mosqueH = screenHeight * 0.32 * scale;
+    final slideUp = (1 - curve) * mosqueH * 1.2;
+    final opacity = (0.25 + curve * 0.75).clamp(0.0, 1.0);
+
+    return Positioned(
+      left: screenWidth * xFactor - (screenWidth * 0.22 * scale),
+      bottom: -slideUp,
+      width: screenWidth * 0.44 * scale,
+      height: mosqueH,
+      child: Opacity(
+        opacity: opacity,
+        child: SvgPicture.asset(
+          'assets/splash/mosque.svg',
+          fit: BoxFit.fitHeight,
+          alignment: Alignment.bottomCenter,
+          colorFilter: ColorFilter.mode(
+            color.withValues(alpha: color.a * opacity),
+            BlendMode.srcIn,
+          ),
+        ),
+      ),
+    );
+  }
 }

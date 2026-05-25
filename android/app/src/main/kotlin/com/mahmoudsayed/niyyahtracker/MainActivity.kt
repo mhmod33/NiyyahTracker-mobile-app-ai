@@ -1,6 +1,7 @@
 package com.mahmoudsayed.niyyahtracker
 
 import android.app.AlarmManager
+import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
@@ -51,6 +52,11 @@ class MainActivity : FlutterActivity() {
                         } catch (e: Exception) {
                             Log.e(TAG, "Error stopping azan service", e)
                         }
+                        // Also cancel Flutter notification 4000 so stop monitor triggers
+                        try {
+                            val nm = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+                            nm.cancel(4000)
+                        } catch (_: Exception) {}
                         result.success(true)
                     }
                     else -> result.notImplemented()

@@ -1,12 +1,13 @@
-import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:quran/quran.dart' as quran;
 import '../../core/app_colors.dart';
 import '../../core/directional_icon.dart';
+import '../../providers/auth_provider.dart';
 import '../../services/quran_audio_service.dart';
 import '../../services/reciter_download_service.dart';
+import 'upload_snippet_sheet.dart';
 
 class ReciterLibraryPage extends StatefulWidget {
   /// If provided, tapping a reciter will immediately play this surah.
@@ -19,21 +20,15 @@ class ReciterLibraryPage extends StatefulWidget {
 }
 
 class _ReciterLibraryPageState extends State<ReciterLibraryPage> {
-  // ─────────────────────────────────────────────────────────────────────────
-  // Feature flag: temporarily hides the user-upload-snippet flow.
-  //
-  // The full implementation (upload sheet, custom reciter management in
-  // [QuranAudioService], the [_UploadCard] widget, etc.) is kept intact —
-  // we just don't render the entry points. Flip this back to `true` once
-  // the file_picker plugin is ready for production.
-  // ─────────────────────────────────────────────────────────────────────────
-  static const bool _uploadFeatureEnabled = false;
+  static const bool _uploadFeatureEnabled = true;
 
   @override
   void initState() {
     super.initState();
     // Refresh download states from disk every time page opens
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await QuranAudioService().refreshSharedLibrary();
+      if (mounted) setState(() {});
       final dl = ReciterDownloadService();
       for (final r in QuranAudioService.reciters) {
         if (r.type == ReciterType.full) {
@@ -43,406 +38,12 @@ class _ReciterLibraryPageState extends State<ReciterLibraryPage> {
     });
   }
 
-  /// Opens a bottom sheet that lets the user pick an mp3 from device storage,
-  /// type a track title, and choose (or type) a reciter name.
   Future<void> _openUploadSheet(BuildContext rootContext) async {
-    final isDark = Theme.of(rootContext).brightness == Brightness.dark;
-    final audioService = QuranAudioService();
-
-    // Build the list of reciters the user can pick from. We include every
-    // snippet reciter — built-in (like Ahmed Fouad) plus any custom ones the
-    // user previously uploaded.
-    final allSnippetReciters = QuranAudioService.reciters
-        .where((r) => r.type == ReciterType.snippets)
-        .toList();
-
-    String? pickedFilePath;
-    String? pickedFileName;
-    final titleCtl = TextEditingController();
-    final newReciterCtl = TextEditingController();
-
-    // Selection state:
-    // - selectedReciterName: chosen from existing reciters (null = none)
-    // - addingNew: true when user opted to add a new reciter manually
-    String? selectedReciterName;
-    bool addingNew = false;
-
-    Future<void> pickAudio(StateSetter setSheet) async {
-      try {
-        // Use [FileType.custom] with explicit extensions because [FileType.audio]
-        // is unreliable on some Android OEM file providers and can throw
-        // MissingPluginException on cold start before native registration.
-        final result = await FilePicker.pickFiles(
-          type: FileType.custom,
-          allowedExtensions: const ['mp3', 'm4a', 'aac', 'wav', 'ogg', 'opus'],
-          allowMultiple: false,
-        );
-        if (result != null && result.files.isNotEmpty) {
-          final f = result.files.single;
-          if (f.path != null) {
-            setSheet(() {
-              pickedFilePath = f.path;
-              pickedFileName = f.name;
-              if (titleCtl.text.isEmpty) {
-                final dot = f.name.lastIndexOf('.');
-                titleCtl.text = dot > 0 ? f.name.substring(0, dot) : f.name;
-              }
-            });
-          }
-        }
-      } catch (e) {
-        if (rootContext.mounted) {
-          ScaffoldMessenger.of(rootContext).showSnackBar(
-            SnackBar(
-              content: Text(
-                'تعذر فتح متصفح الملفات. أعد تشغيل التطبيق ثم حاول مجدداً.',
-                style: GoogleFonts.ibmPlexSansArabic(color: Colors.white),
-              ),
-              backgroundColor: Colors.red,
-              duration: const Duration(seconds: 3),
-            ),
-          );
-        }
-      }
-    }
-
-    await showModalBottomSheet<void>(
+    await showUploadSnippetSheet(
       context: rootContext,
-      isScrollControlled: true,
-      backgroundColor: isDark ? const Color(0xFF1A1A1A) : Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (sheetCtx) => StatefulBuilder(
-        builder: (sheetCtx, setSheet) => Directionality(
-          textDirection: TextDirection.rtl,
-          child: Padding(
-            padding: EdgeInsets.only(
-              left: 22, right: 22, top: 18,
-              bottom: MediaQuery.of(sheetCtx).viewInsets.bottom + 22,
-            ),
-            child: SingleChildScrollView(
-              child: Column(mainAxisSize: MainAxisSize.min, children: [
-                Container(
-                  width: 40, height: 4,
-                  decoration: BoxDecoration(
-                    color: Colors.grey[400],
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-                const SizedBox(height: 14),
-                Row(children: [
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: AppColors.darkGreen.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Icon(Icons.upload_file_rounded,
-                        color: AppColors.darkGreen, size: 22),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('رفع مقطع جديد',
-                          style: GoogleFonts.ibmPlexSansArabic(
-                              fontSize: 17, fontWeight: FontWeight.w800,
-                              color: isDark ? Colors.white : AppColors.darkGreen)),
-                      Text('اختر القارئ ثم ارفع ملف الصوت',
-                          style: GoogleFonts.ibmPlexSansArabic(
-                              fontSize: 11,
-                              color: isDark ? Colors.white60 : AppColors.gray)),
-                    ])),
-                ]),
-                const SizedBox(height: 18),
-
-                // ── Step 1: choose reciter ──
-                Align(
-                  alignment: AlignmentDirectional.centerStart,
-                  child: Text('1. اختر القارئ',
-                      style: GoogleFonts.ibmPlexSansArabic(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w800,
-                          color:
-                              isDark ? Colors.white : AppColors.darkGreen)),
-                ),
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 6,
-                  runSpacing: 6,
-                  children: [
-                    ...allSnippetReciters.map((r) {
-                      final selected =
-                          !addingNew && selectedReciterName == r.nameAr;
-                      return ChoiceChip(
-                        label: Text(r.nameAr,
-                            style: GoogleFonts.ibmPlexSansArabic(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w700,
-                                color:
-                                    selected ? Colors.white : null)),
-                        selected: selected,
-                        selectedColor: AppColors.darkGreen,
-                        backgroundColor: isDark
-                            ? Colors.white.withValues(alpha: 0.06)
-                            : AppColors.paleGreen,
-                        side: BorderSide(
-                          color: selected
-                              ? AppColors.darkGreen
-                              : Colors.transparent,
-                        ),
-                        onSelected: (_) => setSheet(() {
-                          selectedReciterName = r.nameAr;
-                          addingNew = false;
-                          newReciterCtl.clear();
-                        }),
-                      );
-                    }),
-                    // "+ Add new" chip
-                    ChoiceChip(
-                      avatar: Icon(
-                        Icons.add_rounded,
-                        size: 16,
-                        color:
-                            addingNew ? Colors.white : AppColors.darkGreen,
-                      ),
-                      label: Text('قارئ جديد',
-                          style: GoogleFonts.ibmPlexSansArabic(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w700,
-                              color: addingNew ? Colors.white : null)),
-                      selected: addingNew,
-                      selectedColor: AppColors.gold,
-                      backgroundColor: isDark
-                          ? Colors.white.withValues(alpha: 0.06)
-                          : AppColors.paleGreen,
-                      side: BorderSide(
-                        color: addingNew
-                            ? AppColors.gold
-                            : Colors.transparent,
-                      ),
-                      onSelected: (_) => setSheet(() {
-                        addingNew = !addingNew;
-                        if (addingNew) selectedReciterName = null;
-                      }),
-                    ),
-                  ],
-                ),
-
-                if (addingNew) ...[
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: newReciterCtl,
-                    textDirection: TextDirection.rtl,
-                    autofocus: true,
-                    style: GoogleFonts.ibmPlexSansArabic(
-                        fontSize: 14,
-                        color: isDark
-                            ? Colors.white
-                            : AppColors.textPrimary),
-                    decoration: InputDecoration(
-                      labelText: 'اسم القارئ الجديد',
-                      labelStyle: GoogleFonts.ibmPlexSansArabic(
-                          fontSize: 13, color: AppColors.gray),
-                      hintText: 'مثال: محمود البنا',
-                      hintStyle: GoogleFonts.ibmPlexSansArabic(
-                          fontSize: 13, color: AppColors.gray),
-                      prefixIcon: const Icon(Icons.mic_rounded,
-                          color: AppColors.gold),
-                      border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12)),
-                    ),
-                  ),
-                ],
-
-                const SizedBox(height: 18),
-
-                // ── Step 2: pick file ──
-                Align(
-                  alignment: AlignmentDirectional.centerStart,
-                  child: Text('2. اختر الملف الصوتي',
-                      style: GoogleFonts.ibmPlexSansArabic(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w800,
-                          color:
-                              isDark ? Colors.white : AppColors.darkGreen)),
-                ),
-                const SizedBox(height: 8),
-                GestureDetector(
-                  onTap: () => pickAudio(setSheet),
-                  child: Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: isDark
-                          ? Colors.white.withValues(alpha: 0.04)
-                          : AppColors.paleGreen.withValues(alpha: 0.4),
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(
-                        color: pickedFilePath != null
-                            ? AppColors.darkGreen
-                            : AppColors.gold.withValues(alpha: 0.4),
-                        width: 1.5,
-                      ),
-                    ),
-                    child: Row(children: [
-                      Icon(
-                        pickedFilePath != null
-                            ? Icons.audio_file_rounded
-                            : Icons.add_circle_outline_rounded,
-                        color: pickedFilePath != null
-                            ? AppColors.darkGreen
-                            : AppColors.gold,
-                        size: 26,
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              pickedFilePath != null
-                                  ? 'تم اختيار:'
-                                  : 'اضغط لاختيار ملف صوتي (mp3, m4a, ...)',
-                              style: GoogleFonts.ibmPlexSansArabic(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w700,
-                                color: isDark
-                                    ? Colors.white
-                                    : AppColors.darkGreen,
-                              ),
-                            ),
-                            if (pickedFileName != null)
-                              Text(
-                                pickedFileName!,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: GoogleFonts.ibmPlexSansArabic(
-                                  fontSize: 11,
-                                  color: isDark
-                                      ? Colors.white60
-                                      : AppColors.gray,
-                                ),
-                              ),
-                          ],
-                        ),
-                      ),
-                    ]),
-                  ),
-                ),
-
-                const SizedBox(height: 16),
-
-                // ── Step 3: track title ──
-                Align(
-                  alignment: AlignmentDirectional.centerStart,
-                  child: Text('3. عنوان المقطع',
-                      style: GoogleFonts.ibmPlexSansArabic(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w800,
-                          color:
-                              isDark ? Colors.white : AppColors.darkGreen)),
-                ),
-                const SizedBox(height: 8),
-                TextField(
-                  controller: titleCtl,
-                  textDirection: TextDirection.rtl,
-                  style: GoogleFonts.ibmPlexSansArabic(
-                      fontSize: 14,
-                      color: isDark ? Colors.white : AppColors.textPrimary),
-                  decoration: InputDecoration(
-                    hintText: 'مثال: سورة الرحمن',
-                    hintStyle: GoogleFonts.ibmPlexSansArabic(
-                        fontSize: 13, color: AppColors.gray),
-                    prefixIcon: const Icon(Icons.title_rounded,
-                        color: AppColors.darkGreen),
-                    border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12)),
-                  ),
-                ),
-
-                const SizedBox(height: 18),
-
-                SizedBox(
-                  width: double.infinity,
-                  height: 52,
-                  child: ElevatedButton.icon(
-                    onPressed: () async {
-                      final title = titleCtl.text.trim();
-                      final reciterName = addingNew
-                          ? newReciterCtl.text.trim()
-                          : (selectedReciterName ?? '');
-
-                      if (pickedFilePath == null ||
-                          title.isEmpty ||
-                          reciterName.isEmpty) {
-                        ScaffoldMessenger.of(rootContext).showSnackBar(
-                          SnackBar(
-                            content: Text(
-                              'الرجاء اختيار القارئ والملف وكتابة العنوان',
-                              style: GoogleFonts.ibmPlexSansArabic(
-                                  color: Colors.white),
-                            ),
-                            backgroundColor: Colors.red,
-                          ),
-                        );
-                        return;
-                      }
-                      try {
-                        await audioService.addUserSnippet(
-                          reciterName: reciterName,
-                          trackTitle: title,
-                          sourceFilePath: pickedFilePath!,
-                        );
-                        if (sheetCtx.mounted) Navigator.pop(sheetCtx);
-                        if (mounted) {
-                          ScaffoldMessenger.of(rootContext).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                'تم إضافة المقطع بنجاح',
-                                style: GoogleFonts.ibmPlexSansArabic(
-                                    color: Colors.white),
-                              ),
-                              backgroundColor: AppColors.darkGreen,
-                            ),
-                          );
-                          setState(() {});
-                        }
-                      } catch (e) {
-                        if (mounted) {
-                          ScaffoldMessenger.of(rootContext).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                'فشل رفع الملف: $e',
-                                style: GoogleFonts.ibmPlexSansArabic(
-                                    color: Colors.white),
-                              ),
-                              backgroundColor: Colors.red,
-                            ),
-                          );
-                        }
-                      }
-                    },
-                    icon: const Icon(Icons.check_rounded, color: Colors.white),
-                    label: Text(
-                      'حفظ المقطع',
-                      style: GoogleFonts.ibmPlexSansArabic(
-                          fontSize: 15,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white),
-                    ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.darkGreen,
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14)),
-                    ),
-                  ),
-                ),
-              ]),
-            ),
-          ),
-        ),
-      ),
+      onSaved: () {
+        if (mounted) setState(() {});
+      },
     );
   }
 
@@ -468,7 +69,7 @@ class _ReciterLibraryPageState extends State<ReciterLibraryPage> {
             ),
           ),
           title: Text(
-            'مكتبة القراء',
+            'مزامير القرآن',
             style: GoogleFonts.ibmPlexSansArabic(
               fontWeight: FontWeight.w800,
               fontSize: 18,
@@ -477,7 +78,7 @@ class _ReciterLibraryPageState extends State<ReciterLibraryPage> {
           ),
           centerTitle: true,
           actions: [
-            if (_uploadFeatureEnabled)
+            if (_uploadFeatureEnabled && context.watch<AppAuthProvider>().canUpload)
               IconButton(
                 tooltip: 'رفع مقطع جديد',
                 icon: const Icon(Icons.upload_file_rounded, color: Colors.white),
@@ -496,12 +97,13 @@ class _ReciterLibraryPageState extends State<ReciterLibraryPage> {
                 padding: const EdgeInsets.all(16),
                 children: [
                   // ── Snippets section ──
-                  _SectionHeader(title: 'متاح الآن', subtitle: 'مدمج في التطبيق', isDark: isDark),
+                  _SectionHeader(title: 'مقتطفات', subtitle: 'متاحة للتشغيل والتحميل', isDark: isDark),
                   const SizedBox(height: 8),
                   ...QuranAudioService.reciters
                       .where((r) =>
                           r.type == ReciterType.snippets &&
-                          !r.id.startsWith('custom_'))
+                          !r.id.startsWith('custom_') &&
+                          !r.id.startsWith('shared_'))
                       .map((r) => _SnippetReciterCard(
                             reciter: r,
                             audioService: audioService,
@@ -509,8 +111,31 @@ class _ReciterLibraryPageState extends State<ReciterLibraryPage> {
                             isDark: isDark,
                           )),
 
+                  if (QuranAudioService.reciters
+                      .any((r) => r.id.startsWith('shared_'))) ...[
+                    const SizedBox(height: 24),
+                    _SectionHeader(
+                      title: 'مقتطفات بصائر',
+                      subtitle: 'رفعها الإدارة — متاحة للجميع',
+                      isDark: isDark,
+                    ),
+                    const SizedBox(height: 8),
+                    ...QuranAudioService.reciters
+                        .where((r) => r.id.startsWith('shared_'))
+                        .map((r) => _SnippetReciterCard(
+                              reciter: r,
+                              audioService: audioService,
+                              surahToPlay: widget.surahToPlay,
+                              isDark: isDark,
+                              showManageActions:
+                                  context.watch<AppAuthProvider>().isAdmin,
+                              isSharedLibrary: true,
+                            )),
+                  ],
+
                   // ── Custom (user-uploaded) reciters section ──
                   if (_uploadFeatureEnabled &&
+                      context.watch<AppAuthProvider>().canUpload &&
                       QuranAudioService.reciters
                           .any((r) => r.id.startsWith('custom_'))) ...[
                     const SizedBox(height: 24),
@@ -532,7 +157,7 @@ class _ReciterLibraryPageState extends State<ReciterLibraryPage> {
                   ],
 
                   // ── Upload card ──
-                  if (_uploadFeatureEnabled) ...[
+                  if (_uploadFeatureEnabled && context.watch<AppAuthProvider>().canUpload) ...[
                     const SizedBox(height: 16),
                     _UploadCard(
                       isDark: isDark,
@@ -690,6 +315,7 @@ class _SnippetReciterCard extends StatelessWidget {
   final int? surahToPlay;
   final bool isDark;
   final bool showManageActions;
+  final bool isSharedLibrary;
 
   const _SnippetReciterCard({
     required this.reciter,
@@ -697,6 +323,7 @@ class _SnippetReciterCard extends StatelessWidget {
     required this.surahToPlay,
     required this.isDark,
     this.showManageActions = false,
+    this.isSharedLibrary = false,
   });
 
   @override
@@ -763,9 +390,11 @@ class _SnippetReciterCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    showManageActions
-                        ? '${reciter.snippetTracks?.length ?? 0} مقطع — رفعتها بنفسك'
-                        : reciter.description,
+                    isSharedLibrary
+                        ? reciter.description
+                        : showManageActions
+                            ? '${reciter.snippetTracks?.length ?? 0} مقطع — رفعتها بنفسك'
+                            : reciter.description,
                     style: GoogleFonts.ibmPlexSansArabic(
                       fontSize: 11,
                       color: isDark ? Colors.white54 : AppColors.gray,
@@ -781,10 +410,10 @@ class _SnippetReciterCard extends StatelessWidget {
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
-                      '✓ متاح أوفلاين',
+                      isSharedLibrary ? '☁️ مكتبة مشتركة' : '✓ متاح أوفلاين',
                       style: GoogleFonts.ibmPlexSansArabic(
                         fontSize: 10,
-                        color: Colors.green,
+                        color: isSharedLibrary ? AppColors.gold : Colors.green,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -817,6 +446,9 @@ class _SnippetReciterCard extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final audioSvc = context.read<QuranAudioService>();
     final isCustom = reciter.id.startsWith('custom_');
+    final isShared = reciter.id.startsWith('shared_');
+    final canDeleteTrack = isCustom ||
+        (isShared && context.read<AppAuthProvider>().isAdmin);
     final tracks = reciter.snippetTracks ?? [];
 
     showModalBottomSheet(
@@ -890,8 +522,38 @@ class _SnippetReciterCard extends StatelessWidget {
                                 isPlaying ? FontWeight.w700 : FontWeight.w500,
                           ),
                         ),
-                        trailing: isCustom
-                            ? IconButton(
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            IconButton(
+                              icon: const Icon(Icons.download_rounded,
+                                  color: AppColors.darkGreen, size: 22),
+                              tooltip: 'تحميل المقطع',
+                              onPressed: () async {
+                                final dl = ReciterDownloadService();
+                                final path = await dl.downloadSnippetTrack(
+                                  reciterId: reciterId,
+                                  track: track,
+                                );
+                                if (!ctx.mounted) return;
+                                ScaffoldMessenger.of(ctx).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      path != null
+                                          ? 'تم حفظ المقطع في مجلد التحميلات'
+                                          : 'تعذر تحميل المقطع',
+                                      style: GoogleFonts.ibmPlexSansArabic(
+                                          color: Colors.white),
+                                    ),
+                                    backgroundColor:
+                                        path != null ? AppColors.darkGreen : Colors.red,
+                                    duration: const Duration(seconds: 3),
+                                  ),
+                                );
+                              },
+                            ),
+                            if (canDeleteTrack)
+                              IconButton(
                                 icon: const Icon(Icons.delete_outline_rounded,
                                     color: Colors.redAccent, size: 22),
                                 tooltip: 'حذف المقطع',
@@ -904,8 +566,9 @@ class _SnippetReciterCard extends StatelessWidget {
                                     Navigator.pop(ctx);
                                   }
                                 },
-                              )
-                            : null,
+                              ),
+                          ],
+                        ),
                         onTap: () {
                           Navigator.pop(ctx);
                           audioSvc.playSurah(i, reciterId: reciterId);
@@ -1193,7 +856,7 @@ class _StatusBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Priority: downloading > fully done > partial > not started
+    // Priority: downloading > fully done > error > partial > not started
     if (dlState.isDownloading) {
       return _badge(
         'جاري التحميل ${dlState.downloadedCount}/114...',
@@ -1202,6 +865,9 @@ class _StatusBadge extends StatelessWidget {
     }
     if (isFullyDownloaded) {
       return _badge('محمّل بالكامل — 114 سورة', Colors.green);
+    }
+    if (dlState.error != null) {
+      return _badge(dlState.error!, Colors.red);
     }
     if (dlState.downloadedCount > 0) {
       return _badge(

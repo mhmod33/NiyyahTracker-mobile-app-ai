@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:hive/hive.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:path_provider/path_provider.dart';
+import 'shared_library_service.dart';
 
 // ─── Snippet Track ───────────────────────────────────────────────────────────
 
@@ -17,6 +18,15 @@ class SnippetTrack {
   /// When non-null this takes precedence over [assetPath].
   final String? filePath;
 
+  /// Firebase Storage download URL (shared library — visible to all users).
+  final String? remoteUrl;
+
+  /// Firestore document id for shared tracks (delete / cache key).
+  final String? cloudTrackId;
+
+  /// Storage path in Firebase (for admin delete).
+  final String? storagePath;
+
   /// Optional reciter id for tracks that the user uploaded under a custom
   /// reciter name. Used to group tracks by reciter at runtime.
   final String? reciterId;
@@ -25,15 +35,23 @@ class SnippetTrack {
     required this.title,
     required this.assetPath,
     this.filePath,
+    this.remoteUrl,
+    this.cloudTrackId,
+    this.storagePath,
     this.reciterId,
   });
 
   bool get isUserUploaded => filePath != null;
+  bool get isShared =>
+      cloudTrackId != null && cloudTrackId!.isNotEmpty;
 
   Map<String, dynamic> toJson() => {
         'title': title,
         'assetPath': assetPath,
         'filePath': filePath,
+        'remoteUrl': remoteUrl,
+        'cloudTrackId': cloudTrackId,
+        'storagePath': storagePath,
         'reciterId': reciterId,
       };
 
@@ -41,6 +59,9 @@ class SnippetTrack {
         title: json['title'] as String,
         assetPath: (json['assetPath'] as String?) ?? '',
         filePath: json['filePath'] as String?,
+        remoteUrl: json['remoteUrl'] as String?,
+        cloudTrackId: json['cloudTrackId'] as String?,
+        storagePath: json['storagePath'] as String?,
         reciterId: json['reciterId'] as String?,
       );
 }
@@ -200,11 +221,15 @@ class QuranAudioService extends ChangeNotifier {
     ),
   ];
 
-  /// User-added custom reciters (loaded from Hive).
+  /// User-added custom reciters (loaded from Hive, local device only).
   static List<Reciter> _customReciters = const [];
 
-  /// All reciters: built-in + custom.
-  static List<Reciter> get reciters => [..._builtInReciters, ..._customReciters];
+  /// Admin uploads from Firebase — visible to all users.
+  static List<Reciter> _sharedReciters = const [];
+
+  /// All reciters: built-in + shared cloud + local custom.
+  static List<Reciter> get reciters =>
+      [..._builtInReciters, ..._sharedReciters, ..._customReciters];
 
   // ── Settings Keys ─────────────────────────────────────────────────────────
 
@@ -248,8 +273,9 @@ class QuranAudioService extends ChangeNotifier {
       _settingsBox = Hive.box('quran_audio_settings');
     }
 
-    // Load any user-uploaded custom snippet reciters from storage.
+    // Load local custom + cloud shared library.
     _loadCustomReciters();
+    await refreshSharedLibrary();
 
     // Subscribe to player streams
     _playerStateSub = _player.playerStateStream.listen((ps) {
@@ -357,6 +383,15 @@ class QuranAudioService extends ChangeNotifier {
     if (track.isUserUploaded) {
       developer.log('▶️ Playing user snippet: ${track.filePath}', name: 'QuranAudio');
       await _player.setFilePath(track.filePath!);
+    } else if (track.isShared) {
+      final local = await _resolveSharedTrackLocalPath(track);
+      developer.log('▶️ Playing shared snippet: $local', name: 'QuranAudio');
+      if (local == null) {
+        _state = _state.copyWith(isLoading: false);
+        notifyListeners();
+        throw Exception('تعذر تحميل المقطع من السحابة');
+      }
+      await _player.setFilePath(local);
     } else {
       developer.log('▶️ Playing snippet: ${track.assetPath}', name: 'QuranAudio');
       await _player.setAsset(track.assetPath);
@@ -556,15 +591,61 @@ class QuranAudioService extends ChangeNotifier {
     await _settingsBox.flush();
   }
 
+  /// Reload shared snippets from Firestore (call when opening library page).
+  Future<void> refreshSharedLibrary() async {
+    _sharedReciters = await SharedLibraryService().fetchSharedReciters();
+    notifyListeners();
+  }
+
+  Future<String?> _resolveSharedTrackLocalPath(SnippetTrack track) async {
+    if (track.cloudTrackId == null) return null;
+    return SharedLibraryService().ensureTrackCached(track.cloudTrackId!);
+  }
+
   /// Add a user-uploaded snippet track. The mp3 at [sourceFilePath] is copied
   /// into the app's documents directory under the reciter's folder.
-  /// If a reciter with [reciterName] doesn't exist, it's created.
+  /// If [publishToSharedLibrary] is true (admin), also uploads to Firebase for all users.
   Future<Reciter> addUserSnippet({
     required String reciterName,
     required String trackTitle,
     required String sourceFilePath,
+    bool publishToSharedLibrary = false,
+    String? uploadedByUid,
+    String? uploadedByName,
   }) async {
     if (!_initialized) await init();
+
+    if (publishToSharedLibrary) {
+      await SharedLibraryService().uploadSnippet(
+        reciterName: reciterName,
+        trackTitle: trackTitle,
+        localFilePath: sourceFilePath,
+        uploadedByUid: uploadedByUid ?? '',
+        uploadedByName: uploadedByName ?? 'الإدارة',
+      );
+      await refreshSharedLibrary();
+      final id = SharedLibraryService.reciterIdFor(reciterName);
+      return _sharedReciters.firstWhere(
+        (r) => r.id == id,
+        orElse: () => _sharedReciters.isNotEmpty
+            ? _sharedReciters.first
+            : Reciter(
+                id: id,
+                nameAr: reciterName,
+                nameEn: '',
+                description: 'مقتطفات مشتركة',
+                type: ReciterType.snippets,
+                snippetTracks: [
+                  SnippetTrack(
+                    title: trackTitle,
+                    assetPath: '',
+                    remoteUrl: '',
+                    reciterId: id,
+                  ),
+                ],
+              ),
+      );
+    }
 
     final id = _customReciterId(reciterName);
     final dir = await getApplicationDocumentsDirectory();
@@ -622,8 +703,29 @@ class QuranAudioService extends ChangeNotifier {
     return _customReciters.firstWhere((r) => r.id == id);
   }
 
+  /// Remove a shared (cloud) track — admin only, enforced by rules.
+  Future<void> removeSharedSnippet(String reciterId, int trackIndex) async {
+    final idx = _sharedReciters.indexWhere((r) => r.id == reciterId);
+    if (idx < 0) return;
+    final reciter = _sharedReciters[idx];
+    final tracks = [...?reciter.snippetTracks];
+    if (trackIndex < 0 || trackIndex >= tracks.length) return;
+    final removed = tracks[trackIndex];
+    if (removed.cloudTrackId != null) {
+      await SharedLibraryService().deleteSharedTrack(
+        removed.cloudTrackId!,
+        removed.storagePath,
+      );
+    }
+    await refreshSharedLibrary();
+  }
+
   /// Remove a single track from a custom reciter (and delete its file).
   Future<void> removeUserSnippet(String reciterId, int trackIndex) async {
+    if (reciterId.startsWith('shared_')) {
+      await removeSharedSnippet(reciterId, trackIndex);
+      return;
+    }
     final idx = _customReciters.indexWhere((r) => r.id == reciterId);
     if (idx < 0) return;
     final reciter = _customReciters[idx];
