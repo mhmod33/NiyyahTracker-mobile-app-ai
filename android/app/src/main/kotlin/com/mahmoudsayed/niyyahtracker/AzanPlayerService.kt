@@ -7,11 +7,16 @@ import android.app.PendingIntent
 import android.app.Service
 import android.content.Context
 import android.content.Intent
+import android.database.ContentObserver
+import android.media.AudioManager
 import android.media.AudioAttributes
 import android.media.MediaPlayer
 import android.os.Build
+import android.os.Handler
 import android.os.IBinder
+import android.os.Looper
 import android.os.PowerManager
+import android.provider.Settings
 import android.util.Log
 import androidx.core.app.NotificationCompat
 
@@ -26,6 +31,10 @@ class AzanPlayerService : Service() {
 
     private var mediaPlayer: MediaPlayer? = null
     private var wakeLock: PowerManager.WakeLock? = null
+    private var volumeObserver: ContentObserver? = null
+    private var lastAlarmVolume: Int = -1
+    private var lastMusicVolume: Int = -1
+    private var isStopping = false
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -92,6 +101,7 @@ class AzanPlayerService : Service() {
                 }
                 start()
             }
+            registerVolumeDownObserver()
 
             Log.d(TAG, "Playing azan for $prayerName from $filePath")
         } catch (e: Exception) {
@@ -101,6 +111,9 @@ class AzanPlayerService : Service() {
     }
 
     private fun stopPlayback() {
+        if (isStopping) return
+        isStopping = true
+        unregisterVolumeDownObserver()
         try {
             mediaPlayer?.apply {
                 if (isPlaying) stop()
@@ -115,6 +128,7 @@ class AzanPlayerService : Service() {
         try {
             val nm = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             nm.cancel(NOTIFICATION_ID_FLUTTER)
+            nm.cancel(NOTIFICATION_ID)
         } catch (_: Exception) {}
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
             stopForeground(STOP_FOREGROUND_REMOVE)
@@ -123,6 +137,63 @@ class AzanPlayerService : Service() {
             stopForeground(true)
         }
         stopSelf()
+    }
+
+    private fun registerVolumeDownObserver() {
+        unregisterVolumeDownObserver()
+        try {
+            val audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
+            lastAlarmVolume = audioManager.getStreamVolume(AudioManager.STREAM_ALARM)
+            lastMusicVolume = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
+            volumeObserver = object : ContentObserver(Handler(Looper.getMainLooper())) {
+                override fun onChange(selfChange: Boolean) {
+                    super.onChange(selfChange)
+                    stopIfVolumeWasLowered()
+                }
+            }
+            contentResolver.registerContentObserver(
+                Settings.System.CONTENT_URI,
+                true,
+                volumeObserver!!
+            )
+            Log.d(TAG, "Volume-down observer registered, alarm=$lastAlarmVolume, music=$lastMusicVolume")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error registering volume observer", e)
+        }
+    }
+
+    private fun unregisterVolumeDownObserver() {
+        try {
+            volumeObserver?.let { contentResolver.unregisterContentObserver(it) }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error unregistering volume observer", e)
+        }
+        volumeObserver = null
+        lastAlarmVolume = -1
+        lastMusicVolume = -1
+    }
+
+    private fun stopIfVolumeWasLowered() {
+        try {
+            if (isStopping || mediaPlayer == null) return
+            val audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
+            val currentAlarmVolume = audioManager.getStreamVolume(AudioManager.STREAM_ALARM)
+            val currentMusicVolume = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
+            val alarmLowered = lastAlarmVolume >= 0 && currentAlarmVolume < lastAlarmVolume
+            val musicLowered = lastMusicVolume >= 0 && currentMusicVolume < lastMusicVolume
+            if (alarmLowered || musicLowered) {
+                Log.d(
+                    TAG,
+                    "Volume lowered, stopping azan. alarm=$lastAlarmVolume->$currentAlarmVolume music=$lastMusicVolume->$currentMusicVolume"
+                )
+                stopPlayback()
+                return
+            }
+            lastAlarmVolume = currentAlarmVolume
+            lastMusicVolume = currentMusicVolume
+        } catch (e: Exception) {
+            Log.e(TAG, "Error checking alarm volume", e)
+        }
     }
 
     private fun createNotificationChannel() {
@@ -167,9 +238,10 @@ class AzanPlayerService : Service() {
             .setPriority(NotificationCompat.PRIORITY_MAX)
             .setCategory(NotificationCompat.CATEGORY_ALARM)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
-            .setOngoing(true)
-            .setAutoCancel(false)
+            .setOngoing(false)
+            .setAutoCancel(true)
             .setContentIntent(openAppPendingIntent)
+            .setDeleteIntent(stopPendingIntent)
             .addAction(0, "إيقاف الأذان ⏹", stopPendingIntent)
             .build()
     }
@@ -178,7 +250,7 @@ class AzanPlayerService : Service() {
         val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
         wakeLock = powerManager.newWakeLock(
             PowerManager.PARTIAL_WAKE_LOCK,
-            "NiyyahTracker::AzanWakeLock"
+            "Basair::AzanWakeLock"
         ).apply {
             acquire(10 * 60 * 1000L) // 10 minutes max
         }

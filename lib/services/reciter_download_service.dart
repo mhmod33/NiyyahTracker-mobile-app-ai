@@ -12,9 +12,9 @@ import 'shared_library_service.dart';
 
 class ReciterDownloadState {
   final bool isDownloading;
-  final int downloadedCount;   // 0–114
-  final int totalCount;        // always 114
-  final int? currentSurah;     // surah being downloaded right now
+  final int downloadedCount; // 0–114
+  final int totalCount; // always 114
+  final int? currentSurah; // surah being downloaded right now
   final String? error;
   final bool isCancelled;
 
@@ -27,8 +27,7 @@ class ReciterDownloadState {
     this.isCancelled = false,
   });
 
-  double get progress =>
-      totalCount == 0 ? 0 : downloadedCount / totalCount;
+  double get progress => totalCount == 0 ? 0 : downloadedCount / totalCount;
 
   bool get isComplete => downloadedCount >= totalCount;
 
@@ -59,10 +58,12 @@ class ReciterDownloadService extends ChangeNotifier {
   factory ReciterDownloadService() => _instance;
   ReciterDownloadService._internal();
 
-  final Dio _dio = Dio(BaseOptions(
-    connectTimeout: const Duration(seconds: 30),
-    receiveTimeout: const Duration(minutes: 5),
-  ));
+  final Dio _dio = Dio(
+    BaseOptions(
+      connectTimeout: const Duration(seconds: 30),
+      receiveTimeout: const Duration(minutes: 5),
+    ),
+  );
 
   final Map<String, ReciterDownloadState> _states = {};
   final Map<String, CancelToken> _cancelTokens = {};
@@ -84,11 +85,13 @@ class ReciterDownloadService extends ChangeNotifier {
   /// Start downloading all 114 surahs for a reciter.
   /// Resumes from where it left off if partially downloaded.
   Future<void> downloadReciter(String reciterId) async {
-    final reciter = QuranAudioService.reciters
-        .firstWhere((r) => r.id == reciterId, orElse: () => QuranAudioService.reciters.first);
+    final reciter = QuranAudioService.reciters.firstWhere(
+      (r) => r.id == reciterId,
+      orElse: () => QuranAudioService.reciters.first,
+    );
 
     if (reciter.type == ReciterType.snippets) return; // nothing to download
-    if (stateFor(reciterId).isDownloading) return;    // already running
+    if (stateFor(reciterId).isDownloading) return; // already running
 
     final cancelToken = CancelToken();
     _cancelTokens[reciterId] = cancelToken;
@@ -107,7 +110,9 @@ class ReciterDownloadService extends ChangeNotifier {
       for (int i = 1; i <= 114; i++) {
         if (cancelToken.isCancelled) {
           _states[reciterId] = _states[reciterId]!.copyWith(
-              isDownloading: false, isCancelled: true);
+            isDownloading: false,
+            isCancelled: true,
+          );
           notifyListeners();
           return;
         }
@@ -116,7 +121,9 @@ class ReciterDownloadService extends ChangeNotifier {
 
       if (cancelToken.isCancelled) {
         _states[reciterId] = _states[reciterId]!.copyWith(
-            isDownloading: false, isCancelled: true);
+          isDownloading: false,
+          isCancelled: true,
+        );
         notifyListeners();
         return;
       }
@@ -128,8 +135,10 @@ class ReciterDownloadService extends ChangeNotifier {
       );
       notifyListeners();
 
-      developer.log('⬇️ Starting download for $reciterId (already: $alreadyDone/114)',
-          name: 'ReciterDownload');
+      developer.log(
+        '⬇️ Starting download for $reciterId (already: $alreadyDone/114)',
+        name: 'ReciterDownload',
+      );
 
       int failCount = 0;
       for (int surah = 1; surah <= 114; surah++) {
@@ -139,17 +148,17 @@ class ReciterDownloadService extends ChangeNotifier {
             isCancelled: true,
           );
           notifyListeners();
-          developer.log('🚫 Download cancelled for $reciterId at surah $surah',
-              name: 'ReciterDownload');
+          developer.log(
+            '🚫 Download cancelled for $reciterId at surah $surah',
+            name: 'ReciterDownload',
+          );
           return;
         }
 
         // Skip already downloaded
         if (await _isSurahValid(reciterId, surah)) continue;
 
-        _states[reciterId] = _states[reciterId]!.copyWith(
-          currentSurah: surah,
-        );
+        _states[reciterId] = _states[reciterId]!.copyWith(currentSurah: surah);
         notifyListeners();
 
         try {
@@ -161,8 +170,10 @@ class ReciterDownloadService extends ChangeNotifier {
             currentSurah: surah,
           );
           notifyListeners();
-          developer.log('✅ Downloaded surah $surah ($alreadyDone/114)',
-              name: 'ReciterDownload');
+          developer.log(
+            '✅ Downloaded surah $surah ($alreadyDone/114)',
+            name: 'ReciterDownload',
+          );
         } on DioException catch (e) {
           if (CancelToken.isCancel(e)) {
             _states[reciterId] = _states[reciterId]!.copyWith(
@@ -173,21 +184,25 @@ class ReciterDownloadService extends ChangeNotifier {
             return;
           }
           failCount++;
-          developer.log('⚠️ Failed surah $surah: ${e.message}',
-              name: 'ReciterDownload');
+          developer.log(
+            '⚠️ Failed surah $surah: ${e.message}',
+            name: 'ReciterDownload',
+          );
           // Continue to next surah on error (don't abort entire download)
         } catch (e) {
           failCount++;
-          developer.log('⚠️ Unexpected error surah $surah: $e',
-              name: 'ReciterDownload');
+          developer.log(
+            '⚠️ Unexpected error surah $surah: $e',
+            name: 'ReciterDownload',
+          );
         }
       }
 
       final String? error = alreadyDone == 0
           ? 'فشل التحميل — تحقق من اتصال الإنترنت وحاول مجدداً'
           : (failCount > 0
-              ? 'تعذر تحميل $failCount سورة — يمكنك الضغط على «استكمال» لإعادة المحاولة'
-              : null);
+                ? 'تعذر تحميل $failCount سورة — يمكنك الضغط على «استكمال» لإعادة المحاولة'
+                : null);
 
       _states[reciterId] = ReciterDownloadState(
         isDownloading: false,
@@ -197,12 +212,17 @@ class ReciterDownloadService extends ChangeNotifier {
       );
       _cancelTokens.remove(reciterId);
       notifyListeners();
-      developer.log('🎉 Download complete for $reciterId ($alreadyDone/114, failed: $failCount)',
-          name: 'ReciterDownload');
-
+      developer.log(
+        '🎉 Download complete for $reciterId ($alreadyDone/114, failed: $failCount)',
+        name: 'ReciterDownload',
+      );
     } catch (e, st) {
-      developer.log('❌ downloadReciter fatal error: $e',
-          name: 'ReciterDownload', error: e, stackTrace: st);
+      developer.log(
+        '❌ downloadReciter fatal error: $e',
+        name: 'ReciterDownload',
+        error: e,
+        stackTrace: st,
+      );
       _states[reciterId] = ReciterDownloadState(
         isDownloading: false,
         downloadedCount: stateFor(reciterId).downloadedCount,
@@ -231,7 +251,8 @@ class ReciterDownloadService extends ChangeNotifier {
       final padded = surahNumber.toString().padLeft(3, '0');
       url = '${reciter.mp3QuranServer}$padded.mp3';
     } else {
-      url = 'https://cdn.islamic.network/quran/audio-surah/128/$cdnId/$surahNumber.mp3';
+      url =
+          'https://cdn.islamic.network/quran/audio-surah/128/$cdnId/$surahNumber.mp3';
     }
 
     final savePath = await _getLocalPath(reciterId, surahNumber);
@@ -271,7 +292,10 @@ class ReciterDownloadService extends ChangeNotifier {
     _states[reciterId] = (_states[reciterId] ?? const ReciterDownloadState())
         .copyWith(isDownloading: false, isCancelled: true);
     notifyListeners();
-    developer.log('🚫 Cancelled download for $reciterId', name: 'ReciterDownload');
+    developer.log(
+      '🚫 Cancelled download for $reciterId',
+      name: 'ReciterDownload',
+    );
   }
 
   // ── Delete ────────────────────────────────────────────────────────────────
@@ -298,6 +322,25 @@ class ReciterDownloadService extends ChangeNotifier {
     return total / (1024 * 1024);
   }
 
+  Future<bool> isSnippetDownloaded({
+    required String reciterId,
+    required SnippetTrack track,
+  }) async {
+    final safeTitle = track.title
+        .replaceAll(RegExp(r'[\\/:*?"<>|]'), '_')
+        .trim();
+
+    if (Platform.isAndroid) {
+      final publicPath =
+          '/storage/emulated/0/Download/Basair/$reciterId/$safeTitle.mp3';
+      if (File(publicPath).existsSync()) return true;
+    }
+
+    final dir = await getApplicationDocumentsDirectory();
+    final outPath = '${dir.path}/downloaded_snippets/$reciterId/$safeTitle.mp3';
+    return File(outPath).existsSync();
+  }
+
   /// Copy a snippet track (مقتطف) to device storage for offline access outside the app.
   /// Returns the saved file path, or null on failure.
   Future<String?> downloadSnippetTrack({
@@ -305,8 +348,13 @@ class ReciterDownloadService extends ChangeNotifier {
     required SnippetTrack track,
   }) async {
     try {
-      final dir = await getApplicationDocumentsDirectory();
-      final outDir = Directory('${dir.path}/downloaded_snippets/$reciterId');
+      Directory outDir;
+      if (Platform.isAndroid) {
+        outDir = Directory('/storage/emulated/0/Download/Basair/$reciterId');
+      } else {
+        final dir = await getApplicationDocumentsDirectory();
+        outDir = Directory('${dir.path}/downloaded_snippets/$reciterId');
+      }
       if (!await outDir.exists()) await outDir.create(recursive: true);
 
       final safeTitle = track.title
@@ -318,8 +366,9 @@ class ReciterDownloadService extends ChangeNotifier {
       if (track.filePath != null && await File(track.filePath!).exists()) {
         await File(track.filePath!).copy(outFile.path);
       } else if (track.isShared && track.cloudTrackId != null) {
-        final cachePath =
-            await SharedLibraryService().ensureTrackCached(track.cloudTrackId!);
+        final cachePath = await SharedLibraryService().ensureTrackCached(
+          track.cloudTrackId!,
+        );
         if (cachePath == null) return null;
         await File(cachePath).copy(outFile.path);
       } else if (track.assetPath.isNotEmpty) {
@@ -333,7 +382,12 @@ class ReciterDownloadService extends ChangeNotifier {
       }
       return outFile.path;
     } catch (e, st) {
-      developer.log('Snippet download failed', name: 'ReciterDownload', error: e, stackTrace: st);
+      developer.log(
+        'Snippet download failed',
+        name: 'ReciterDownload',
+        error: e,
+        stackTrace: st,
+      );
       return null;
     }
   }
@@ -341,8 +395,10 @@ class ReciterDownloadService extends ChangeNotifier {
   /// Refresh download state from disk (call on app start).
   /// Does NOT overwrite an active download state.
   Future<void> refreshState(String reciterId) async {
-    final reciter = QuranAudioService.reciters
-        .firstWhere((r) => r.id == reciterId, orElse: () => QuranAudioService.reciters.first);
+    final reciter = QuranAudioService.reciters.firstWhere(
+      (r) => r.id == reciterId,
+      orElse: () => QuranAudioService.reciters.first,
+    );
     if (reciter.type == ReciterType.snippets) return;
 
     // Don't overwrite an active download — it has the live count

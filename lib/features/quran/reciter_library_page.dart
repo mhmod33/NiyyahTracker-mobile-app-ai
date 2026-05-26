@@ -450,6 +450,22 @@ class _SnippetReciterCard extends StatelessWidget {
     final canDeleteTrack = isCustom ||
         (isShared && context.read<AppAuthProvider>().isAdmin);
     final tracks = reciter.snippetTracks ?? [];
+    int? downloadingTrackIndex;
+    final Set<int> downloadedIndices = {};
+    bool isLoadingStates = true;
+
+    // Async initialization of downloaded states
+    Future<void> loadDownloadStates(StateSetter setSheet) async {
+      final dl = ReciterDownloadService();
+      for (int i = 0; i < tracks.length; i++) {
+        if (await dl.isSnippetDownloaded(reciterId: reciterId, track: tracks[i])) {
+          downloadedIndices.add(i);
+        }
+      }
+      if (context.mounted) {
+        setSheet(() => isLoadingStates = false);
+      }
+    }
 
     showModalBottomSheet(
       context: context,
@@ -466,9 +482,13 @@ class _SnippetReciterCard extends StatelessWidget {
           minChildSize: 0.4,
           expand: false,
           builder: (_, scrollCtrl) => StatefulBuilder(
-            builder: (ctx, setSheet) => Column(
-              children: [
-                const SizedBox(height: 12),
+            builder: (ctx, setSheet) {
+              if (isLoadingStates) {
+                loadDownloadStates(setSheet);
+              }
+              return Column(
+                children: [
+                  const SizedBox(height: 12),
                 Container(
                   width: 40,
                   height: 4,
@@ -526,44 +546,87 @@ class _SnippetReciterCard extends StatelessWidget {
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             IconButton(
-                              icon: const Icon(Icons.download_rounded,
-                                  color: AppColors.darkGreen, size: 22),
+                              icon: downloadingTrackIndex == i
+                                  ? const SizedBox(
+                                      width: 22,
+                                      height: 22,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: AppColors.darkGreen,
+                                      ),
+                                    )
+                                  : const Icon(Icons.download_rounded,
+                                      color: AppColors.darkGreen, size: 22),
                               tooltip: 'تحميل المقطع',
-                              onPressed: () async {
-                                final dl = ReciterDownloadService();
-                                final path = await dl.downloadSnippetTrack(
-                                  reciterId: reciterId,
-                                  track: track,
-                                );
-                                if (!ctx.mounted) return;
-                                ScaffoldMessenger.of(ctx).showSnackBar(
-                                  SnackBar(
-                                    content: Text(
-                                      path != null
-                                          ? 'تم حفظ المقطع في مجلد التحميلات'
-                                          : 'تعذر تحميل المقطع',
-                                      style: GoogleFonts.ibmPlexSansArabic(
-                                          color: Colors.white),
-                                    ),
-                                    backgroundColor:
-                                        path != null ? AppColors.darkGreen : Colors.red,
-                                    duration: const Duration(seconds: 3),
-                                  ),
-                                );
-                              },
+                              onPressed: (downloadingTrackIndex != null || downloadedIndices.contains(i))
+                                  ? null
+                                  : () async {
+                                      setSheet(() => downloadingTrackIndex = i);
+                                      String? downloadedPath;
+                                      try {
+                                        final dl = ReciterDownloadService();
+                                        downloadedPath =
+                                            await dl.downloadSnippetTrack(
+                                          reciterId: reciterId,
+                                          track: track,
+                                        );
+                                        if (!ctx.mounted) return;
+                                        ScaffoldMessenger.of(ctx).showSnackBar(
+                                          SnackBar(
+                                            content: Text(
+                                              downloadedPath != null
+                                                  ? 'تم حفظ المقطع في مجلد التحميلات'
+                                                  : 'تعذر تحميل المقطع',
+                                              style: GoogleFonts.ibmPlexSansArabic(
+                                                  color: Colors.white),
+                                            ),
+                                            backgroundColor: downloadedPath != null
+                                                ? AppColors.darkGreen
+                                                : Colors.red,
+                                            duration: const Duration(seconds: 3),
+                                          ),
+                                        );
+                                      } finally {
+                                        if (ctx.mounted) {
+                                          setSheet(() {
+                                            downloadingTrackIndex = null;
+                                            if (downloadedPath != null) downloadedIndices.add(i);
+                                          });
+                                        }
+                                      }
+                                    },
                             ),
+                            if (downloadedIndices.contains(i))
+                              const Padding(
+                                padding: EdgeInsets.only(left: 8.0, right: 8.0),
+                                child: Icon(Icons.check_circle_rounded, color: AppColors.darkGreen, size: 20),
+                              ),
                             if (canDeleteTrack)
                               IconButton(
                                 icon: const Icon(Icons.delete_outline_rounded,
                                     color: Colors.redAccent, size: 22),
                                 tooltip: 'حذف المقطع',
                                 onPressed: () async {
-                                  await audioSvc.removeUserSnippet(reciterId, i);
-                                  setSheet(() {
-                                    tracks.removeAt(i);
-                                  });
-                                  if (tracks.isEmpty && ctx.mounted) {
-                                    Navigator.pop(ctx);
+                                  try {
+                                    await audioSvc.removeUserSnippet(reciterId, i);
+                                    if (ctx.mounted) {
+                                      ScaffoldMessenger.of(ctx).showSnackBar(
+                                        SnackBar(
+                                          content: Text('تم حذف المقطع بنجاح', style: GoogleFonts.ibmPlexSansArabic(color: Colors.white)),
+                                          backgroundColor: AppColors.darkGreen,
+                                        ),
+                                      );
+                                      Navigator.pop(ctx); // Close sheet so it can refresh properly on reopen
+                                    }
+                                  } catch (e) {
+                                    if (ctx.mounted) {
+                                      ScaffoldMessenger.of(ctx).showSnackBar(
+                                        SnackBar(
+                                          content: Text('فشل حذف المقطع: $e', style: GoogleFonts.ibmPlexSansArabic(color: Colors.white)),
+                                          backgroundColor: Colors.red,
+                                        ),
+                                      );
+                                    }
                                   }
                                 },
                               ),
@@ -577,8 +640,9 @@ class _SnippetReciterCard extends StatelessWidget {
                     },
                   ),
                 ),
-              ],
-            ),
+                ],
+              );
+            },
           ),
         ),
       ),

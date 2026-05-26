@@ -84,6 +84,19 @@ class MosqueModel {
 class NearbyMosquesPage extends StatefulWidget {
   const NearbyMosquesPage({super.key});
 
+  /// Open the mosque finder as a full-height overlay bottom sheet.
+  static Future<void> show(BuildContext context) {
+    return showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      isDismissible: true,
+      enableDrag: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => const NearbyMosquesPage(),
+    );
+  }
+
   @override
   State<NearbyMosquesPage> createState() => _NearbyMosquesPageState();
 }
@@ -311,68 +324,91 @@ class _NearbyMosquesPageState extends State<NearbyMosquesPage>
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final bgColor = isDark ? const Color(0xFF121212) : const Color(0xFFF7F9F7);
+    final screenH = MediaQuery.sizeOf(context).height;
 
     return Directionality(
       textDirection: TextDirection.rtl,
-      child: Scaffold(
-        backgroundColor: bgColor,
-        body: Column(
-          children: [
-            _buildHeader(),
-            _buildControls(),
-            Expanded(
-              child: Stack(
-                children: [
-                  // Always render map so MapController initializes
-                  if (!_showList) _buildMapView(),
-                  if (_showList) _buildListView(),
-
-                  // Loading overlay on top of map
-                  if (_loading)
-                    Container(
-                      color: AppColors.background.withOpacity(0.85),
-                      child: _buildLoader(),
+      child: ClipRRect(
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        child: Material(
+          color: bgColor,
+          child: SizedBox(
+            height: screenH * 0.93,
+            child: Column(
+              children: [
+                // ── Drag handle ──
+                Padding(
+                  padding: const EdgeInsets.only(top: 10, bottom: 4),
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.withOpacity(0.4),
+                      borderRadius: BorderRadius.circular(2),
                     ),
+                  ),
+                ),
+                _buildHeader(),
+                _buildControls(),
+                Expanded(
+                  child: Stack(
+                    children: [
+                      if (!_showList) _buildMapView(),
+                      if (_showList) _buildListView(),
 
-                  // Error overlay on top of map
-                  if (!_loading && _error != null && _error!.isNotEmpty && _mosques.isEmpty)
-                    Container(
-                      color: Theme.of(context).scaffoldBackgroundColor.withOpacity(0.9),
-                      child: _buildError(),
-                    ),
+                      // Loading overlay
+                      if (_loading)
+                        Container(
+                          color: bgColor.withOpacity(0.85),
+                          child: _buildLoader(),
+                        ),
 
-                  // Mosque detail sheet
-                  if (_selected != null)
-                    Positioned(
-                      bottom: 0,
-                      left: 0,
-                      right: 0,
-                      child: SlideTransition(
-                        position: Tween<Offset>(
-                          begin: const Offset(0, 1),
-                          end: Offset.zero,
-                        ).animate(_sheetSlide),
-                        child: _buildDetailSheet(_selected!),
-                      ),
-                    ),
-                ],
-              ),
+                      // Error overlay
+                      if (!_loading && _error.isNotEmpty && _mosques.isEmpty)
+                        Container(
+                          color: bgColor.withOpacity(0.9),
+                          child: _buildError(),
+                        ),
+
+                      // Mosque detail panel
+                      if (_selected != null)
+                        Positioned(
+                          bottom: 0,
+                          left: 0,
+                          right: 0,
+                          child: SlideTransition(
+                            position: Tween<Offset>(
+                              begin: const Offset(0, 1),
+                              end: Offset.zero,
+                            ).animate(_sheetSlide),
+                            child: _buildDetailSheet(_selected!),
+                          ),
+                        ),
+
+                      // Locate-me FAB
+                      if (_userLocation != null && !_loading && !_showList)
+                        Positioned(
+                          bottom: 16,
+                          left: 16,
+                          child: FloatingActionButton.small(
+                            backgroundColor: AppColors.darkGreen,
+                            foregroundColor: Colors.white,
+                            tooltip: 'موقعي',
+                            onPressed: () {
+                              if (_mapReady && _userLocation != null) {
+                                _mapController.move(_userLocation!, 14);
+                              }
+                            },
+                            child: const Icon(Icons.my_location),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
-        floatingActionButton: _userLocation != null && !_loading && !_showList
-            ? FloatingActionButton.small(
-                backgroundColor: AppColors.darkGreen,
-                foregroundColor: Colors.white,
-                tooltip: 'موقعي',
-                onPressed: () {
-                  if (_mapReady && _userLocation != null) {
-                    _mapController.move(_userLocation!, 14);
-                  }
-                },
-                child: const Icon(Icons.my_location),
-              )
-            : null,
       ),
     );
   }
@@ -387,54 +423,54 @@ class _NearbyMosquesPageState extends State<NearbyMosquesPage>
           end: Alignment.bottomRight,
         ),
       ),
-      child: SafeArea(
-        bottom: false,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          child: Row(
-            children: [
-              GestureDetector(
-                onTap: () => Navigator.pop(context),
-                child: Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(color: Colors.white.withOpacity(0.15), shape: BoxShape.circle),
-                  child: const DirectionalIcon(isBack: true, size: 18, color: Colors.white),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Row(
+          children: [
+            GestureDetector(
+              onTap: () => Navigator.pop(context),
+              child: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.15),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.close_rounded, size: 18, color: Colors.white),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Flexible(
+              child: Text(
+                '🕌 المساجد القريبة',
+                overflow: TextOverflow.ellipsis,
+                style: GoogleFonts.ibmPlexSansArabic(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
                 ),
               ),
-              Flexible(
-                child: Text(
-                  '🕌 المساجد القريبة',
-                  overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.ibmPlexSansArabic(
-                    color: Colors.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-              ),
-              const Spacer(),
-              // Map / List toggle
-              _ToggleChip(
-                active: !_showList,
-                icon: Icons.map_outlined,
-                label: 'خريطة',
-                onTap: () => setState(() {
-                  _showList = false;
-                  _clearSelection();
-                }),
-              ),
-              const SizedBox(width: 8),
-              _ToggleChip(
-                active: _showList,
-                icon: Icons.list_alt_outlined,
-                label: 'قائمة',
-                onTap: () => setState(() {
-                  _showList = true;
-                  _clearSelection();
-                }),
-              ),
-            ],
-          ),
+            ),
+            const Spacer(),
+            _ToggleChip(
+              active: !_showList,
+              icon: Icons.map_outlined,
+              label: 'خريطة',
+              onTap: () => setState(() {
+                _showList = false;
+                _clearSelection();
+              }),
+            ),
+            const SizedBox(width: 8),
+            _ToggleChip(
+              active: _showList,
+              icon: Icons.list_alt_outlined,
+              label: 'قائمة',
+              onTap: () => setState(() {
+                _showList = true;
+                _clearSelection();
+              }),
+            ),
+          ],
         ),
       ),
     );

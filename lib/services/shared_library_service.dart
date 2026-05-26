@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:developer' as developer;
 import 'dart:io';
@@ -20,8 +21,15 @@ class SharedLibraryService {
   /// Raw bytes per chunk (keeps each Firestore doc under 1 MB limit).
   static const int chunkByteSize = 700000;
 
-  /// ~15 MB max per upload on free tier.
-  static const int maxFileBytes = 15 * 1024 * 1024;
+  /// Chunks per Firestore batch (stay under ~10 MB batch payload).
+  static const int chunksPerBatch = 4;
+
+  static const Duration metaWriteTimeout = Duration(seconds: 30);
+  static const Duration batchWriteTimeout = Duration(seconds: 180);
+  static const Duration fetchTimeout = Duration(seconds: 45);
+
+  /// ~100 MB max per upload.
+  static const int maxFileBytes = 100 * 1024 * 1024;
 
   final FirebaseFirestore _db = FirebaseFirestore.instance;
   final _uuid = const Uuid();
@@ -35,6 +43,25 @@ class SharedLibraryService {
     return 'shared_${slug.isEmpty ? 'reciter' : slug}';
   }
 
+  String _firestoreErrorMessage(Object e) {
+    if (e is FirebaseException) {
+      switch (e.code) {
+        case 'permission-denied':
+          return 'لا صلاحية للرفع — تأكد أن حسابك مسجّل كمسؤول في Firestore';
+        case 'unavailable':
+          return 'الخدمة غير متاحة — تحقق من الاتصال بالإنترنت';
+        case 'deadline-exceeded':
+          return 'انتهت مهلة الاتصال — جرّب ملفاً أصغر أو شبكة أسرع';
+        default:
+          return 'خطأ Firestore (${e.code}): ${e.message ?? e.toString()}';
+      }
+    }
+    if (e is TimeoutException) {
+      return 'انتهت مهلة الرفع — تحقق من الاتصال وحاول مرة أخرى';
+    }
+    return e.toString();
+  }
+
   /// Upload audio + metadata (admin only — Firestore rules).
   Future<void> uploadSnippet({
     required String reciterName,
@@ -42,6 +69,7 @@ class SharedLibraryService {
     required String localFilePath,
     required String uploadedByUid,
     required String uploadedByName,
+    void Function(int completedChunks, int totalChunks)? onProgress,
   }) async {
     final file = File(localFilePath);
     if (!await file.exists()) {
@@ -58,42 +86,64 @@ class SharedLibraryService {
     final trackId = _uuid.v4();
     final reciterId = reciterIdFor(reciterName);
     final totalChunks = (bytes.length / chunkByteSize).ceil();
-
     final trackRef = _db.collection(collection).doc(trackId);
-    await trackRef.set({
-      'reciterId': reciterId,
-      'reciterNameAr': reciterName.trim(),
-      'title': trackTitle.trim(),
-      'uploadedBy': uploadedByUid,
-      'uploadedByName': uploadedByName,
-      'createdAt': FieldValue.serverTimestamp(),
-      'totalChunks': totalChunks,
-      'fileSize': bytes.length,
-      'encoding': 'base64_chunks',
-    });
 
-    for (int i = 0; i < totalChunks; i++) {
-      final start = i * chunkByteSize;
-      final end = (start + chunkByteSize < bytes.length)
-          ? start + chunkByteSize
-          : bytes.length;
-      final slice = bytes.sublist(start, end);
-      await trackRef.collection(chunksSubcollection).doc('$i').set({
-        'index': i,
-        'data': base64Encode(slice),
-      });
+    try {
+      await trackRef
+          .set({
+            'reciterId': reciterId,
+            'reciterNameAr': reciterName.trim(),
+            'title': trackTitle.trim(),
+            'uploadedBy': uploadedByUid,
+            'uploadedByName': uploadedByName,
+            'createdAt': FieldValue.serverTimestamp(),
+            'totalChunks': totalChunks,
+            'fileSize': bytes.length,
+            'encoding': 'base64_chunks',
+          })
+          .timeout(metaWriteTimeout);
+
+      for (int batchStart = 0; batchStart < totalChunks; batchStart += chunksPerBatch) {
+        final batch = _db.batch();
+        final batchEnd = (batchStart + chunksPerBatch < totalChunks)
+            ? batchStart + chunksPerBatch
+            : totalChunks;
+
+        for (int i = batchStart; i < batchEnd; i++) {
+          final start = i * chunkByteSize;
+          final end = (start + chunkByteSize < bytes.length)
+              ? start + chunkByteSize
+              : bytes.length;
+          final slice = bytes.sublist(start, end);
+          batch.set(trackRef.collection(chunksSubcollection).doc('$i'), {
+            'index': i,
+            'data': base64Encode(slice),
+          });
+        }
+
+        await batch.commit().timeout(batchWriteTimeout);
+        onProgress?.call(batchEnd, totalChunks);
+      }
+
+      developer.log(
+        '☁️ Shared snippet uploaded (Firestore chunks): $trackId ($totalChunks chunks)',
+        name: 'SharedLibrary',
+      );
+    } catch (e, st) {
+      developer.log('⚠️ uploadSnippet failed',
+          name: 'SharedLibrary', error: e, stackTrace: st);
+      try {
+        await deleteSharedTrack(trackId, null);
+      } catch (_) {}
+      throw Exception(_firestoreErrorMessage(e));
     }
-
-    developer.log(
-      '☁️ Shared snippet uploaded (Firestore chunks): $trackId ($totalChunks chunks)',
-      name: 'SharedLibrary',
-    );
   }
 
   /// Fetch all shared snippets grouped as [Reciter]s (metadata only).
   Future<List<Reciter>> fetchSharedReciters() async {
     try {
-      final snap = await _db.collection(collection).get();
+      final snap =
+          await _db.collection(collection).get().timeout(fetchTimeout);
 
       final Map<String, List<SnippetTrack>> byReciter = {};
       final Map<String, String> names = {};
@@ -141,8 +191,11 @@ class SharedLibraryService {
     if (await File(outPath).exists()) return outPath;
 
     try {
-      final trackDoc =
-          await _db.collection(collection).doc(cloudTrackId).get();
+      final trackDoc = await _db
+          .collection(collection)
+          .doc(cloudTrackId)
+          .get()
+          .timeout(fetchTimeout);
       if (!trackDoc.exists) return null;
 
       final chunksSnap = await _db
@@ -150,7 +203,8 @@ class SharedLibraryService {
           .doc(cloudTrackId)
           .collection(chunksSubcollection)
           .orderBy('index')
-          .get();
+          .get()
+          .timeout(fetchTimeout);
 
       if (chunksSnap.docs.isEmpty) return null;
 

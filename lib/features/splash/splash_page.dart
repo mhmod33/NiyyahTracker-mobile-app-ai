@@ -129,29 +129,10 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
                     _RisingMosqueSvg(
                       rise: _mosqueRiseController.value,
                       delay: 0.0,
-                      xFactor: 0.2,
-                      scale: 0.62,
-                      screenWidth: size.width,
-                      screenHeight: size.height,
-                      color: _lineColor(isDark, isDark ? 0.32 : 0.24),
-                    ),
-                    _RisingMosqueSvg(
-                      rise: _mosqueRiseController.value,
-                      delay: 0.14,
                       xFactor: 0.5,
-                      scale: 0.88,
+                      scale: 1.0,
                       screenWidth: size.width,
                       screenHeight: size.height,
-                      color: _lineColor(isDark, isDark ? 0.42 : 0.32),
-                    ),
-                    _RisingMosqueSvg(
-                      rise: _mosqueRiseController.value,
-                      delay: 0.28,
-                      xFactor: 0.8,
-                      scale: 0.7,
-                      screenWidth: size.width,
-                      screenHeight: size.height,
-                      color: _lineColor(isDark, isDark ? 0.32 : 0.24),
                     ),
                   ],
                 ),
@@ -299,7 +280,6 @@ class _RisingMosqueSvg extends StatelessWidget {
   final double scale;
   final double screenWidth;
   final double screenHeight;
-  final Color color;
 
   const _RisingMosqueSvg({
     required this.rise,
@@ -308,7 +288,6 @@ class _RisingMosqueSvg extends StatelessWidget {
     required this.scale,
     required this.screenWidth,
     required this.screenHeight,
-    required this.color,
   });
 
   @override
@@ -317,14 +296,14 @@ class _RisingMosqueSvg extends StatelessWidget {
         ? 0.0
         : ((rise - delay) / (1 - delay)).clamp(0.0, 1.0);
     final curve = Curves.easeOutCubic.transform(t);
-    final mosqueH = screenHeight * 0.32 * scale;
-    final slideUp = (1 - curve) * mosqueH * 1.2;
-    final opacity = (0.25 + curve * 0.75).clamp(0.0, 1.0);
+    final mosqueH = screenHeight * 0.74 * scale;
+    final slideUp = (1 - curve) * mosqueH * 0.35;
+    final opacity = (0.04 + curve * 0.2).clamp(0.0, 0.24);
 
     return Positioned(
-      left: screenWidth * xFactor - (screenWidth * 0.22 * scale),
+      left: screenWidth * xFactor - (screenWidth * 0.56 * scale),
       bottom: -slideUp,
-      width: screenWidth * 0.44 * scale,
+      width: screenWidth * 1.12 * scale,
       height: mosqueH,
       child: Opacity(
         opacity: opacity,
@@ -332,10 +311,6 @@ class _RisingMosqueSvg extends StatelessWidget {
           'assets/splash/mosque.svg',
           fit: BoxFit.fitHeight,
           alignment: Alignment.bottomCenter,
-          colorFilter: ColorFilter.mode(
-            color.withValues(alpha: color.a * opacity),
-            BlendMode.srcIn,
-          ),
         ),
       ),
     );

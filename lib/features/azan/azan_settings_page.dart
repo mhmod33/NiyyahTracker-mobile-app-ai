@@ -5,8 +5,17 @@ import '../../core/directional_icon.dart';
 import '../../services/azan_service.dart';
 import 'muazzin_selection_page.dart';
 
-TextStyle _f({double sz = 14, FontWeight fw = FontWeight.w400, Color? c, double? h}) =>
-    GoogleFonts.ibmPlexSansArabic(fontSize: sz, fontWeight: fw, color: c, height: h);
+TextStyle _f({
+  double sz = 14,
+  FontWeight fw = FontWeight.w400,
+  Color? c,
+  double? h,
+}) => GoogleFonts.ibmPlexSansArabic(
+  fontSize: sz,
+  fontWeight: fw,
+  color: c,
+  height: h,
+);
 
 class AzanSettingsPage extends StatefulWidget {
   const AzanSettingsPage({super.key});
@@ -134,8 +143,14 @@ class _AzanSettingsPageState extends State<AzanSettingsPage> {
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
                           colors: isDark
-                              ? [const Color(0xFF0D2818), const Color(0xFF0A3D22)]
-                              : [const Color(0xFF145A3A), const Color(0xFF1E8255)],
+                              ? [
+                                  const Color(0xFF0D2818),
+                                  const Color(0xFF0A3D22),
+                                ]
+                              : [
+                                  const Color(0xFF145A3A),
+                                  const Color(0xFF1E8255),
+                                ],
                         ),
                         borderRadius: const BorderRadius.only(
                           bottomLeft: Radius.circular(32),
@@ -165,7 +180,11 @@ class _AzanSettingsPageState extends State<AzanSettingsPage> {
                                 child: Text(
                                   'إعدادات الأذان',
                                   textAlign: TextAlign.center,
-                                  style: _f(sz: 20, fw: FontWeight.w800, c: Colors.white),
+                                  style: _f(
+                                    sz: 20,
+                                    fw: FontWeight.w800,
+                                    c: Colors.white,
+                                  ),
                                 ),
                               ),
                               const SizedBox(width: 48),
@@ -174,7 +193,11 @@ class _AzanSettingsPageState extends State<AzanSettingsPage> {
                           const SizedBox(height: 16),
                           Text(
                             'تخصيص صوت الأذان لكل صلاة',
-                            style: _f(sz: 14, fw: FontWeight.w500, c: Colors.white70),
+                            style: _f(
+                              sz: 14,
+                              fw: FontWeight.w500,
+                              c: Colors.white70,
+                            ),
                           ),
                         ],
                       ),
@@ -239,7 +262,8 @@ class _AzanSettingsPageState extends State<AzanSettingsPage> {
                                   subtitle: 'صوت أذان مميز للفجر',
                                   icon: Icons.wb_twilight_rounded,
                                   value: _fajrEnabled,
-                                  onChanged: (v) => _setPrayerEnabled('fajr', v),
+                                  onChanged: (v) =>
+                                      _setPrayerEnabled('fajr', v),
                                   isDark: isDark,
                                 ),
                                 _SettingsTile(
@@ -247,7 +271,8 @@ class _AzanSettingsPageState extends State<AzanSettingsPage> {
                                   subtitle: 'تشغيل الأذان عند دخول وقت الظهر',
                                   icon: Icons.light_mode_rounded,
                                   value: _dhuhrEnabled,
-                                  onChanged: (v) => _setPrayerEnabled('dhuhr', v),
+                                  onChanged: (v) =>
+                                      _setPrayerEnabled('dhuhr', v),
                                   isDark: isDark,
                                 ),
                                 _SettingsTile(
@@ -263,7 +288,8 @@ class _AzanSettingsPageState extends State<AzanSettingsPage> {
                                   subtitle: 'تشغيل الأذان عند دخول وقت المغرب',
                                   icon: Icons.wb_twilight_rounded,
                                   value: _maghribEnabled,
-                                  onChanged: (v) => _setPrayerEnabled('maghrib', v),
+                                  onChanged: (v) =>
+                                      _setPrayerEnabled('maghrib', v),
                                   isDark: isDark,
                                 ),
                                 _SettingsTile(
@@ -271,7 +297,8 @@ class _AzanSettingsPageState extends State<AzanSettingsPage> {
                                   subtitle: 'تشغيل الأذان عند دخول وقت العشاء',
                                   icon: Icons.nights_stay_rounded,
                                   value: _ishaEnabled,
-                                  onChanged: (v) => _setPrayerEnabled('isha', v),
+                                  onChanged: (v) =>
+                                      _setPrayerEnabled('isha', v),
                                   isDark: isDark,
                                 ),
                               ],
@@ -400,8 +427,14 @@ class _SettingsTile extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: _f(sz: 16, fw: FontWeight.w600, c: textColor)),
-                Text(subtitle, style: _f(sz: 12, fw: FontWeight.w400, c: subColor)),
+                Text(
+                  title,
+                  style: _f(sz: 16, fw: FontWeight.w600, c: textColor),
+                ),
+                Text(
+                  subtitle,
+                  style: _f(sz: 12, fw: FontWeight.w400, c: subColor),
+                ),
               ],
             ),
           ),
@@ -461,8 +494,18 @@ class _NavigationTile extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(title, style: _f(sz: 16, fw: FontWeight.w600, c: textColor)),
-                  Text(subtitle, style: _f(sz: 13, fw: FontWeight.w500, c: AppColors.darkGreen)),
+                  Text(
+                    title,
+                    style: _f(sz: 16, fw: FontWeight.w600, c: textColor),
+                  ),
+                  Text(
+                    subtitle,
+                    style: _f(
+                      sz: 13,
+                      fw: FontWeight.w500,
+                      c: AppColors.darkGreen,
+                    ),
+                  ),
                 ],
               ),
             ),

@@ -52,10 +52,16 @@ class MainActivity : FlutterActivity() {
                         } catch (e: Exception) {
                             Log.e(TAG, "Error stopping azan service", e)
                         }
-                        // Also cancel Flutter notification 4000 so stop monitor triggers
+                        try {
+                            stopService(Intent(this, AzanPlayerService::class.java))
+                        } catch (e: Exception) {
+                            Log.e(TAG, "Error force stopping azan service", e)
+                        }
+                        // Also cancel Flutter and native notifications.
                         try {
                             val nm = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
                             nm.cancel(4000)
+                            nm.cancel(4006)
                         } catch (_: Exception) {}
                         result.success(true)
                     }

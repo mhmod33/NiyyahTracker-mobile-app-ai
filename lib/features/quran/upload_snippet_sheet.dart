@@ -1,6 +1,10 @@
+import 'dart:async';
+import 'dart:io';
+
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
 import '../../core/app_colors.dart';
 import '../../providers/auth_provider.dart';
@@ -37,6 +41,8 @@ class _UploadSnippetSheetState extends State<_UploadSnippetSheet> {
   String? _selectedReciterName;
   bool _addingNew = false;
   bool _isUploading = false;
+  String? _uploadProgressLabel;
+  double _uploadProgress = 0.0;
 
   final _titleCtl = TextEditingController();
   final _newReciterCtl = TextEditingController();
@@ -59,8 +65,9 @@ class _UploadSnippetSheetState extends State<_UploadSnippetSheet> {
     super.dispose();
   }
 
-  String get _reciterName =>
-      _addingNew ? _newReciterCtl.text.trim() : (_selectedReciterName ?? '').trim();
+  String get _reciterName => _addingNew
+      ? _newReciterCtl.text.trim()
+      : (_selectedReciterName ?? '').trim();
 
   bool get _canSave =>
       !_isUploading &&
@@ -78,11 +85,33 @@ class _UploadSnippetSheetState extends State<_UploadSnippetSheet> {
       if (result != null && result.files.isNotEmpty) {
         final f = result.files.single;
         if (f.path != null) {
+          final source = File(f.path!);
+          if (!await source.exists()) {
+            throw Exception('الملف غير موجود');
+          }
+
+          final bytes = await source.readAsBytes();
+          if (bytes.isEmpty) {
+            throw Exception('الملف الصوتي فارغ');
+          }
+
+          final dir = await getApplicationDocumentsDirectory();
+          final uploadDir = Directory('${dir.path}/pending_audio_uploads');
+          if (!await uploadDir.exists()) {
+            await uploadDir.create(recursive: true);
+          }
+
+          final dot = f.name.lastIndexOf('.');
+          final ext = dot > 0 ? f.name.substring(dot).toLowerCase() : '.mp3';
+          final persistentPath =
+              '${uploadDir.path}/${DateTime.now().millisecondsSinceEpoch}$ext';
+          await File(persistentPath).writeAsBytes(bytes, flush: true);
+
+          if (!mounted) return;
           setState(() {
-            _pickedFilePath = f.path;
+            _pickedFilePath = persistentPath;
             _pickedFileName = f.name;
             if (_titleCtl.text.isEmpty) {
-              final dot = f.name.lastIndexOf('.');
               _titleCtl.text = dot > 0 ? f.name.substring(0, dot) : f.name;
             }
           });
@@ -104,25 +133,48 @@ class _UploadSnippetSheetState extends State<_UploadSnippetSheet> {
 
   Future<void> _save() async {
     if (!_canSave) return;
-    setState(() => _isUploading = true);
+    final auth = context.read<AppAuthProvider>();
+    setState(() {
+      _isUploading = true;
+      _uploadProgress = 0.0;
+      _uploadProgressLabel = auth.canUpload
+          ? 'جاري تجهيز الرفع...'
+          : 'جاري الحفظ...';
+    });
 
     try {
-      final auth = context.read<AppAuthProvider>();
-      await QuranAudioService().addUserSnippet(
-        reciterName: _reciterName,
-        trackTitle: _titleCtl.text.trim(),
-        sourceFilePath: _pickedFilePath!,
-        publishToSharedLibrary: auth.isAdmin,
-        uploadedByUid: auth.userId,
-        uploadedByName: auth.displayName,
-      );
+      await QuranAudioService()
+          .addUserSnippet(
+            reciterName: _reciterName,
+            trackTitle: _titleCtl.text.trim(),
+            sourceFilePath: _pickedFilePath!,
+            publishToSharedLibrary: auth.canUpload,
+            uploadedByUid: auth.userId,
+            uploadedByName: auth.displayName,
+            onUploadProgress: auth.canUpload
+                ? (done, total) {
+                    if (!mounted) return;
+                    setState(() {
+                      _uploadProgress = total > 0 ? done / total : 0;
+                      _uploadProgressLabel =
+                          'جاري الرفع ${(done / total * 100).toInt()}%...';
+                    });
+                  }
+                : null,
+          )
+          .timeout(
+            const Duration(minutes: 5),
+            onTimeout: () => throw Exception(
+              'انتهت مهلة العملية — تحقق من الاتصال أو استخدم ملفاً أصغر',
+            ),
+          );
       if (!mounted) return;
       Navigator.pop(context);
       widget.onSaved();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            auth.isAdmin
+            auth.canUpload
                 ? 'تم رفع المقطع — سيظهر لجميع المستخدمين'
                 : 'تم حفظ المقطع بنجاح',
             style: GoogleFonts.ibmPlexSansArabic(color: Colors.white),
@@ -144,7 +196,13 @@ class _UploadSnippetSheetState extends State<_UploadSnippetSheet> {
         ),
       );
     } finally {
-      if (mounted) setState(() => _isUploading = false);
+      if (mounted) {
+        setState(() {
+          _isUploading = false;
+          _uploadProgressLabel = null;
+          _uploadProgress = 0.0;
+        });
+      }
     }
   }
 
@@ -217,8 +275,10 @@ class _UploadSnippetSheetState extends State<_UploadSnippetSheet> {
                       final selected =
                           !_addingNew && _selectedReciterName == r.nameAr;
                       return ChoiceChip(
-                        label: Text(r.nameAr,
-                            style: GoogleFonts.ibmPlexSansArabic(fontSize: 12)),
+                        label: Text(
+                          r.nameAr,
+                          style: GoogleFonts.ibmPlexSansArabic(fontSize: 12),
+                        ),
                         selected: selected,
                         selectedColor: AppColors.darkGreen,
                         labelStyle: TextStyle(
@@ -233,8 +293,10 @@ class _UploadSnippetSheetState extends State<_UploadSnippetSheet> {
                     }),
                     ChoiceChip(
                       avatar: const Icon(Icons.add_rounded, size: 16),
-                      label: Text('قارئ جديد',
-                          style: GoogleFonts.ibmPlexSansArabic(fontSize: 12)),
+                      label: Text(
+                        'قارئ جديد',
+                        style: GoogleFonts.ibmPlexSansArabic(fontSize: 12),
+                      ),
                       selected: _addingNew,
                       selectedColor: AppColors.gold,
                       onSelected: (_) => setState(() {
@@ -296,7 +358,9 @@ class _UploadSnippetSheetState extends State<_UploadSnippetSheet> {
                           Expanded(
                             child: Text(
                               _pickedFileName ?? 'اضغط لاختيار ملف mp3',
-                              style: GoogleFonts.ibmPlexSansArabic(fontSize: 13),
+                              style: GoogleFonts.ibmPlexSansArabic(
+                                fontSize: 13,
+                              ),
                             ),
                           ),
                         ],
@@ -351,7 +415,9 @@ class _UploadSnippetSheetState extends State<_UploadSnippetSheet> {
                           )
                         : const Icon(Icons.check_rounded, color: Colors.white),
                     label: Text(
-                      _isUploading ? 'جاري الرفع...' : 'حفظ المقطع',
+                      _isUploading
+                          ? (_uploadProgressLabel ?? 'جاري الرفع...')
+                          : 'حفظ المقطع',
                       style: GoogleFonts.ibmPlexSansArabic(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
@@ -360,8 +426,9 @@ class _UploadSnippetSheetState extends State<_UploadSnippetSheet> {
                     ),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.darkGreen,
-                      disabledBackgroundColor:
-                          AppColors.darkGreen.withValues(alpha: 0.35),
+                      disabledBackgroundColor: AppColors.darkGreen.withValues(
+                        alpha: 0.35,
+                      ),
                       disabledForegroundColor: Colors.white70,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(14),
@@ -369,6 +436,20 @@ class _UploadSnippetSheetState extends State<_UploadSnippetSheet> {
                     ),
                   ),
                 ),
+                if (_isUploading) ...[
+                  const SizedBox(height: 12),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(4),
+                    child: LinearProgressIndicator(
+                      value: _uploadProgress > 0 ? _uploadProgress : null,
+                      backgroundColor: isDark ? Colors.white12 : Colors.black12,
+                      valueColor: const AlwaysStoppedAnimation<Color>(
+                        AppColors.darkGreen,
+                      ),
+                      minHeight: 6,
+                    ),
+                  ),
+                ],
               ],
             ),
           ),

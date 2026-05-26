@@ -36,9 +36,9 @@ TextStyle _font({
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
-    statusBarColor: Colors.transparent,
-  ));
+  SystemChrome.setSystemUIOverlayStyle(
+    const SystemUiOverlayStyle(statusBarColor: Colors.transparent),
+  );
 
   try {
     await Firebase.initializeApp(
@@ -98,13 +98,13 @@ void main() async {
         ChangeNotifierProvider.value(value: QuranAudioService()),
         ChangeNotifierProvider.value(value: ReciterDownloadService()),
       ],
-      child: const NiyyahTrackerApp(),
+      child: const BasairApp(),
     ),
   );
 }
 
-class NiyyahTrackerApp extends StatelessWidget {
-  const NiyyahTrackerApp({super.key});
+class BasairApp extends StatelessWidget {
+  const BasairApp({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -140,12 +140,18 @@ class NiyyahTrackerApp extends StatelessWidget {
           foregroundColor: AppColors.textPrimary,
           elevation: 0,
           scrolledUnderElevation: 1,
-          titleTextStyle: _font(fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
+          titleTextStyle: _font(
+            fontSize: 18,
+            fontWeight: FontWeight.w700,
+            color: AppColors.textPrimary,
+          ),
         ),
         cardTheme: CardThemeData(
           color: AppColors.cardBg,
           elevation: 0,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
         ),
       ),
 
@@ -160,19 +166,27 @@ class NiyyahTrackerApp extends StatelessWidget {
           surface: const Color(0xFF1E1E1E),
           brightness: Brightness.dark,
         ),
-        textTheme: GoogleFonts.ibmPlexSansArabicTextTheme(ThemeData.dark().textTheme),
+        textTheme: GoogleFonts.ibmPlexSansArabicTextTheme(
+          ThemeData.dark().textTheme,
+        ),
         scaffoldBackgroundColor: const Color(0xFF121212),
         appBarTheme: AppBarTheme(
           backgroundColor: const Color(0xFF1E1E1E),
           foregroundColor: Colors.white,
           elevation: 0,
           scrolledUnderElevation: 1,
-          titleTextStyle: _font(fontSize: 18, fontWeight: FontWeight.w700, color: Colors.white),
+          titleTextStyle: _font(
+            fontSize: 18,
+            fontWeight: FontWeight.w700,
+            color: Colors.white,
+          ),
         ),
         cardTheme: CardThemeData(
           color: const Color(0xFF1E1E1E),
           elevation: 0,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
         ),
       ),
 

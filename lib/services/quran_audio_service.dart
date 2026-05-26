@@ -42,28 +42,27 @@ class SnippetTrack {
   });
 
   bool get isUserUploaded => filePath != null;
-  bool get isShared =>
-      cloudTrackId != null && cloudTrackId!.isNotEmpty;
+  bool get isShared => cloudTrackId != null && cloudTrackId!.isNotEmpty;
 
   Map<String, dynamic> toJson() => {
-        'title': title,
-        'assetPath': assetPath,
-        'filePath': filePath,
-        'remoteUrl': remoteUrl,
-        'cloudTrackId': cloudTrackId,
-        'storagePath': storagePath,
-        'reciterId': reciterId,
-      };
+    'title': title,
+    'assetPath': assetPath,
+    'filePath': filePath,
+    'remoteUrl': remoteUrl,
+    'cloudTrackId': cloudTrackId,
+    'storagePath': storagePath,
+    'reciterId': reciterId,
+  };
 
   factory SnippetTrack.fromJson(Map<String, dynamic> json) => SnippetTrack(
-        title: json['title'] as String,
-        assetPath: (json['assetPath'] as String?) ?? '',
-        filePath: json['filePath'] as String?,
-        remoteUrl: json['remoteUrl'] as String?,
-        cloudTrackId: json['cloudTrackId'] as String?,
-        storagePath: json['storagePath'] as String?,
-        reciterId: json['reciterId'] as String?,
-      );
+    title: json['title'] as String,
+    assetPath: (json['assetPath'] as String?) ?? '',
+    filePath: json['filePath'] as String?,
+    remoteUrl: json['remoteUrl'] as String?,
+    cloudTrackId: json['cloudTrackId'] as String?,
+    storagePath: json['storagePath'] as String?,
+    reciterId: json['reciterId'] as String?,
+  );
 }
 
 // ─── Reciter Model ───────────────────────────────────────────────────────────
@@ -167,19 +166,71 @@ class QuranAudioService extends ChangeNotifier {
       description: 'مقتطفات مختارة من تلاوات الشيخ أحمد فؤاد',
       type: ReciterType.snippets,
       snippetTracks: [
-        SnippetTrack(title: 'سورة الرحمن', assetPath: 'assets/audio/quran/snippets/احمد فؤاد/_سورة الرحمن الشيخ أحمد فؤاد بني سويف(128K).mp3'),
-        SnippetTrack(title: 'آيات من سورة يوسف', assetPath: 'assets/audio/quran/snippets/احمد فؤاد/آيات_من_سورة_يوسف(128K).mp3'),
-        SnippetTrack(title: 'آيات من العنكبوت', assetPath: 'assets/audio/quran/snippets/احمد فؤاد/أيات من العنكبوت ليلة 21(128K).mp3'),
-        SnippetTrack(title: 'آخر سورة الزمر', assetPath: 'assets/audio/quran/snippets/احمد فؤاد/اخر_سورة_الزمر_الشيخ_احمد_فؤاد(128K).mp3'),
-        SnippetTrack(title: 'آخر سورة الشعراء', assetPath: 'assets/audio/quran/snippets/احمد فؤاد/اخر_سورة_الشعراء_الشيخ_احمد_فؤاد(128K).mp3'),
-        SnippetTrack(title: 'الأعراف', assetPath: 'assets/audio/quran/snippets/احمد فؤاد/الأعراف ، أحمد فؤاد(128K).mp3'),
-        SnippetTrack(title: 'سورة هود', assetPath: 'assets/audio/quran/snippets/احمد فؤاد/الشيخ أحمد فؤاد سورة هود.mp3'),
-        SnippetTrack(title: 'سورة الطور والنجم', assetPath: 'assets/audio/quran/snippets/احمد فؤاد/سورة_الطور_والنجم_للشيخ_احمد_فؤاد(128K).mp3'),
-        SnippetTrack(title: 'سورة المطففين', assetPath: 'assets/audio/quran/snippets/احمد فؤاد/سورة_المطففين_ودعاء_للشيخ_أحمد_فؤاد_(1).mp3'),
-        SnippetTrack(title: 'آل عمران من الآية 149', assetPath: 'assets/audio/quran/snippets/احمد فؤاد/سورة-آل-عمران-من-الآيه-149(128K).mp3'),
-        SnippetTrack(title: 'سورة مريم', assetPath: 'assets/audio/quran/snippets/احمد فؤاد/مريم_.._أحمد_فؤاد(128K).mp3'),
-        SnippetTrack(title: 'من سورة الرعد', assetPath: 'assets/audio/quran/snippets/احمد فؤاد/من_سورة_الرعد__،_القارئ_أحمد_فؤاد(128K).mp3'),
-        SnippetTrack(title: 'نصف سورة الأحزاب', assetPath: 'assets/audio/quran/snippets/احمد فؤاد/نصف سورة  الأحزاب الثانى(128K).mp3'),
+        SnippetTrack(
+          title: 'سورة الرحمن',
+          assetPath:
+              'assets/audio/quran/snippets/احمد فؤاد/_سورة الرحمن الشيخ أحمد فؤاد بني سويف(128K).mp3',
+        ),
+        SnippetTrack(
+          title: 'آيات من سورة يوسف',
+          assetPath:
+              'assets/audio/quran/snippets/احمد فؤاد/آيات_من_سورة_يوسف(128K).mp3',
+        ),
+        SnippetTrack(
+          title: 'آيات من العنكبوت',
+          assetPath:
+              'assets/audio/quran/snippets/احمد فؤاد/أيات من العنكبوت ليلة 21(128K).mp3',
+        ),
+        SnippetTrack(
+          title: 'آخر سورة الزمر',
+          assetPath:
+              'assets/audio/quran/snippets/احمد فؤاد/اخر_سورة_الزمر_الشيخ_احمد_فؤاد(128K).mp3',
+        ),
+        SnippetTrack(
+          title: 'آخر سورة الشعراء',
+          assetPath:
+              'assets/audio/quran/snippets/احمد فؤاد/اخر_سورة_الشعراء_الشيخ_احمد_فؤاد(128K).mp3',
+        ),
+        SnippetTrack(
+          title: 'الأعراف',
+          assetPath:
+              'assets/audio/quran/snippets/احمد فؤاد/الأعراف ، أحمد فؤاد(128K).mp3',
+        ),
+        SnippetTrack(
+          title: 'سورة هود',
+          assetPath:
+              'assets/audio/quran/snippets/احمد فؤاد/الشيخ أحمد فؤاد سورة هود.mp3',
+        ),
+        SnippetTrack(
+          title: 'سورة الطور والنجم',
+          assetPath:
+              'assets/audio/quran/snippets/احمد فؤاد/سورة_الطور_والنجم_للشيخ_احمد_فؤاد(128K).mp3',
+        ),
+        SnippetTrack(
+          title: 'سورة المطففين',
+          assetPath:
+              'assets/audio/quran/snippets/احمد فؤاد/سورة_المطففين_ودعاء_للشيخ_أحمد_فؤاد_(1).mp3',
+        ),
+        SnippetTrack(
+          title: 'آل عمران من الآية 149',
+          assetPath:
+              'assets/audio/quran/snippets/احمد فؤاد/سورة-آل-عمران-من-الآيه-149(128K).mp3',
+        ),
+        SnippetTrack(
+          title: 'سورة مريم',
+          assetPath:
+              'assets/audio/quran/snippets/احمد فؤاد/مريم_.._أحمد_فؤاد(128K).mp3',
+        ),
+        SnippetTrack(
+          title: 'من سورة الرعد',
+          assetPath:
+              'assets/audio/quran/snippets/احمد فؤاد/من_سورة_الرعد__،_القارئ_أحمد_فؤاد(128K).mp3',
+        ),
+        SnippetTrack(
+          title: 'نصف سورة الأحزاب',
+          assetPath:
+              'assets/audio/quran/snippets/احمد فؤاد/نصف سورة  الأحزاب الثانى(128K).mp3',
+        ),
       ],
     ),
     // ── Full Reciters (download on demand) ──
@@ -228,8 +279,40 @@ class QuranAudioService extends ChangeNotifier {
   static List<Reciter> _sharedReciters = const [];
 
   /// All reciters: built-in + shared cloud + local custom.
-  static List<Reciter> get reciters =>
-      [..._builtInReciters, ..._sharedReciters, ..._customReciters];
+  static List<Reciter> get reciters {
+    final merged = [..._builtInReciters];
+
+    for (final shared in _sharedReciters) {
+      final builtInIdx = merged.indexWhere(
+        (r) =>
+            r.type == ReciterType.snippets &&
+            _normalizeReciterName(r.nameAr) ==
+                _normalizeReciterName(shared.nameAr),
+      );
+
+      if (builtInIdx < 0) {
+        merged.add(shared);
+        continue;
+      }
+
+      final builtIn = merged[builtInIdx];
+      merged[builtInIdx] = Reciter(
+        id: builtIn.id,
+        nameAr: builtIn.nameAr,
+        nameEn: builtIn.nameEn,
+        description: builtIn.description,
+        type: builtIn.type,
+        cdnId: builtIn.cdnId,
+        mp3QuranServer: builtIn.mp3QuranServer,
+        snippetTracks: [...?builtIn.snippetTracks, ...?shared.snippetTracks],
+      );
+    }
+
+    return [...merged, ..._customReciters];
+  }
+
+  static String _normalizeReciterName(String value) =>
+      value.trim().replaceAll(RegExp(r'\s+'), ' ');
 
   // ── Settings Keys ─────────────────────────────────────────────────────────
 
@@ -248,16 +331,18 @@ class QuranAudioService extends ChangeNotifier {
     // Configure audio session — share focus with AzanService
     try {
       final session = await AudioSession.instance;
-      await session.configure(const AudioSessionConfiguration(
-        avAudioSessionCategory: AVAudioSessionCategory.playback,
-        avAudioSessionMode: AVAudioSessionMode.defaultMode,
-        androidAudioAttributes: AndroidAudioAttributes(
-          contentType: AndroidAudioContentType.music,
-          usage: AndroidAudioUsage.media,
+      await session.configure(
+        const AudioSessionConfiguration(
+          avAudioSessionCategory: AVAudioSessionCategory.playback,
+          avAudioSessionMode: AVAudioSessionMode.defaultMode,
+          androidAudioAttributes: AndroidAudioAttributes(
+            contentType: AndroidAudioContentType.music,
+            usage: AndroidAudioUsage.media,
+          ),
+          androidAudioFocusGainType: AndroidAudioFocusGainType.gain,
+          androidWillPauseWhenDucked: true,
         ),
-        androidAudioFocusGainType: AndroidAudioFocusGainType.gain,
-        androidWillPauseWhenDucked: true,
-      ));
+      );
       session.interruptionEventStream.listen((event) {
         if (event.begin) _player.pause();
       });
@@ -281,7 +366,8 @@ class QuranAudioService extends ChangeNotifier {
     _playerStateSub = _player.playerStateStream.listen((ps) {
       _state = _state.copyWith(
         isPlaying: ps.playing,
-        isLoading: ps.processingState == ProcessingState.loading ||
+        isLoading:
+            ps.processingState == ProcessingState.loading ||
             ps.processingState == ProcessingState.buffering,
       );
       if (ps.processingState == ProcessingState.completed) {
@@ -311,9 +397,10 @@ class QuranAudioService extends ChangeNotifier {
   String get selectedReciterId =>
       _settingsBox.get(_selectedReciterKey, defaultValue: 'snippets_mishary');
 
-  Reciter get selectedReciter =>
-      reciters.firstWhere((r) => r.id == selectedReciterId,
-          orElse: () => reciters.first);
+  Reciter get selectedReciter => reciters.firstWhere(
+    (r) => r.id == selectedReciterId,
+    orElse: () => reciters.first,
+  );
 
   int get lastSurah => _settingsBox.get(_lastSurahKey, defaultValue: 1);
 
@@ -339,10 +426,15 @@ class QuranAudioService extends ChangeNotifier {
     if (!_initialized) await init();
 
     final rid = reciterId ?? selectedReciterId;
-    final reciter = reciters.firstWhere((r) => r.id == rid,
-        orElse: () => selectedReciter);
+    final reciter = reciters.firstWhere(
+      (r) => r.id == rid,
+      orElse: () => selectedReciter,
+    );
 
-    developer.log('▶️ playSurah($surahNumber) reciter=${reciter.id}', name: 'QuranAudio');
+    developer.log(
+      '▶️ playSurah($surahNumber) reciter=${reciter.id}',
+      name: 'QuranAudio',
+    );
 
     _state = _state.copyWith(
       isLoading: true,
@@ -359,7 +451,12 @@ class QuranAudioService extends ChangeNotifier {
       }
       await _settingsBox.put(_lastSurahKey, surahNumber);
     } catch (e, st) {
-      developer.log('❌ playSurah error', name: 'QuranAudio', error: e, stackTrace: st);
+      developer.log(
+        '❌ playSurah error',
+        name: 'QuranAudio',
+        error: e,
+        stackTrace: st,
+      );
       _state = _state.copyWith(isLoading: false, isPlaying: false);
       notifyListeners();
     }
@@ -373,7 +470,10 @@ class QuranAudioService extends ChangeNotifier {
   Future<void> _playSnippet(int trackIndex, Reciter reciter) async {
     final tracks = reciter.snippetTracks;
     if (tracks == null || tracks.isEmpty) {
-      developer.log('⚠️ No snippet tracks for reciter ${reciter.id}', name: 'QuranAudio');
+      developer.log(
+        '⚠️ No snippet tracks for reciter ${reciter.id}',
+        name: 'QuranAudio',
+      );
       _state = _state.copyWith(isLoading: false, currentSurah: null);
       notifyListeners();
       return;
@@ -381,7 +481,10 @@ class QuranAudioService extends ChangeNotifier {
     final safeIndex = trackIndex.clamp(0, tracks.length - 1);
     final track = tracks[safeIndex];
     if (track.isUserUploaded) {
-      developer.log('▶️ Playing user snippet: ${track.filePath}', name: 'QuranAudio');
+      developer.log(
+        '▶️ Playing user snippet: ${track.filePath}',
+        name: 'QuranAudio',
+      );
       await _player.setFilePath(track.filePath!);
     } else if (track.isShared) {
       final local = await _resolveSharedTrackLocalPath(track);
@@ -393,7 +496,10 @@ class QuranAudioService extends ChangeNotifier {
       }
       await _player.setFilePath(local);
     } else {
-      developer.log('▶️ Playing snippet: ${track.assetPath}', name: 'QuranAudio');
+      developer.log(
+        '▶️ Playing snippet: ${track.assetPath}',
+        name: 'QuranAudio',
+      );
       await _player.setAsset(track.assetPath);
     }
     await _player.play();
@@ -514,8 +620,10 @@ class QuranAudioService extends ChangeNotifier {
 
   /// Returns true if the reciter is fully available offline.
   Future<bool> isReciterFullyDownloaded(String reciterId) async {
-    final reciter = reciters.firstWhere((r) => r.id == reciterId,
-        orElse: () => reciters.first);
+    final reciter = reciters.firstWhere(
+      (r) => r.id == reciterId,
+      orElse: () => reciters.first,
+    );
     if (reciter.type == ReciterType.snippets) return true;
     return (await downloadedSurahCount(reciterId)) == 114;
   }
@@ -546,14 +654,17 @@ class QuranAudioService extends ChangeNotifier {
   /// Load custom reciters from Hive into [_customReciters].
   void _loadCustomReciters() {
     try {
-      final raw =
-          _settingsBox.get(_customRecitersKey, defaultValue: <dynamic>[]);
+      final raw = _settingsBox.get(
+        _customRecitersKey,
+        defaultValue: <dynamic>[],
+      );
       final list = (raw as List).map((e) {
         final m = Map<String, dynamic>.from(e as Map);
         final tracksRaw = (m['tracks'] as List?) ?? const [];
         final tracks = tracksRaw
-            .map((t) =>
-                SnippetTrack.fromJson(Map<String, dynamic>.from(t as Map)))
+            .map(
+              (t) => SnippetTrack.fromJson(Map<String, dynamic>.from(t as Map)),
+            )
             .toList();
         return Reciter(
           id: m['id'] as String,
@@ -566,26 +677,32 @@ class QuranAudioService extends ChangeNotifier {
         );
       }).toList();
       _customReciters = list;
-      developer.log('📚 Loaded ${list.length} custom reciters',
-          name: 'QuranAudio');
+      developer.log(
+        '📚 Loaded ${list.length} custom reciters',
+        name: 'QuranAudio',
+      );
     } catch (e) {
-      developer.log('⚠️ Failed to load custom reciters: $e',
-          name: 'QuranAudio');
+      developer.log(
+        '⚠️ Failed to load custom reciters: $e',
+        name: 'QuranAudio',
+      );
       _customReciters = const [];
     }
   }
 
   Future<void> _persistCustomReciters() async {
     final list = _customReciters
-        .map((r) => {
-              'id': r.id,
-              'nameAr': r.nameAr,
-              'nameEn': r.nameEn,
-              'description': r.description,
-              'tracks': (r.snippetTracks ?? const [])
-                  .map((t) => t.toJson())
-                  .toList(),
-            })
+        .map(
+          (r) => {
+            'id': r.id,
+            'nameAr': r.nameAr,
+            'nameEn': r.nameEn,
+            'description': r.description,
+            'tracks': (r.snippetTracks ?? const [])
+                .map((t) => t.toJson())
+                .toList(),
+          },
+        )
         .toList();
     await _settingsBox.put(_customRecitersKey, list);
     await _settingsBox.flush();
@@ -612,6 +729,7 @@ class QuranAudioService extends ChangeNotifier {
     bool publishToSharedLibrary = false,
     String? uploadedByUid,
     String? uploadedByName,
+    void Function(int completedChunks, int totalChunks)? onUploadProgress,
   }) async {
     if (!_initialized) await init();
 
@@ -622,8 +740,13 @@ class QuranAudioService extends ChangeNotifier {
         localFilePath: sourceFilePath,
         uploadedByUid: uploadedByUid ?? '',
         uploadedByName: uploadedByName ?? 'الإدارة',
+        onProgress: onUploadProgress,
       );
-      await refreshSharedLibrary();
+      try {
+        await refreshSharedLibrary().timeout(const Duration(seconds: 20));
+      } catch (_) {
+        // Upload succeeded; list refresh can fail without blocking save.
+      }
       final id = SharedLibraryService.reciterIdFor(reciterName);
       return _sharedReciters.firstWhere(
         (r) => r.id == id,

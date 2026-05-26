@@ -8,6 +8,7 @@ import '../../core/theme_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../auth/login_page.dart';
 import '../settings/notification_settings_page.dart';
+import '../admin/admin_panel_page.dart';
 
 TextStyle _f({double sz = 14, FontWeight fw = FontWeight.w400, Color? c, double? h}) =>
     GoogleFonts.ibmPlexSansArabic(fontSize: sz, fontWeight: fw, color: c, height: h);
@@ -173,6 +174,23 @@ class ProfilePage extends StatelessWidget {
                         ),
                                               ],
                     ),
+
+                    if (authProvider.isAdmin) ...[
+                      const SizedBox(height: 24),
+                      _SectionHeader(title: 'الإدارة', isDark: isDark),
+                      _ProfileCard(
+                        isDark: isDark,
+                        children: [
+                          _ModernSettingsTile(
+                            icon: Icons.shield_rounded,
+                            color: AppColors.gold,
+                            title: 'لوحة التحكم',
+                            subtitle: 'إدارة التطبيق والمستخدمين',
+                            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AdminPanelPage())),
+                          ),
+                        ],
+                      ),
+                    ],
 
                     const SizedBox(height: 40),
                     // Logout

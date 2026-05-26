@@ -3,8 +3,17 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../core/app_colors.dart';
 
-TextStyle _f({double sz = 14, FontWeight fw = FontWeight.w400, Color? c, double? h}) =>
-    GoogleFonts.ibmPlexSansArabic(fontSize: sz, fontWeight: fw, color: c, height: h);
+TextStyle _f({
+  double sz = 14,
+  FontWeight fw = FontWeight.w400,
+  Color? c,
+  double? h,
+}) => GoogleFonts.ibmPlexSansArabic(
+  fontSize: sz,
+  fontWeight: fw,
+  color: c,
+  height: h,
+);
 
 class NotificationOverlay extends StatefulWidget {
   final String title;
@@ -48,18 +57,12 @@ class _NotificationOverlayState extends State<NotificationOverlay>
     _slideAnimation = Tween<Offset>(
       begin: const Offset(0, -1),
       end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _controller,
-      curve: Curves.easeOutBack,
-    ));
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutBack));
 
     _fadeAnimation = Tween<double>(
       begin: 0.0,
       end: 1.0,
-    ).animate(CurvedAnimation(
-      parent: _controller,
-      curve: Curves.easeInOut,
-    ));
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
 
     _controller.forward();
     _startDismissTimer();
@@ -78,7 +81,6 @@ class _NotificationOverlayState extends State<NotificationOverlay>
     _controller.reverse().then((_) {
       if (mounted) {
         widget.onDismiss?.call();
-        Navigator.of(context).pop();
       }
     });
   }
@@ -121,10 +123,7 @@ class _NotificationOverlayState extends State<NotificationOverlay>
                                 widget.color.withOpacity(0.95),
                                 widget.color.withOpacity(0.85),
                               ]
-                            : [
-                                widget.color,
-                                widget.color.withOpacity(0.9),
-                              ],
+                            : [widget.color, widget.color.withOpacity(0.9)],
                       ),
                       borderRadius: BorderRadius.circular(16),
                       boxShadow: [
@@ -163,7 +162,7 @@ class _NotificationOverlayState extends State<NotificationOverlay>
                             ),
                           ),
                           const SizedBox(width: 12),
-                          
+
                           // Content Section - More compact
                           Expanded(
                             child: Column(
@@ -194,7 +193,7 @@ class _NotificationOverlayState extends State<NotificationOverlay>
                               ],
                             ),
                           ),
-                          
+
                           // Close Button - Smaller
                           GestureDetector(
                             onTap: _dismiss,
@@ -228,6 +227,8 @@ class _NotificationOverlayState extends State<NotificationOverlay>
 
 // Notification Manager for showing overlays
 class NotificationOverlayManager {
+  static OverlayEntry? _activeEntry;
+
   static void show(
     BuildContext context, {
     required String title,
@@ -237,23 +238,35 @@ class NotificationOverlayManager {
     Duration duration = const Duration(seconds: 5),
     VoidCallback? onTap,
   }) {
-    Navigator.of(context).push(
-      PageRouteBuilder(
-        pageBuilder: (context, animation, secondaryAnimation) =>
-            NotificationOverlay(
-              title: title,
-              body: body,
-              icon: icon,
-              color: color,
-              duration: duration,
-              onTap: onTap,
-            ),
-        transitionDuration: Duration.zero,
-        reverseTransitionDuration: const Duration(milliseconds: 300),
-        opaque: false,
-        barrierDismissible: false,
+    final overlay = Overlay.of(context, rootOverlay: true);
+    _activeEntry?.remove();
+    _activeEntry = null;
+
+    late final OverlayEntry entry;
+    entry = OverlayEntry(
+      builder: (_) => Positioned(
+        top: 0,
+        left: 0,
+        right: 0,
+        child: NotificationOverlay(
+          title: title,
+          body: body,
+          icon: icon,
+          color: color,
+          duration: duration,
+          onTap: onTap,
+          onDismiss: () {
+            if (_activeEntry == entry) {
+              _activeEntry = null;
+            }
+            entry.remove();
+          },
+        ),
       ),
     );
+
+    _activeEntry = entry;
+    overlay.insert(entry);
   }
 
   static void showAzkarNotification(
