@@ -17,12 +17,10 @@ import android.os.IBinder
 import android.os.Looper
 import android.os.PowerManager
 import android.provider.Settings
-import android.util.Log
 import androidx.core.app.NotificationCompat
 
 class AzanPlayerService : Service() {
     companion object {
-        const val TAG = "AzanPlayerService"
         const val CHANNEL_ID = "azan_playback_channel"
         const val NOTIFICATION_ID = 4006
         const val NOTIFICATION_ID_FLUTTER = 4000
@@ -46,7 +44,6 @@ class AzanPlayerService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (intent?.action == ACTION_STOP) {
-            Log.d(TAG, "Stop action received")
             stopPlayback()
             return START_NOT_STICKY
         }
@@ -55,7 +52,6 @@ class AzanPlayerService : Service() {
         val prayerName = intent?.getStringExtra(AzanAlarmReceiver.EXTRA_PRAYER_NAME) ?: "الصلاة"
 
         if (filePath == null) {
-            Log.e(TAG, "No file path provided")
             stopSelf()
             return START_NOT_STICKY
         }
@@ -64,21 +60,19 @@ class AzanPlayerService : Service() {
         startForeground(NOTIFICATION_ID, createNotification(prayerName))
 
         // Play audio
-        playAzan(filePath, prayerName)
+        playAzan(filePath)
 
         return START_NOT_STICKY
     }
 
-    private fun playAzan(filePath: String, prayerName: String) {
+    private fun playAzan(filePath: String) {
         try {
             // Stop any existing playback
             mediaPlayer?.apply {
                 try {
                     if (isPlaying) stop()
                     release()
-                } catch (e: Exception) {
-                    Log.e(TAG, "Error stopping old player", e)
-                }
+                } catch (_: Exception) {}
             }
 
             mediaPlayer = MediaPlayer().apply {
@@ -91,21 +85,16 @@ class AzanPlayerService : Service() {
                 setDataSource(filePath)
                 prepare()
                 setOnCompletionListener {
-                    Log.d(TAG, "Azan playback completed for $prayerName")
                     stopPlayback()
                 }
-                setOnErrorListener { _, what, extra ->
-                    Log.e(TAG, "MediaPlayer error: what=$what, extra=$extra")
+                setOnErrorListener { _, _, _ ->
                     stopPlayback()
                     true
                 }
                 start()
             }
             registerVolumeDownObserver()
-
-            Log.d(TAG, "Playing azan for $prayerName from $filePath")
-        } catch (e: Exception) {
-            Log.e(TAG, "Error playing azan", e)
+        } catch (_: Exception) {
             stopPlayback()
         }
     }
@@ -119,9 +108,7 @@ class AzanPlayerService : Service() {
                 if (isPlaying) stop()
                 release()
             }
-        } catch (e: Exception) {
-            Log.e(TAG, "Error stopping playback", e)
-        }
+        } catch (_: Exception) {}
         mediaPlayer = null
         releaseWakeLock()
         // Cancel Flutter's notification 4000 so its stop monitor triggers
@@ -156,18 +143,13 @@ class AzanPlayerService : Service() {
                 true,
                 volumeObserver!!
             )
-            Log.d(TAG, "Volume-down observer registered, alarm=$lastAlarmVolume, music=$lastMusicVolume")
-        } catch (e: Exception) {
-            Log.e(TAG, "Error registering volume observer", e)
-        }
+        } catch (_: Exception) {}
     }
 
     private fun unregisterVolumeDownObserver() {
         try {
             volumeObserver?.let { contentResolver.unregisterContentObserver(it) }
-        } catch (e: Exception) {
-            Log.e(TAG, "Error unregistering volume observer", e)
-        }
+        } catch (_: Exception) {}
         volumeObserver = null
         lastAlarmVolume = -1
         lastMusicVolume = -1
@@ -182,18 +164,12 @@ class AzanPlayerService : Service() {
             val alarmLowered = lastAlarmVolume >= 0 && currentAlarmVolume < lastAlarmVolume
             val musicLowered = lastMusicVolume >= 0 && currentMusicVolume < lastMusicVolume
             if (alarmLowered || musicLowered) {
-                Log.d(
-                    TAG,
-                    "Volume lowered, stopping azan. alarm=$lastAlarmVolume->$currentAlarmVolume music=$lastMusicVolume->$currentMusicVolume"
-                )
                 stopPlayback()
                 return
             }
             lastAlarmVolume = currentAlarmVolume
             lastMusicVolume = currentMusicVolume
-        } catch (e: Exception) {
-            Log.e(TAG, "Error checking alarm volume", e)
-        }
+        } catch (_: Exception) {}
     }
 
     private fun createNotificationChannel() {
@@ -261,9 +237,7 @@ class AzanPlayerService : Service() {
             wakeLock?.let {
                 if (it.isHeld) it.release()
             }
-        } catch (e: Exception) {
-            Log.e(TAG, "Error releasing wake lock", e)
-        }
+        } catch (_: Exception) {}
         wakeLock = null
     }
 

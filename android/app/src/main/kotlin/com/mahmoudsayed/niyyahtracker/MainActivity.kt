@@ -6,7 +6,6 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.os.Build
-import android.util.Log
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
@@ -14,7 +13,6 @@ import io.flutter.plugin.common.MethodChannel
 class MainActivity : FlutterActivity() {
     companion object {
         const val CHANNEL = "com.mahmoudsayed.niyyahtracker/azan"
-        const val TAG = "AzanScheduler"
     }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
@@ -49,14 +47,10 @@ class MainActivity : FlutterActivity() {
                         }
                         try {
                             startService(intent)
-                        } catch (e: Exception) {
-                            Log.e(TAG, "Error stopping azan service", e)
-                        }
+                        } catch (_: Exception) {}
                         try {
                             stopService(Intent(this, AzanPlayerService::class.java))
-                        } catch (e: Exception) {
-                            Log.e(TAG, "Error force stopping azan service", e)
-                        }
+                        } catch (_: Exception) {}
                         // Also cancel Flutter and native notifications.
                         try {
                             val nm = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
@@ -100,10 +94,7 @@ class MainActivity : FlutterActivity() {
                     AlarmManager.RTC_WAKEUP, triggerAtMs, pendingIntent
                 )
             }
-            Log.d(TAG, "Scheduled azan for $prayerName at $triggerAtMs (id=$alarmId)")
-        } catch (e: Exception) {
-            Log.e(TAG, "Error scheduling azan alarm", e)
-        }
+        } catch (_: Exception) {}
     }
 
     private fun cancelAzan(alarmId: Int) {
@@ -114,6 +105,5 @@ class MainActivity : FlutterActivity() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
         alarmManager.cancel(pendingIntent)
-        Log.d(TAG, "Cancelled azan alarm id=$alarmId")
     }
 }

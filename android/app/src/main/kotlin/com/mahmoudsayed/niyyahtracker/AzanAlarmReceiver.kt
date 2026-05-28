@@ -4,11 +4,9 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.os.Build
-import android.util.Log
 
 class AzanAlarmReceiver : BroadcastReceiver() {
     companion object {
-        const val TAG = "AzanAlarmReceiver"
         const val EXTRA_FILE_PATH = "file_path"
         const val EXTRA_PRAYER_NAME = "prayer_name"
         const val EXTRA_ALARM_ID = "alarm_id"
@@ -19,10 +17,7 @@ class AzanAlarmReceiver : BroadcastReceiver() {
         val filePath = intent.getStringExtra(EXTRA_FILE_PATH)
         val alarmId = intent.getIntExtra(EXTRA_ALARM_ID, 0)
 
-        Log.d(TAG, "Alarm received for $prayerName (id=$alarmId), file=$filePath")
-
         if (filePath == null) {
-            Log.e(TAG, "No file path, cannot play azan")
             return
         }
 
@@ -38,8 +33,6 @@ class AzanAlarmReceiver : BroadcastReceiver() {
             } else {
                 context.startService(serviceIntent)
             }
-        } catch (e: Exception) {
-            Log.e(TAG, "Error starting AzanPlayerService", e)
-        }
+        } catch (_: Exception) {}
     }
 }

@@ -62,8 +62,7 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> with SingleTickerProv
             coords = Coordinates(pos.latitude, pos.longitude);
           }
         }
-      } catch (locErr) {
-        debugPrint('Location fetch error: $locErr');
+      } catch (_) {
       }
 
       final params = CalculationMethod.egyptian.getParameters()..madhab = Madhab.shafi;
@@ -89,7 +88,6 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> with SingleTickerProv
         _loading = false; 
       });
     } catch (e) {
-      debugPrint('PrayerTimes error: $e');
       setState(() { _error = 'تعذر الحصول على أوقات الصلاة: $e'; _loading = false; });
     }
   }
