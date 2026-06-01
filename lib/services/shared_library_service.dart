@@ -33,6 +33,26 @@ class SharedLibraryService {
     return 'shared_${slug.isEmpty ? 'reciter' : slug}';
   }
 
+  static String _normalizeArabicName(String value) {
+    return value
+        .trim()
+        .toLowerCase()
+        .replaceAll(RegExp(r'[\u064B-\u065F\u0670]'), '')
+        .replaceAll(RegExp(r'[أإآ]'), 'ا')
+        .replaceAll('ؤ', 'و')
+        .replaceAll(RegExp(r'\s+'), ' ');
+  }
+
+  static bool _isLegacyAhmedFouadReciter(String reciterId, String nameAr) {
+    final normalizedId = _normalizeArabicName(reciterId.replaceAll('_', ' '));
+    final normalizedName = _normalizeArabicName(nameAr);
+    return reciterId == 'snippets_ahmed_fouad' ||
+        normalizedId.contains('ahmed fouad') ||
+        normalizedName.contains('ahmed fouad') ||
+        (normalizedId.contains('احمد') && normalizedId.contains('فواد')) ||
+        (normalizedName.contains('احمد') && normalizedName.contains('فواد'));
+  }
+
   String _firestoreErrorMessage(Object e) {
     if (e is FirebaseException) {
       switch (e.code) {
@@ -54,7 +74,7 @@ class SharedLibraryService {
 
   /// Add a snippet that streams from a direct audio URL (admin only — Firestore rules).
   /// Writes a single lightweight metadata doc — no audio bytes are stored.
-  Future<void> addLinkSnippet({
+  Future<String> addLinkSnippet({
     required String reciterName,
     required String trackTitle,
     required String remoteUrl,
@@ -92,6 +112,8 @@ class SharedLibraryService {
         '🔗 Shared link snippet added: $trackId ($url)',
         name: 'SharedLibrary',
       );
+
+      return trackId;
     } catch (e, st) {
       developer.log('⚠️ addLinkSnippet failed',
           name: 'SharedLibrary', error: e, stackTrace: st);
@@ -114,6 +136,10 @@ class SharedLibraryService {
         final reciterId = d['reciterId'] as String? ?? 'shared_unknown';
         final nameAr = d['reciterNameAr'] as String? ?? 'مقتطفات بصائر';
         final title = d['title'] as String? ?? 'مقطع';
+
+        if (_isLegacyAhmedFouadReciter(reciterId, nameAr)) {
+          continue;
+        }
 
         names[reciterId] = nameAr;
         descriptions[reciterId] = 'مقتطفات مشتركة — متاحة للجميع';

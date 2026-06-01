@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
+import 'audio_link_resolver.dart';
 import 'quran_audio_service.dart';
 import 'shared_library_service.dart';
 
@@ -363,7 +364,8 @@ class ReciterDownloadService extends ChangeNotifier {
       final outFile = File(outPath);
 
       if (track.remoteUrl != null && track.remoteUrl!.isNotEmpty) {
-        await _dio.download(track.remoteUrl!, outFile.path);
+        final playable = await AudioLinkResolver.resolve(track.remoteUrl!);
+        await _dio.download(playable, outFile.path);
       } else if (track.isShared && track.cloudTrackId != null) {
         // Legacy shared track stored as Firestore chunks.
         final cachePath = await SharedLibraryService().ensureTrackCached(

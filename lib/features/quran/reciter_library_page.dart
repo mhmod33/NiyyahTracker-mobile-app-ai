@@ -39,9 +39,14 @@ class _ReciterLibraryPageState extends State<ReciterLibraryPage> {
   }
 
   Future<void> _openUploadSheet(BuildContext rootContext) async {
+    await QuranAudioService().refreshSharedLibrary();
+    if (!mounted) return;
+    setState(() {});
+
     await showUploadSnippetSheet(
       context: rootContext,
-      onSaved: () {
+      onSaved: () async {
+        await QuranAudioService().refreshSharedLibrary();
         if (mounted) setState(() {});
       },
     );
@@ -1347,4 +1352,3 @@ class _Btn extends StatelessWidget {
     return fullWidth ? SizedBox(width: double.infinity, child: btn) : btn;
   }
 }
-

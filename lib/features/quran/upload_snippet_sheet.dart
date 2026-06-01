@@ -8,7 +8,7 @@ import '../../services/quran_audio_service.dart';
 /// Bottom sheet for adding a snippet by direct audio link (admin only).
 Future<void> showUploadSnippetSheet({
   required BuildContext context,
-  required VoidCallback onSaved,
+  required Future<void> Function() onSaved,
 }) {
   return showModalBottomSheet<void>(
     context: context,
@@ -22,7 +22,7 @@ Future<void> showUploadSnippetSheet({
 }
 
 class _UploadSnippetSheet extends StatefulWidget {
-  final VoidCallback onSaved;
+  final Future<void> Function() onSaved;
 
   const _UploadSnippetSheet({required this.onSaved});
 
@@ -45,10 +45,10 @@ class _UploadSnippetSheetState extends State<_UploadSnippetSheet> {
     final reciters = QuranAudioService.reciters
         .where((r) => r.type == ReciterType.snippets)
         .toList();
-    if (reciters.isNotEmpty) {
-      _selectedReciterName = reciters.first.nameAr;
-    } else {
+    if (reciters.isEmpty) {
       _addingNew = true;
+    } else {
+      _selectedReciterName = reciters.first.nameAr;
     }
   }
 
@@ -69,15 +69,26 @@ class _UploadSnippetSheetState extends State<_UploadSnippetSheet> {
     return uri != null && (uri.isScheme('http') || uri.isScheme('https'));
   }
 
+  bool get _isNewReciterName {
+    final name = _reciterName;
+    if (name.isEmpty) return false;
+    if (!_addingNew) return true;
+    return !QuranAudioService.reciters.any(
+      (r) => r.nameAr.trim().toLowerCase() == name.toLowerCase(),
+    );
+  }
+
   bool get _canSave =>
       !_isSaving &&
       _isValidUrl &&
       _titleCtl.text.trim().isNotEmpty &&
-      _reciterName.isNotEmpty;
+      _isNewReciterName;
 
   Future<void> _save() async {
     if (!_canSave) return;
     final auth = context.read<AppAuthProvider>();
+    final messenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
     setState(() => _isSaving = true);
 
     try {
@@ -88,10 +99,10 @@ class _UploadSnippetSheetState extends State<_UploadSnippetSheet> {
         uploadedByUid: auth.userId,
         uploadedByName: auth.displayName,
       );
+      await widget.onSaved();
       if (!mounted) return;
-      Navigator.pop(context);
-      widget.onSaved();
-      ScaffoldMessenger.of(context).showSnackBar(
+      navigator.pop();
+      messenger.showSnackBar(
         SnackBar(
           content: Text(
             'تمت إضافة المقطع — سيظهر لجميع المستخدمين',
@@ -103,7 +114,7 @@ class _UploadSnippetSheetState extends State<_UploadSnippetSheet> {
       );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
+      messenger.showSnackBar(
         SnackBar(
           content: Text(
             'فشل الحفظ: $e',
@@ -163,7 +174,7 @@ class _UploadSnippetSheetState extends State<_UploadSnippetSheet> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'اختر القارئ وأدخل رابطاً مباشراً للملف الصوتي ثم احفظ',
+                  'اختر قارئاً موجوداً أو أضف قارئاً جديداً ثم احفظ الرابط الصوتي',
                   style: GoogleFonts.ibmPlexSansArabic(
                     fontSize: 11,
                     color: isDark ? Colors.white60 : AppColors.gray,
@@ -212,8 +223,8 @@ class _UploadSnippetSheetState extends State<_UploadSnippetSheet> {
                       selected: _addingNew,
                       selectedColor: AppColors.gold,
                       onSelected: (_) => setState(() {
-                        _addingNew = !_addingNew;
-                        if (_addingNew) _selectedReciterName = null;
+                        _addingNew = true;
+                        _selectedReciterName = null;
                       }),
                     ),
                   ],
@@ -225,7 +236,8 @@ class _UploadSnippetSheetState extends State<_UploadSnippetSheet> {
                     textDirection: TextDirection.rtl,
                     onChanged: (_) => setState(() {}),
                     decoration: InputDecoration(
-                      labelText: 'اسم القارئ',
+                      labelText: 'اسم القارئ الجديد',
+                      prefixIcon: const Icon(Icons.person_add_alt_1_rounded),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
@@ -256,7 +268,7 @@ class _UploadSnippetSheetState extends State<_UploadSnippetSheet> {
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  'يجب أن يكون رابطاً مباشراً لملف صوتي (mp3/m4a) — روابط صفحات مثل SoundCloud لا تعمل',
+                  'يمكنك لصق رابط SoundCloud (soundcloud.com أو on.soundcloud.com) أو رابطاً مباشراً لملف صوتي (mp3/m4a)',
                   style: GoogleFonts.ibmPlexSansArabic(
                     fontSize: 10,
                     color: isDark ? Colors.white54 : AppColors.gray,
@@ -337,7 +349,8 @@ class _UploadSnippetSheetState extends State<_UploadSnippetSheet> {
   }
 
   String _hintMessage() {
-    if (_reciterName.isEmpty) return 'اختر قارئاً أو أضف قارئاً جديداً';
+    if (_reciterName.isEmpty) return 'اختر قارئاً أو أدخل اسم قارئ جديد';
+    if (!_isNewReciterName) return 'هذا القارئ موجود بالفعل — أدخل اسماً جديداً';
     if (_linkCtl.text.trim().isEmpty) return 'أدخل رابط الملف الصوتي';
     if (!_isValidUrl) return 'الرابط غير صالح — يجب أن يبدأ بـ http أو https';
     if (_titleCtl.text.trim().isEmpty) return 'اكتب عنوان المقطع';

@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:hive/hive.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:path_provider/path_provider.dart';
+import 'audio_link_resolver.dart';
 import 'shared_library_service.dart';
 
 // ─── Snippet Track ───────────────────────────────────────────────────────────
@@ -286,8 +287,15 @@ class QuranAudioService extends ChangeNotifier {
 
   // ── Getters ───────────────────────────────────────────────────────────────
 
-  String get selectedReciterId =>
-      _settingsBox.get(_selectedReciterKey, defaultValue: 'snippets_mishary');
+  String get selectedReciterId {
+    final stored = _settingsBox.get(
+      _selectedReciterKey,
+      defaultValue: _builtInReciters.first.id,
+    ) as String;
+    return reciters.any((r) => r.id == stored)
+        ? stored
+        : _builtInReciters.first.id;
+  }
 
   Reciter get selectedReciter => reciters.firstWhere(
     (r) => r.id == selectedReciterId,
@@ -356,7 +364,14 @@ class QuranAudioService extends ChangeNotifier {
 
   /// Play a snippet track by index.
   Future<void> playSnippetTrack(int trackIndex, {String? reciterId}) async {
-    await playSurah(trackIndex, reciterId: reciterId ?? 'snippets_ahmed_fouad');
+    final targetReciterId = reciterId ??
+        reciters
+            .firstWhere(
+              (r) => r.type == ReciterType.snippets,
+              orElse: () => selectedReciter,
+            )
+            .id;
+    await playSurah(trackIndex, reciterId: targetReciterId);
   }
 
   Future<void> _playSnippet(int trackIndex, Reciter reciter) async {
@@ -373,12 +388,11 @@ class QuranAudioService extends ChangeNotifier {
     final safeIndex = trackIndex.clamp(0, tracks.length - 1);
     final track = tracks[safeIndex];
     if (track.remoteUrl != null && track.remoteUrl!.isNotEmpty) {
-      // Streaming link (admin-added shared snippet).
-      developer.log(
-        '🌐 Streaming snippet: ${track.remoteUrl}',
-        name: 'QuranAudio',
-      );
-      await _player.setUrl(track.remoteUrl!);
+      // Streaming link (admin-added shared snippet). Resolve page links
+      // (e.g. SoundCloud) to a direct stream URL just before playing.
+      final playable = await AudioLinkResolver.resolve(track.remoteUrl!);
+      developer.log('🌐 Streaming snippet: $playable', name: 'QuranAudio');
+      await _player.setUrl(playable);
     } else if (track.isShared) {
       // Legacy shared track stored as Firestore chunks — download then play.
       final local = await _resolveSharedTrackLocalPath(track);
@@ -533,9 +547,71 @@ class QuranAudioService extends ChangeNotifier {
 
   // ── Custom (user-uploaded) snippet reciters ──────────────────────────────
 
+  static List<SnippetTrack> _mergeSnippetTracks(
+    List<SnippetTrack> current,
+    List<SnippetTrack> incoming,
+  ) {
+    final merged = <SnippetTrack>[];
+    final keys = <String>{};
+
+    void addTrack(SnippetTrack track) {
+      final key = track.cloudTrackId?.isNotEmpty == true
+          ? 'id:${track.cloudTrackId}'
+          : 'url:${track.remoteUrl}|title:${track.title}';
+      if (keys.add(key)) merged.add(track);
+    }
+
+    for (final track in incoming) {
+      addTrack(track);
+    }
+    for (final track in current) {
+      addTrack(track);
+    }
+
+    return merged;
+  }
+
+  static List<Reciter> _mergeSharedReciters(
+    List<Reciter> current,
+    List<Reciter> incoming,
+  ) {
+    final byId = <String, Reciter>{for (final r in incoming) r.id: r};
+
+    for (final existing in current) {
+      final fetched = byId[existing.id];
+      if (fetched == null) {
+        byId[existing.id] = existing;
+        continue;
+      }
+
+      byId[existing.id] = Reciter(
+        id: fetched.id,
+        nameAr: fetched.nameAr,
+        nameEn: fetched.nameEn,
+        description: fetched.description,
+        type: fetched.type,
+        snippetTracks: _mergeSnippetTracks(
+          existing.snippetTracks ?? const [],
+          fetched.snippetTracks ?? const [],
+        ),
+      );
+    }
+
+    return byId.values.toList();
+  }
+
   /// Reload shared snippets from Firestore (call when opening library page).
-  Future<void> refreshSharedLibrary() async {
-    _sharedReciters = await SharedLibraryService().fetchSharedReciters();
+  Future<void> refreshSharedLibrary({
+    bool preserveExisting = true,
+    bool allowEmpty = false,
+  }) async {
+    final fetched = await SharedLibraryService().fetchSharedReciters();
+    if (fetched.isEmpty && _sharedReciters.isNotEmpty && !allowEmpty) {
+      return;
+    }
+    _sharedReciters = preserveExisting
+        ? _mergeSharedReciters(_sharedReciters, fetched)
+        : fetched;
     notifyListeners();
   }
 
@@ -556,13 +632,52 @@ class QuranAudioService extends ChangeNotifier {
   }) async {
     if (!_initialized) await init();
 
-    await SharedLibraryService().addLinkSnippet(
+    final trackId = await SharedLibraryService().addLinkSnippet(
       reciterName: reciterName,
       trackTitle: trackTitle,
       remoteUrl: remoteUrl,
       uploadedByUid: uploadedByUid ?? '',
       uploadedByName: uploadedByName ?? 'الإدارة',
     );
+
+    final reciterId = SharedLibraryService.reciterIdFor(reciterName);
+    final track = SnippetTrack(
+      title: trackTitle.trim(),
+      assetPath: '',
+      remoteUrl: remoteUrl.trim(),
+      reciterId: reciterId,
+      cloudTrackId: trackId,
+    );
+    final existingIndex = _sharedReciters.indexWhere((r) => r.id == reciterId);
+    if (existingIndex >= 0) {
+      final existing = _sharedReciters[existingIndex];
+      final tracks = [...?existing.snippetTracks, track];
+      _sharedReciters = [
+        ..._sharedReciters.take(existingIndex),
+        Reciter(
+          id: existing.id,
+          nameAr: existing.nameAr,
+          nameEn: existing.nameEn,
+          description: existing.description,
+          type: existing.type,
+          snippetTracks: tracks,
+        ),
+        ..._sharedReciters.skip(existingIndex + 1),
+      ];
+    } else {
+      _sharedReciters = [
+        ..._sharedReciters,
+        Reciter(
+          id: reciterId,
+          nameAr: reciterName.trim(),
+          nameEn: '',
+          description: 'مقتطفات مشتركة — متاحة للجميع',
+          type: ReciterType.snippets,
+          snippetTracks: [track],
+        ),
+      ];
+    }
+    notifyListeners();
 
     try {
       await refreshSharedLibrary().timeout(const Duration(seconds: 20));
@@ -585,7 +700,7 @@ class QuranAudioService extends ChangeNotifier {
         removed.storagePath,
       );
     }
-    await refreshSharedLibrary();
+    await refreshSharedLibrary(preserveExisting: false, allowEmpty: true);
   }
 
   /// Remove a single shared snippet track — admin only, enforced by rules.
@@ -605,7 +720,7 @@ class QuranAudioService extends ChangeNotifier {
             .deleteSharedTrack(t.cloudTrackId!, t.storagePath);
       }
     }
-    await refreshSharedLibrary();
+    await refreshSharedLibrary(preserveExisting: false, allowEmpty: true);
   }
 
   @override

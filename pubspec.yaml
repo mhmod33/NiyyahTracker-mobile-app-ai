@@ -74,6 +74,7 @@ dependencies:
   uuid: ^4.5.3
   youtube_explode_dart: ^2.3.6
   flutter_svg: ^2.0.17
+  soundcloud_explode_dart: ^1.1.0
 
 
 dev_dependencies:
