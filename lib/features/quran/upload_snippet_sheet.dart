@@ -1,16 +1,11 @@
-import 'dart:async';
-import 'dart:io';
-
-import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
 import '../../core/app_colors.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/quran_audio_service.dart';
 
-/// Bottom sheet for uploading a snippet — fixed scroll + enabled save button.
+/// Bottom sheet for adding a snippet by direct audio link (admin only).
 Future<void> showUploadSnippetSheet({
   required BuildContext context,
   required VoidCallback onSaved,
@@ -36,16 +31,13 @@ class _UploadSnippetSheet extends StatefulWidget {
 }
 
 class _UploadSnippetSheetState extends State<_UploadSnippetSheet> {
-  String? _pickedFilePath;
-  String? _pickedFileName;
   String? _selectedReciterName;
   bool _addingNew = false;
-  bool _isUploading = false;
-  String? _uploadProgressLabel;
-  double _uploadProgress = 0.0;
+  bool _isSaving = false;
 
   final _titleCtl = TextEditingController();
   final _newReciterCtl = TextEditingController();
+  final _linkCtl = TextEditingController();
 
   @override
   void initState() {
@@ -55,6 +47,8 @@ class _UploadSnippetSheetState extends State<_UploadSnippetSheet> {
         .toList();
     if (reciters.isNotEmpty) {
       _selectedReciterName = reciters.first.nameAr;
+    } else {
+      _addingNew = true;
     }
   }
 
@@ -62,6 +56,7 @@ class _UploadSnippetSheetState extends State<_UploadSnippetSheet> {
   void dispose() {
     _titleCtl.dispose();
     _newReciterCtl.dispose();
+    _linkCtl.dispose();
     super.dispose();
   }
 
@@ -69,114 +64,37 @@ class _UploadSnippetSheetState extends State<_UploadSnippetSheet> {
       ? _newReciterCtl.text.trim()
       : (_selectedReciterName ?? '').trim();
 
+  bool get _isValidUrl {
+    final uri = Uri.tryParse(_linkCtl.text.trim());
+    return uri != null && (uri.isScheme('http') || uri.isScheme('https'));
+  }
+
   bool get _canSave =>
-      !_isUploading &&
-      _pickedFilePath != null &&
+      !_isSaving &&
+      _isValidUrl &&
       _titleCtl.text.trim().isNotEmpty &&
       _reciterName.isNotEmpty;
-
-  Future<void> _pickAudio() async {
-    try {
-      final result = await FilePicker.pickFiles(
-        type: FileType.custom,
-        allowedExtensions: const ['mp3', 'm4a', 'aac', 'wav', 'ogg', 'opus'],
-        allowMultiple: false,
-      );
-      if (result != null && result.files.isNotEmpty) {
-        final f = result.files.single;
-        if (f.path != null) {
-          final source = File(f.path!);
-          if (!await source.exists()) {
-            throw Exception('الملف غير موجود');
-          }
-
-          final bytes = await source.readAsBytes();
-          if (bytes.isEmpty) {
-            throw Exception('الملف الصوتي فارغ');
-          }
-
-          final dir = await getApplicationDocumentsDirectory();
-          final uploadDir = Directory('${dir.path}/pending_audio_uploads');
-          if (!await uploadDir.exists()) {
-            await uploadDir.create(recursive: true);
-          }
-
-          final dot = f.name.lastIndexOf('.');
-          final ext = dot > 0 ? f.name.substring(dot).toLowerCase() : '.mp3';
-          final persistentPath =
-              '${uploadDir.path}/${DateTime.now().millisecondsSinceEpoch}$ext';
-          await File(persistentPath).writeAsBytes(bytes, flush: true);
-
-          if (!mounted) return;
-          setState(() {
-            _pickedFilePath = persistentPath;
-            _pickedFileName = f.name;
-            if (_titleCtl.text.isEmpty) {
-              _titleCtl.text = dot > 0 ? f.name.substring(0, dot) : f.name;
-            }
-          });
-        }
-      }
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'تعذر فتح متصفح الملفات: $e',
-            style: GoogleFonts.ibmPlexSansArabic(color: Colors.white),
-          ),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
-  }
 
   Future<void> _save() async {
     if (!_canSave) return;
     final auth = context.read<AppAuthProvider>();
-    setState(() {
-      _isUploading = true;
-      _uploadProgress = 0.0;
-      _uploadProgressLabel = auth.canUpload
-          ? 'جاري تجهيز الرفع...'
-          : 'جاري الحفظ...';
-    });
+    setState(() => _isSaving = true);
 
     try {
-      await QuranAudioService()
-          .addUserSnippet(
-            reciterName: _reciterName,
-            trackTitle: _titleCtl.text.trim(),
-            sourceFilePath: _pickedFilePath!,
-            publishToSharedLibrary: auth.canUpload,
-            uploadedByUid: auth.userId,
-            uploadedByName: auth.displayName,
-            onUploadProgress: auth.canUpload
-                ? (done, total) {
-                    if (!mounted) return;
-                    setState(() {
-                      _uploadProgress = total > 0 ? done / total : 0;
-                      _uploadProgressLabel =
-                          'جاري الرفع ${(done / total * 100).toInt()}%...';
-                    });
-                  }
-                : null,
-          )
-          .timeout(
-            const Duration(minutes: 5),
-            onTimeout: () => throw Exception(
-              'انتهت مهلة العملية — تحقق من الاتصال أو استخدم ملفاً أصغر',
-            ),
-          );
+      await QuranAudioService().addSharedLink(
+        reciterName: _reciterName,
+        trackTitle: _titleCtl.text.trim(),
+        remoteUrl: _linkCtl.text.trim(),
+        uploadedByUid: auth.userId,
+        uploadedByName: auth.displayName,
+      );
       if (!mounted) return;
       Navigator.pop(context);
       widget.onSaved();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            auth.canUpload
-                ? 'تم رفع المقطع — سيظهر لجميع المستخدمين'
-                : 'تم حفظ المقطع بنجاح',
+            'تمت إضافة المقطع — سيظهر لجميع المستخدمين',
             style: GoogleFonts.ibmPlexSansArabic(color: Colors.white),
           ),
           backgroundColor: AppColors.darkGreen,
@@ -196,13 +114,7 @@ class _UploadSnippetSheetState extends State<_UploadSnippetSheet> {
         ),
       );
     } finally {
-      if (mounted) {
-        setState(() {
-          _isUploading = false;
-          _uploadProgressLabel = null;
-          _uploadProgress = 0.0;
-        });
-      }
+      if (mounted) setState(() => _isSaving = false);
     }
   }
 
@@ -242,7 +154,7 @@ class _UploadSnippetSheetState extends State<_UploadSnippetSheet> {
                 ),
                 const SizedBox(height: 14),
                 Text(
-                  'رفع مقطع جديد',
+                  'إضافة مقطع برابط',
                   style: GoogleFonts.ibmPlexSansArabic(
                     fontSize: 17,
                     fontWeight: FontWeight.w800,
@@ -251,7 +163,7 @@ class _UploadSnippetSheetState extends State<_UploadSnippetSheet> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'اختر القارئ والملف ثم اضغط حفظ المقطع',
+                  'اختر القارئ وأدخل رابطاً مباشراً للملف الصوتي ثم احفظ',
                   style: GoogleFonts.ibmPlexSansArabic(
                     fontSize: 11,
                     color: isDark ? Colors.white60 : AppColors.gray,
@@ -313,7 +225,7 @@ class _UploadSnippetSheetState extends State<_UploadSnippetSheet> {
                     textDirection: TextDirection.rtl,
                     onChanged: (_) => setState(() {}),
                     decoration: InputDecoration(
-                      labelText: 'اسم القارئ الجديد',
+                      labelText: 'اسم القارئ',
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
@@ -322,50 +234,32 @@ class _UploadSnippetSheetState extends State<_UploadSnippetSheet> {
                 ],
                 const SizedBox(height: 18),
                 Text(
-                  '2. اختر الملف الصوتي',
+                  '2. رابط الملف الصوتي',
                   style: GoogleFonts.ibmPlexSansArabic(
                     fontSize: 14,
                     fontWeight: FontWeight.w800,
                   ),
                 ),
                 const SizedBox(height: 8),
-                Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    onTap: _isUploading ? null : _pickAudio,
-                    borderRadius: BorderRadius.circular(14),
-                    child: Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(
-                          color: _pickedFilePath != null
-                              ? AppColors.darkGreen
-                              : AppColors.gold.withValues(alpha: 0.5),
-                          width: 1.5,
-                        ),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(
-                            _pickedFilePath != null
-                                ? Icons.audio_file_rounded
-                                : Icons.add_circle_outline_rounded,
-                            color: AppColors.darkGreen,
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Text(
-                              _pickedFileName ?? 'اضغط لاختيار ملف mp3',
-                              style: GoogleFonts.ibmPlexSansArabic(
-                                fontSize: 13,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
+                TextField(
+                  controller: _linkCtl,
+                  textDirection: TextDirection.ltr,
+                  keyboardType: TextInputType.url,
+                  onChanged: (_) => setState(() {}),
+                  decoration: InputDecoration(
+                    hintText: 'https://example.com/audio.mp3',
+                    prefixIcon: const Icon(Icons.link_rounded),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
                     ),
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'يجب أن يكون رابطاً مباشراً لملف صوتي (mp3/m4a) — روابط صفحات مثل SoundCloud لا تعمل',
+                  style: GoogleFonts.ibmPlexSansArabic(
+                    fontSize: 10,
+                    color: isDark ? Colors.white54 : AppColors.gray,
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -388,7 +282,7 @@ class _UploadSnippetSheetState extends State<_UploadSnippetSheet> {
                     ),
                   ),
                 ),
-                if (!_canSave && !_isUploading) ...[
+                if (!_canSave && !_isSaving) ...[
                   const SizedBox(height: 10),
                   Text(
                     _hintMessage(),
@@ -404,7 +298,7 @@ class _UploadSnippetSheetState extends State<_UploadSnippetSheet> {
                   height: 54,
                   child: ElevatedButton.icon(
                     onPressed: _canSave ? _save : null,
-                    icon: _isUploading
+                    icon: _isSaving
                         ? const SizedBox(
                             width: 22,
                             height: 22,
@@ -415,9 +309,7 @@ class _UploadSnippetSheetState extends State<_UploadSnippetSheet> {
                           )
                         : const Icon(Icons.check_rounded, color: Colors.white),
                     label: Text(
-                      _isUploading
-                          ? (_uploadProgressLabel ?? 'جاري الرفع...')
-                          : 'حفظ المقطع',
+                      _isSaving ? 'جاري الحفظ...' : 'حفظ المقطع',
                       style: GoogleFonts.ibmPlexSansArabic(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
@@ -436,20 +328,6 @@ class _UploadSnippetSheetState extends State<_UploadSnippetSheet> {
                     ),
                   ),
                 ),
-                if (_isUploading) ...[
-                  const SizedBox(height: 12),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(4),
-                    child: LinearProgressIndicator(
-                      value: _uploadProgress > 0 ? _uploadProgress : null,
-                      backgroundColor: isDark ? Colors.white12 : Colors.black12,
-                      valueColor: const AlwaysStoppedAnimation<Color>(
-                        AppColors.darkGreen,
-                      ),
-                      minHeight: 6,
-                    ),
-                  ),
-                ],
               ],
             ),
           ),
@@ -460,7 +338,8 @@ class _UploadSnippetSheetState extends State<_UploadSnippetSheet> {
 
   String _hintMessage() {
     if (_reciterName.isEmpty) return 'اختر قارئاً أو أضف قارئاً جديداً';
-    if (_pickedFilePath == null) return 'اختر ملفاً صوتياً';
+    if (_linkCtl.text.trim().isEmpty) return 'أدخل رابط الملف الصوتي';
+    if (!_isValidUrl) return 'الرابط غير صالح — يجب أن يبدأ بـ http أو https';
     if (_titleCtl.text.trim().isEmpty) return 'اكتب عنوان المقطع';
     return '';
   }

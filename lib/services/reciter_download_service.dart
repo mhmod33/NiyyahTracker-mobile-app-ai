@@ -3,7 +3,6 @@ import 'dart:developer' as developer;
 import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 import 'quran_audio_service.dart';
 import 'shared_library_service.dart';
@@ -363,20 +362,15 @@ class ReciterDownloadService extends ChangeNotifier {
       final outPath = '${outDir.path}/$safeTitle.mp3';
       final outFile = File(outPath);
 
-      if (track.filePath != null && await File(track.filePath!).exists()) {
-        await File(track.filePath!).copy(outFile.path);
+      if (track.remoteUrl != null && track.remoteUrl!.isNotEmpty) {
+        await _dio.download(track.remoteUrl!, outFile.path);
       } else if (track.isShared && track.cloudTrackId != null) {
+        // Legacy shared track stored as Firestore chunks.
         final cachePath = await SharedLibraryService().ensureTrackCached(
           track.cloudTrackId!,
         );
         if (cachePath == null) return null;
         await File(cachePath).copy(outFile.path);
-      } else if (track.assetPath.isNotEmpty) {
-        final data = await rootBundle.load(track.assetPath);
-        await outFile.writeAsBytes(
-          data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes),
-          flush: true,
-        );
       } else {
         return null;
       }

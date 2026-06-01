@@ -80,8 +80,8 @@ class _ReciterLibraryPageState extends State<ReciterLibraryPage> {
           actions: [
             if (_uploadFeatureEnabled && context.watch<AppAuthProvider>().canUpload)
               IconButton(
-                tooltip: 'رفع مقطع جديد',
-                icon: const Icon(Icons.upload_file_rounded, color: Colors.white),
+                tooltip: 'إضافة مقطع برابط',
+                icon: const Icon(Icons.add_link_rounded, color: Colors.white),
                 onPressed: () => _openUploadSheet(context),
               ),
           ],
@@ -96,27 +96,12 @@ class _ReciterLibraryPageState extends State<ReciterLibraryPage> {
               child: ListView(
                 padding: const EdgeInsets.all(16),
                 children: [
-                  // ── Snippets section ──
-                  _SectionHeader(title: 'مقتطفات', subtitle: 'متاحة للتشغيل والتحميل', isDark: isDark),
-                  const SizedBox(height: 8),
-                  ...QuranAudioService.reciters
-                      .where((r) =>
-                          r.type == ReciterType.snippets &&
-                          !r.id.startsWith('custom_') &&
-                          !r.id.startsWith('shared_'))
-                      .map((r) => _SnippetReciterCard(
-                            reciter: r,
-                            audioService: audioService,
-                            surahToPlay: widget.surahToPlay,
-                            isDark: isDark,
-                          )),
-
+                  // ── Shared snippets section (admin-added links) ──
                   if (QuranAudioService.reciters
                       .any((r) => r.id.startsWith('shared_'))) ...[
-                    const SizedBox(height: 24),
                     _SectionHeader(
                       title: 'مقتطفات بصائر',
-                      subtitle: 'رفعها الإدارة — متاحة للجميع',
+                      subtitle: 'مقتطفات مختارة — متاحة للجميع',
                       isDark: isDark,
                     ),
                     const SizedBox(height: 8),
@@ -133,30 +118,7 @@ class _ReciterLibraryPageState extends State<ReciterLibraryPage> {
                             )),
                   ],
 
-                  // ── Custom (user-uploaded) reciters section ──
-                  if (_uploadFeatureEnabled &&
-                      context.watch<AppAuthProvider>().canUpload &&
-                      QuranAudioService.reciters
-                          .any((r) => r.id.startsWith('custom_'))) ...[
-                    const SizedBox(height: 24),
-                    _SectionHeader(
-                      title: 'مقاطع رفعتها بنفسك',
-                      subtitle: 'يمكنك حذف أي مقطع أو إضافة المزيد',
-                      isDark: isDark,
-                    ),
-                    const SizedBox(height: 8),
-                    ...QuranAudioService.reciters
-                        .where((r) => r.id.startsWith('custom_'))
-                        .map((r) => _SnippetReciterCard(
-                              reciter: r,
-                              audioService: audioService,
-                              surahToPlay: widget.surahToPlay,
-                              isDark: isDark,
-                              showManageActions: true,
-                            )),
-                  ],
-
-                  // ── Upload card ──
+                  // ── Add link card (admin) ──
                   if (_uploadFeatureEnabled && context.watch<AppAuthProvider>().canUpload) ...[
                     const SizedBox(height: 16),
                     _UploadCard(
@@ -426,7 +388,7 @@ class _SnippetReciterCard extends StatelessWidget {
                 tooltip: 'حذف هذا القارئ',
                 icon: const Icon(Icons.delete_outline_rounded,
                     color: Colors.redAccent),
-                onPressed: () => _confirmRemoveCustom(context),
+                onPressed: () => _confirmRemoveReciter(context),
               )
             else
               Icon(
@@ -445,10 +407,9 @@ class _SnippetReciterCard extends StatelessWidget {
   void _showSurahPicker(BuildContext context, String reciterId) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final audioSvc = context.read<QuranAudioService>();
-    final isCustom = reciter.id.startsWith('custom_');
     final isShared = reciter.id.startsWith('shared_');
-    final canDeleteTrack = isCustom ||
-        (isShared && context.read<AppAuthProvider>().isAdmin);
+    final canDeleteTrack =
+        isShared && context.read<AppAuthProvider>().isAdmin;
     final tracks = reciter.snippetTracks ?? [];
     int? downloadingTrackIndex;
     final Set<int> downloadedIndices = {};
@@ -649,7 +610,7 @@ class _SnippetReciterCard extends StatelessWidget {
     );
   }
 
-  void _confirmRemoveCustom(BuildContext context) {
+  void _confirmRemoveReciter(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     showDialog(
       context: context,
@@ -667,7 +628,7 @@ class _SnippetReciterCard extends StatelessWidget {
             ),
           ),
           content: Text(
-            'سيتم حذف ${reciter.nameAr} وجميع مقاطعه التي رفعتها.',
+            'سيتم حذف ${reciter.nameAr} وجميع مقاطعه من المكتبة المشتركة.',
             style: GoogleFonts.ibmPlexSansArabic(
               color: isDark ? Colors.white70 : AppColors.gray,
             ),
@@ -686,7 +647,7 @@ class _SnippetReciterCard extends StatelessWidget {
               ),
               onPressed: () async {
                 Navigator.pop(ctx);
-                await QuranAudioService().removeCustomReciter(reciter.id);
+                await QuranAudioService().removeSharedReciter(reciter.id);
               },
               child: Text('حذف',
                   style: GoogleFonts.ibmPlexSansArabic(color: Colors.white)),
@@ -745,7 +706,7 @@ class _UploadCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'أضف قارئاً جديداً',
+                    'إضافة مقطع برابط',
                     style: GoogleFonts.ibmPlexSansArabic(
                       fontSize: 16,
                       fontWeight: FontWeight.w800,
@@ -753,7 +714,7 @@ class _UploadCard extends StatelessWidget {
                     ),
                   ),
                   Text(
-                    'ارفع ملفاتك الصوتية واستمع إليها هنا',
+                    'أضف رابطاً مباشراً لمقطع صوتي يظهر للجميع',
                     style: GoogleFonts.ibmPlexSansArabic(
                       fontSize: 12,
                       color: isDark ? Colors.white60 : AppColors.gray,

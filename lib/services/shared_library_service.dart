@@ -18,18 +18,8 @@ class SharedLibraryService {
   static const String collection = 'library_snippets';
   static const String chunksSubcollection = 'chunks';
 
-  /// Raw bytes per chunk (keeps each Firestore doc under 1 MB limit).
-  static const int chunkByteSize = 700000;
-
-  /// Chunks per Firestore batch (stay under ~10 MB batch payload).
-  static const int chunksPerBatch = 4;
-
   static const Duration metaWriteTimeout = Duration(seconds: 30);
-  static const Duration batchWriteTimeout = Duration(seconds: 180);
   static const Duration fetchTimeout = Duration(seconds: 45);
-
-  /// ~100 MB max per upload.
-  static const int maxFileBytes = 100 * 1024 * 1024;
 
   final FirebaseFirestore _db = FirebaseFirestore.instance;
   final _uuid = const Uuid();
@@ -62,79 +52,49 @@ class SharedLibraryService {
     return e.toString();
   }
 
-  /// Upload audio + metadata (admin only — Firestore rules).
-  Future<void> uploadSnippet({
+  /// Add a snippet that streams from a direct audio URL (admin only — Firestore rules).
+  /// Writes a single lightweight metadata doc — no audio bytes are stored.
+  Future<void> addLinkSnippet({
     required String reciterName,
     required String trackTitle,
-    required String localFilePath,
+    required String remoteUrl,
     required String uploadedByUid,
     required String uploadedByName,
-    void Function(int completedChunks, int totalChunks)? onProgress,
   }) async {
-    final file = File(localFilePath);
-    if (!await file.exists()) {
-      throw Exception('الملف غير موجود');
-    }
-
-    final bytes = await file.readAsBytes();
-    if (bytes.length > maxFileBytes) {
-      throw Exception(
-        'الملف كبير جداً (الحد ${maxFileBytes ~/ (1024 * 1024)} ميجا). استخدم ملفاً أصغر.',
-      );
+    final url = remoteUrl.trim();
+    final uri = Uri.tryParse(url);
+    if (url.isEmpty ||
+        uri == null ||
+        !(uri.isScheme('http') || uri.isScheme('https'))) {
+      throw Exception('رابط غير صالح — يجب أن يبدأ بـ http أو https');
     }
 
     final trackId = _uuid.v4();
     final reciterId = reciterIdFor(reciterName);
-    final totalChunks = (bytes.length / chunkByteSize).ceil();
-    final trackRef = _db.collection(collection).doc(trackId);
 
     try {
-      await trackRef
+      await _db
+          .collection(collection)
+          .doc(trackId)
           .set({
             'reciterId': reciterId,
             'reciterNameAr': reciterName.trim(),
             'title': trackTitle.trim(),
+            'remoteUrl': url,
             'uploadedBy': uploadedByUid,
             'uploadedByName': uploadedByName,
             'createdAt': FieldValue.serverTimestamp(),
-            'totalChunks': totalChunks,
-            'fileSize': bytes.length,
-            'encoding': 'base64_chunks',
+            'encoding': 'link',
           })
           .timeout(metaWriteTimeout);
 
-      for (int batchStart = 0; batchStart < totalChunks; batchStart += chunksPerBatch) {
-        final batch = _db.batch();
-        final batchEnd = (batchStart + chunksPerBatch < totalChunks)
-            ? batchStart + chunksPerBatch
-            : totalChunks;
-
-        for (int i = batchStart; i < batchEnd; i++) {
-          final start = i * chunkByteSize;
-          final end = (start + chunkByteSize < bytes.length)
-              ? start + chunkByteSize
-              : bytes.length;
-          final slice = bytes.sublist(start, end);
-          batch.set(trackRef.collection(chunksSubcollection).doc('$i'), {
-            'index': i,
-            'data': base64Encode(slice),
-          });
-        }
-
-        await batch.commit().timeout(batchWriteTimeout);
-        onProgress?.call(batchEnd, totalChunks);
-      }
-
       developer.log(
-        '☁️ Shared snippet uploaded (Firestore chunks): $trackId ($totalChunks chunks)',
+        '🔗 Shared link snippet added: $trackId ($url)',
         name: 'SharedLibrary',
       );
     } catch (e, st) {
-      developer.log('⚠️ uploadSnippet failed',
+      developer.log('⚠️ addLinkSnippet failed',
           name: 'SharedLibrary', error: e, stackTrace: st);
-      try {
-        await deleteSharedTrack(trackId, null);
-      } catch (_) {}
       throw Exception(_firestoreErrorMessage(e));
     }
   }
@@ -162,7 +122,7 @@ class SharedLibraryService {
         byReciter[reciterId]!.add(SnippetTrack(
           title: title,
           assetPath: '',
-          remoteUrl: '',
+          remoteUrl: d['remoteUrl'] as String? ?? '',
           reciterId: reciterId,
           cloudTrackId: doc.id,
         ));
