@@ -53,7 +53,7 @@ class _ManageUploadsPageState extends State<ManageUploadsPage> {
             backgroundColor: AppColors.darkGreen,
             foregroundColor: Colors.white,
             title: Text('إدارة صلاحية الرفع',
-                style: GoogleFonts.ibmPlexSansArabic(fontWeight: FontWeight.w800)),
+                style: GoogleFonts.ibmPlexSansArabic(fontWeight: FontWeight.w800, color: Colors.white)),
           ),
           body: Center(
             child: Padding(
@@ -78,7 +78,7 @@ class _ManageUploadsPageState extends State<ManageUploadsPage> {
           foregroundColor: Colors.white,
           elevation: 0,
           title: Text('إدارة صلاحية الرفع',
-              style: GoogleFonts.ibmPlexSansArabic(fontWeight: FontWeight.w800, fontSize: 18)),
+              style: GoogleFonts.ibmPlexSansArabic(fontWeight: FontWeight.w800, fontSize: 18, color: Colors.white)),
           centerTitle: true,
         ),
         body: Column(

@@ -35,11 +35,15 @@ class _SmartPlanPageState extends State<SmartPlanPage> {
     }
 
     try {
-      // Load goals for auto-verification
-      _goals = await _firebaseService.getAllMonthlyGoals(userId);
-      
-      var plan = await _firebaseService.getCurrentWeeklyPlan(userId);
-      
+      // Fetch goals and the current plan in parallel (one round-trip instead
+      // of two) so the page loads noticeably faster.
+      final results = await Future.wait([
+        _firebaseService.getAllMonthlyGoals(userId),
+        _firebaseService.getCurrentWeeklyPlan(userId),
+      ]);
+      _goals = results[0] as List<MonthlyGoal>;
+      var plan = results[1] as WeeklyPlan?;
+
       if (plan == null) {
         final goalId = 'all_active_goals';
         
@@ -158,6 +162,7 @@ class _SmartPlanPageState extends State<SmartPlanPage> {
         backgroundColor: bg,
         appBar: AppBar(
           backgroundColor: isDark ? const Color(0xFF0D2818) : AppColors.darkGreen,
+          foregroundColor: Colors.white,
           title: Text('الخطة الأسبوعية الذكية', style: GoogleFonts.ibmPlexSansArabic(color: Colors.white, fontWeight: FontWeight.bold)),
           centerTitle: true,
           actions: [

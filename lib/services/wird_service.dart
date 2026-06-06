@@ -1,8 +1,10 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:developer' as developer;
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import '../core/app_colors.dart';
+import 'firebase_service.dart';
 
 /// Represents a single day's wird reading record.
 class WirdDayRecord {
@@ -232,6 +234,67 @@ class WirdService {
     await _safeBox.put(_userKey(record.date), jsonEncode(record.toJson()));
     // Force flush to disk so data persists even if app is killed quickly.
     await _safeBox.flush();
+    // Mirror to Firestore so wird survives reinstall and feeds analytics.
+    unawaited(_pushToCloud(record));
+  }
+
+  /// Fire-and-forget push of a single record to Firestore.
+  Future<void> _pushToCloud(WirdDayRecord record) async {
+    if (!hasUser) return;
+    try {
+      await FirebaseService().saveWirdRecord(_currentUserId, record.toJson());
+    } catch (e) {
+      developer.log('⚠️ wird cloud push failed: $e', name: 'WirdService');
+    }
+  }
+
+  /// Pull cloud wird records into Hive. Called after [setUserId] so a reinstall
+  /// (or a new device) restores history. Local stays the source of truth for
+  /// reads; cloud only fills missing dates or higher page counts.
+  Future<void> syncFromCloud() async {
+    if (!hasUser) return;
+    try {
+      final cloud = await FirebaseService().getAllWirdRecords(_currentUserId);
+      final cloudByDate = <String, Map<String, dynamic>>{};
+      for (final d in cloud) {
+        final date = d['date'] as String?;
+        if (date != null) cloudByDate[date] = Map<String, dynamic>.from(d);
+      }
+
+      // Pull: cloud → local (fill missing dates or higher page counts).
+      for (final data in cloudByDate.values) {
+        WirdDayRecord record;
+        try {
+          record = WirdDayRecord.fromJson(data);
+        } catch (_) {
+          continue;
+        }
+        final local = getRecord(record.date);
+        if (local == null || record.pagesRead > local.pagesRead) {
+          await _safeBox.put(
+              _userKey(record.date), jsonEncode(record.toJson()));
+        }
+      }
+      await _safeBox.flush();
+
+      // Push: local → cloud, migrating any local-only history (e.g. data
+      // created before cloud sync existed) so it shows up in analytics.
+      for (final key in _userDateKeys.toList()) {
+        final local = getRecord(key);
+        if (local == null) continue;
+        final cloudRec = cloudByDate[local.date];
+        final cloudPages =
+            cloudRec != null ? (cloudRec['pagesRead'] as int? ?? 0) : -1;
+        if (cloudRec == null || local.pagesRead > cloudPages) {
+          unawaited(_pushToCloud(local));
+        }
+      }
+
+      developer.log('☁️ Wird reconciled with cloud: ${cloud.length} records',
+          name: 'WirdService');
+    } catch (e) {
+      developer.log('⚠️ wird syncFromCloud failed: $e', name: 'WirdService');
+    }
   }
 
   // ── Session tracking ──────────────────────────────────────────────────────

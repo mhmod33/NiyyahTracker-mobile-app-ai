@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:developer' as developer;
 import 'dart:io';
 import 'package:audio_session/audio_session.dart';
@@ -214,6 +215,14 @@ class QuranAudioService extends ChangeNotifier {
   static const String _selectedReciterKey = 'quran_selected_reciter';
   static const String _lastSurahKey = 'quran_last_surah';
 
+  /// Local cache of the shared library so admin-added snippets survive app
+  /// restarts and show instantly (even offline) before a network refresh lands.
+  static const String _sharedCacheKey = 'shared_library_cache_v1';
+
+  /// Last playback error (Arabic, user-friendly). Set by [playSurah]; read by
+  /// the UI right after awaiting playback to surface streaming failures.
+  String? lastPlaybackError;
+
   // ── Init ──────────────────────────────────────────────────────────────────
 
   Future<void> init() async {
@@ -252,8 +261,13 @@ class QuranAudioService extends ChangeNotifier {
       _settingsBox = Hive.box('quran_audio_settings');
     }
 
-    // Load cloud shared library (admin-added streaming links).
-    await refreshSharedLibrary();
+    // Cache-first: show the last-known shared library immediately (offline /
+    // before the network refresh lands), then refresh from Firestore.
+    _loadCachedSharedReciters();
+
+    // Refresh cloud shared library in the background — do NOT await, so a slow
+    // network never blocks startup. The cache above is shown meanwhile.
+    unawaited(refreshSharedLibrary());
 
     // Subscribe to player streams
     _playerStateSub = _player.playerStateStream.listen((ps) {
@@ -336,6 +350,7 @@ class QuranAudioService extends ChangeNotifier {
       name: 'QuranAudio',
     );
 
+    lastPlaybackError = null;
     _state = _state.copyWith(
       isLoading: true,
       currentSurah: surahNumber,
@@ -357,6 +372,8 @@ class QuranAudioService extends ChangeNotifier {
         error: e,
         stackTrace: st,
       );
+      lastPlaybackError =
+          e is Exception ? e.toString().replaceFirst('Exception: ', '') : 'تعذّر تشغيل المقطع';
       _state = _state.copyWith(isLoading: false, isPlaying: false);
       notifyListeners();
     }
@@ -612,7 +629,60 @@ class QuranAudioService extends ChangeNotifier {
     _sharedReciters = preserveExisting
         ? _mergeSharedReciters(_sharedReciters, fetched)
         : fetched;
+    await _cacheSharedReciters();
     notifyListeners();
+  }
+
+  /// Persist the current shared library to Hive so it survives app restarts
+  /// and is available offline.
+  Future<void> _cacheSharedReciters() async {
+    try {
+      final list = _sharedReciters
+          .map((r) => {
+                'id': r.id,
+                'nameAr': r.nameAr,
+                'nameEn': r.nameEn,
+                'description': r.description,
+                'tracks': (r.snippetTracks ?? const [])
+                    .map((t) => t.toJson())
+                    .toList(),
+              })
+          .toList();
+      await _settingsBox.put(_sharedCacheKey, jsonEncode(list));
+    } catch (e) {
+      developer.log('⚠️ cacheSharedReciters failed: $e', name: 'QuranAudio');
+    }
+  }
+
+  /// Load the cached shared library into memory (called before the first
+  /// network refresh so content shows instantly).
+  void _loadCachedSharedReciters() {
+    try {
+      final raw = _settingsBox.get(_sharedCacheKey) as String?;
+      if (raw == null || raw.isEmpty) return;
+      final list = (jsonDecode(raw) as List).cast<dynamic>();
+      final cached = list.map((m) {
+        final map = Map<String, dynamic>.from(m as Map);
+        final tracks = (map['tracks'] as List? ?? const [])
+            .map((t) => SnippetTrack.fromJson(Map<String, dynamic>.from(t as Map)))
+            .toList();
+        return Reciter(
+          id: map['id'] as String,
+          nameAr: map['nameAr'] as String? ?? 'مقتطفات بصائر',
+          nameEn: map['nameEn'] as String? ?? '',
+          description:
+              map['description'] as String? ?? 'مقتطفات مشتركة — متاحة للجميع',
+          type: ReciterType.snippets,
+          snippetTracks: tracks,
+        );
+      }).toList();
+      if (cached.isNotEmpty) {
+        _sharedReciters = cached;
+        notifyListeners();
+      }
+    } catch (e) {
+      developer.log('⚠️ loadCachedSharedReciters failed: $e', name: 'QuranAudio');
+    }
   }
 
   Future<String?> _resolveSharedTrackLocalPath(SnippetTrack track) async {
@@ -677,6 +747,9 @@ class QuranAudioService extends ChangeNotifier {
         ),
       ];
     }
+    // Cache the optimistic update so the new track survives a restart even if
+    // the network refresh below fails.
+    await _cacheSharedReciters();
     notifyListeners();
 
     try {

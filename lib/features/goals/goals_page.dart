@@ -60,6 +60,7 @@ class _GoalsPageState extends State<GoalsPage> {
         backgroundColor: bg,
         appBar: AppBar(
           backgroundColor: isDark ? const Color(0xFF0D2818) : AppColors.darkGreen,
+          foregroundColor: Colors.white,
           title: Text('الأهداف الروحية', style: GoogleFonts.ibmPlexSansArabic(color: Colors.white, fontWeight: FontWeight.bold)),
           centerTitle: true,
         ),
@@ -125,21 +126,23 @@ class _GoalsPageState extends State<GoalsPage> {
     final overdueGoals = _statistics['overdueGoals'] as int? ?? 0;
     
     return Container(
-      margin: const EdgeInsets.all(16),
+      margin: const EdgeInsets.fromLTRB(16, 16, 16, 4),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: isDark 
-              ? [const Color(0xFF1A4D2E), const Color(0xFF0D2818)]
-              : [AppColors.paleGreen, AppColors.lightGreen.withOpacity(0.3)],
+          begin: Alignment.topRight,
+          end: Alignment.bottomLeft,
+          colors: isDark
+              ? [const Color(0xFF1A4D2E), const Color(0xFF0A2A1A)]
+              : [AppColors.darkGreen, AppColors.midGreen],
         ),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.gold.withOpacity(0.3)),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: AppColors.gold.withOpacity(0.35)),
         boxShadow: [
           BoxShadow(
-            color: AppColors.darkGreen.withOpacity(0.1),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+            color: AppColors.darkGreen.withOpacity(isDark ? 0.25 : 0.30),
+            blurRadius: 18,
+            offset: const Offset(0, 8),
           ),
         ],
       ),
@@ -148,32 +151,53 @@ class _GoalsPageState extends State<GoalsPage> {
         children: [
           Row(
             children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: AppColors.gold.withOpacity(0.2),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(Icons.analytics_rounded, color: AppColors.gold, size: 24),
-              ),
-              const SizedBox(width: 12),
+              _completionRing(completionRate),
+              const SizedBox(width: 16),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      'إحصائيات الأهداف',
-                      style: GoogleFonts.ibmPlexSansArabic(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w800,
-                        color: isDark ? Colors.white : AppColors.darkGreen,
-                      ),
+                    Row(
+                      children: [
+                        const Icon(Icons.auto_graph_rounded, color: AppColors.gold, size: 20),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'إحصائيات الأهداف',
+                            style: GoogleFonts.ibmPlexSansArabic(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w800,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
+                    const SizedBox(height: 4),
                     Text(
                       'نظرة عامة على تقدمك الشهري 📊',
                       style: GoogleFonts.ibmPlexSansArabic(
                         fontSize: 12,
-                        color: isDark ? Colors.white70 : AppColors.gray,
+                        color: Colors.white.withOpacity(0.75),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      'متوسط التقدم ${(averageProgress * 100).toInt()}%',
+                      style: GoogleFonts.ibmPlexSansArabic(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.gold,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(6),
+                      child: LinearProgressIndicator(
+                        value: averageProgress.clamp(0.0, 1.0),
+                        minHeight: 6,
+                        backgroundColor: Colors.white.withOpacity(0.18),
+                        color: AppColors.gold,
                       ),
                     ),
                   ],
@@ -270,6 +294,50 @@ class _GoalsPageState extends State<GoalsPage> {
     );
   }
 
+  Widget _completionRing(double rate) {
+    final clamped = rate.clamp(0.0, 1.0);
+    final pct = (clamped * 100).toInt();
+    return SizedBox(
+      width: 76,
+      height: 76,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          SizedBox(
+            width: 76,
+            height: 76,
+            child: CircularProgressIndicator(
+              value: clamped,
+              strokeWidth: 7,
+              backgroundColor: Colors.white.withOpacity(0.18),
+              valueColor: const AlwaysStoppedAnimation<Color>(AppColors.gold),
+            ),
+          ),
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                '$pct%',
+                style: GoogleFonts.ibmPlexSansArabic(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w900,
+                  color: Colors.white,
+                ),
+              ),
+              Text(
+                'إنجاز',
+                style: GoogleFonts.ibmPlexSansArabic(
+                  fontSize: 9,
+                  color: Colors.white70,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _statCard(String title, String value, IconData icon, bool isDark, {Color? color}) {
     return Container(
       padding: const EdgeInsets.all(12),
@@ -297,7 +365,7 @@ class _GoalsPageState extends State<GoalsPage> {
             title,
             style: GoogleFonts.ibmPlexSansArabic(
               fontSize: 10,
-              color: isDark ? Colors.white70 : AppColors.gray,
+              color: Colors.white70,
             ),
           ),
         ],
@@ -327,7 +395,7 @@ class _GoalsPageState extends State<GoalsPage> {
             title,
             style: GoogleFonts.ibmPlexSansArabic(
               fontSize: 10,
-              color: isDark ? Colors.white70 : AppColors.gray,
+              color: Colors.white70,
             ),
           ),
           const SizedBox(height: 8),

@@ -91,6 +91,71 @@ class FirebaseService {
     }
   }
 
+  /// Fetch worships for an arbitrary [start]–[end] date range (inclusive).
+  /// Used by analytics for custom weeks that can cross a month boundary.
+  Future<List<DailyWorship>> getWorshipsInRange(
+      String userId, DateTime start, DateTime end) async {
+    try {
+      final s = DateTime(start.year, start.month, start.day);
+      final e = DateTime(end.year, end.month, end.day, 23, 59, 59);
+
+      final query = await _db
+          .collection('users')
+          .doc(userId)
+          .collection('daily_worship')
+          .where('date', isGreaterThanOrEqualTo: s.toIso8601String())
+          .where('date', isLessThanOrEqualTo: e.toIso8601String())
+          .get();
+
+      return query.docs
+          .map((doc) => DailyWorship.fromMap(doc.data()))
+          .toList();
+    } catch (e) {
+      throw Exception('فشل جلب العبادات: $e');
+    }
+  }
+
+  // ===== Wird (daily Qur'an portion) =====
+  // Stored under users/{uid}/wird_days/{yyyy-MM-dd}. The document id is the
+  // date key, which sorts chronologically. Records carry a 'date' field used
+  // for range queries.
+  String _wirdDateKey(DateTime d) =>
+      '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+
+  Future<void> saveWirdRecord(String userId, Map<String, dynamic> record) async {
+    final date = record['date'] as String?;
+    if (date == null || date.isEmpty) return;
+    await _db
+        .collection('users')
+        .doc(userId)
+        .collection('wird_days')
+        .doc(date)
+        .set(record);
+  }
+
+  Future<List<Map<String, dynamic>>> getAllWirdRecords(String userId) async {
+    final query = await _db
+        .collection('users')
+        .doc(userId)
+        .collection('wird_days')
+        .get();
+    return query.docs.map((d) => d.data()).toList();
+  }
+
+  Future<List<Map<String, dynamic>>> getWirdRecordsInRange(
+      String userId, DateTime start, DateTime end) async {
+    final startKey = _wirdDateKey(start);
+    final endKey = _wirdDateKey(end);
+    final query = await _db
+        .collection('users')
+        .doc(userId)
+        .collection('wird_days')
+        .where('date', isGreaterThanOrEqualTo: startKey)
+        .where('date', isLessThanOrEqualTo: endKey)
+        .get();
+    return query.docs.map((d) => d.data()).toList();
+  }
+
   // ===== Monthly Goal Methods =====
   Future<void> saveMonthlyGoal(String userId, MonthlyGoal goal) async {
     try {

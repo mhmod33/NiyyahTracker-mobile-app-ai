@@ -19,7 +19,7 @@ class AdminPanelPage extends StatelessWidget {
           backgroundColor: AppColors.darkGreen,
           foregroundColor: Colors.white,
           elevation: 0,
-          title: Text('لوحة الإدارة', style: GoogleFonts.ibmPlexSansArabic(fontWeight: FontWeight.w800, fontSize: 18)),
+          title: Text('لوحة الإدارة', style: GoogleFonts.ibmPlexSansArabic(fontWeight: FontWeight.w800, fontSize: 18, color: Colors.white)),
           centerTitle: true,
           leading: GestureDetector(
             onTap: () => Navigator.pop(context),

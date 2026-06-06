@@ -369,8 +369,8 @@ class _ChallengesPageState extends State<ChallengesPage> {
 
     final userId = context.read<AppAuthProvider>().userId;
     final newCurrent = c.current + 1;
-    await _firebaseService.updateChallengeProgress(userId, c.id, newCurrent);
-    // Update locally immediately
+
+    // Update UI immediately so the tap feels instant, then persist to Firestore.
     setState(() {
       final index = _challenges.indexWhere((ch) => ch.id == c.id);
       if (index != -1) {
@@ -385,6 +385,8 @@ class _ChallengesPageState extends State<ChallengesPage> {
         );
       }
     });
+
+    await _firebaseService.updateChallengeProgress(userId, c.id, newCurrent);
   }
 
   IconData _getIconData(String name) {

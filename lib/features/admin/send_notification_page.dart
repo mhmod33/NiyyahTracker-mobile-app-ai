@@ -73,7 +73,7 @@ class _SendNotificationPageState extends State<SendNotificationPage> {
           backgroundColor: AppColors.darkGreen,
           foregroundColor: Colors.white,
           elevation: 0,
-          title: Text('إرسال إشعار', style: GoogleFonts.ibmPlexSansArabic(fontWeight: FontWeight.w800, fontSize: 18)),
+          title: Text('إرسال إشعار', style: GoogleFonts.ibmPlexSansArabic(fontWeight: FontWeight.w800, fontSize: 18, color: Colors.white)),
           centerTitle: true,
         ),
         body: SingleChildScrollView(

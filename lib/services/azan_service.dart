@@ -80,6 +80,12 @@ class AzanService {
   static const String _maghribAzanEnabledKey = 'maghrib_azan_enabled';
   static const String _ishaAzanEnabledKey = 'isha_azan_enabled';
 
+  /// Increment this whenever bundled audio filenames or content change.
+  /// A mismatch wipes the extracted folder and forces a clean re-extraction,
+  /// which is the only reliable way to fix devices that have stale files.
+  static const int _audioExtractionVersion = 3;
+  static const String _audioExtractionVersionKey = 'audio_extraction_version';
+
   // ── Notification Channel ──
   static const String azanChannelId = 'azan_channel';
   static const String _azanChannelName = 'الأذان';
@@ -107,6 +113,13 @@ class AzanService {
       nameEn: 'Madinah Mosque',
       description: 'أذان المسجد النبوي الشريف بالمدينة المنورة',
       folderPath: 'assets/audio/azan/madinah',
+    ),
+    Muazzin(
+      id: 'refaat',
+      nameAr: 'محمد رفعت',
+      nameEn: 'Mohamed Refaat',
+      description: 'بصوت الشيخ محمد رفعت رحمه الله',
+      folderPath: 'assets/audio/azan/refaat',
     ),
   ];
 
@@ -183,22 +196,44 @@ class AzanService {
 
   /// Extract audio files from Flutter assets to app documents directory.
   /// This ensures they are accessible from background isolates.
+  ///
+  /// Uses a version number stored in Hive. When the version doesn't match
+  /// (e.g., after renaming bundled files), the entire azan_audio folder is
+  /// wiped and all files are re-extracted from scratch, ensuring no stale
+  /// file from a previous install is ever used.
   Future<void> _extractAudioFiles() async {
     try {
       final dir = await getApplicationDocumentsDirectory();
       final azanDir = Directory('${dir.path}/azan_audio');
+
+      // Version check — wipe everything if the version doesn't match.
+      final storedVersion =
+          _settingsBox.get(_audioExtractionVersionKey, defaultValue: 0) as int;
+      if (storedVersion != _audioExtractionVersion) {
+        developer.log(
+          '🗑 Audio version mismatch ($storedVersion → $_audioExtractionVersion), '
+          'wiping and re-extracting all azan audio',
+          name: 'AzanService',
+        );
+        if (azanDir.existsSync()) {
+          azanDir.deleteSync(recursive: true);
+        }
+      }
+
       if (!azanDir.existsSync()) {
         azanDir.createSync(recursive: true);
       }
 
-      // List of asset files to extract
+      // All asset files to extract. Key = destination filename in azan_audio/.
       final assets = {
-        'tobar_nasreldin.mp3': 'assets/audio/azan/tobar/nasreldin.mp3',
+        'tobar_nasreldin.mp3':     'assets/audio/azan/tobar/nasreldin.mp3',
         'tobar_nasreldinfagr.mp3': 'assets/audio/azan/tobar/nasreldinfagr.mp3',
-        'makkah_normal.mp3': 'assets/audio/azan/makkah/normal.mp3',
-        'makkah_fajr.mp3': 'assets/audio/azan/makkah/fajr.mp3',
-        'madinah_normal.mp3': 'assets/audio/azan/madinah/normal.mp3',
-        'madinah_fajr.mp3': 'assets/audio/azan/madinah/fajr.mp3',
+        'makkah_normal.mp3':       'assets/audio/azan/makkah/normal.mp3',
+        'makkah_fajr.mp3':         'assets/audio/azan/makkah/fajr.mp3',
+        'madinah_normal.mp3':      'assets/audio/azan/madinah/normal.mp3',
+        'madinah_fajr.mp3':        'assets/audio/azan/madinah/fajr.mp3',
+        'refaat_normal.mp3':       'assets/audio/azan/refaat/normal.mp3',
+        'refaat_fajr.mp3':         'assets/audio/azan/refaat/fajr.mp3',
       };
 
       for (final entry in assets.entries) {
@@ -216,6 +251,10 @@ class AzanService {
           }
         }
       }
+
+      // Persist the current version so we only wipe once.
+      await _settingsBox.put(
+          _audioExtractionVersionKey, _audioExtractionVersion);
     } catch (e) {
       developer.log('⚠️ Error extracting audio files: $e', name: 'AzanService');
     }
@@ -383,98 +422,98 @@ class AzanService {
 
   // ── Audio Playback ──
 
-  /// Play the azan for a specific prayer.
+  /// Returns the extracted file path for a muazzin's audio.
+  /// Falls back to re-extracting if the file is missing.
+  Future<String?> _getExtractedPath(Muazzin muazzin, {required bool isFajr}) async {
+    final dir = await getApplicationDocumentsDirectory();
+    final azanDir = '${dir.path}/azan_audio';
 
+    final String fileName;
+    final String assetPath;
+    if (muazzin.id == 'tobar') {
+      fileName = isFajr ? 'tobar_nasreldinfagr.mp3' : 'tobar_nasreldin.mp3';
+      assetPath = isFajr
+          ? 'assets/audio/azan/tobar/nasreldinfagr.mp3'
+          : 'assets/audio/azan/tobar/nasreldin.mp3';
+    } else {
+      final suffix = isFajr ? 'fajr.mp3' : 'normal.mp3';
+      fileName = '${muazzin.id}_$suffix';
+      assetPath = '${muazzin.folderPath}/$suffix';
+    }
+
+    final outFile = File('$azanDir/$fileName');
+
+    // If file is missing (e.g., first launch after Refaat was added), extract it now.
+    if (!outFile.existsSync()) {
+      try {
+        final d = Directory(azanDir);
+        if (!d.existsSync()) d.createSync(recursive: true);
+        final data = await rootBundle.load(assetPath);
+        await outFile.writeAsBytes(data.buffer.asUint8List(), flush: true);
+        developer.log('📁 On-demand extracted $fileName', name: 'AzanService');
+      } catch (e) {
+        developer.log('⚠️ On-demand extract failed for $fileName: $e',
+            name: 'AzanService');
+        return null;
+      }
+    }
+
+    return outFile.path;
+  }
+
+  /// Play the azan for a specific prayer.
   Future<void> playAzan({required bool isFajr}) async {
     if (!azanEnabled) return;
 
     try {
       final muazzin = selectedMuazzin;
+      final filePath = await _getExtractedPath(muazzin, isFajr: isFajr);
 
-      final String assetPath;
-
-      if (muazzin.id == 'tobar') {
-        assetPath = isFajr
-            ? 'assets/audio/azan/tobar/nasreldinfagr.mp3'
-            : 'assets/audio/azan/tobar/nasreldin.mp3';
-      } else {
-        final fileName = isFajr ? 'fajr.mp3' : 'normal.mp3';
-
-        assetPath = '${muazzin.folderPath}/$fileName';
+      if (filePath == null) {
+        developer.log('❌ No audio file for ${muazzin.id}', name: 'AzanService');
+        return;
       }
 
-      developer.log('🔊 Playing azan: $assetPath', name: 'AzanService');
-
-      await _audioPlayer.setAsset(assetPath);
-
+      developer.log('🔊 Playing azan from file: $filePath', name: 'AzanService');
+      await _audioPlayer.setFilePath(filePath);
       await _audioPlayer.setVolume(1.0);
-
       await _audioPlayer.play();
 
-      // Monitor volume — if user lowers volume to 0, stop the azan
-
       _volumeSubscription?.cancel();
-
       _volumeSubscription = _audioPlayer.volumeStream.listen((volume) {
         if (volume <= 0.01 && _audioPlayer.playing) {
-          developer.log(
-            '🔇 Volume reduced to 0, stopping azan',
-            name: 'AzanService',
-          );
-
+          developer.log('🔇 Volume reduced to 0, stopping azan', name: 'AzanService');
           stopAzan();
-
           dismissAzanNotification();
-
           _volumeSubscription?.cancel();
         }
       });
     } catch (e, st) {
-      developer.log(
-        '❌ Error playing azan',
-        name: 'AzanService',
-        error: e,
-        stackTrace: st,
-      );
+      developer.log('❌ Error playing azan', name: 'AzanService', error: e, stackTrace: st);
     }
   }
 
   /// Preview a muazzin's azan sound.
-
   Future<void> previewAzan(String muazzinId, {bool isFajr = false}) async {
     try {
       final muazzin = availableMuazzins.firstWhere(
         (m) => m.id == muazzinId,
-
         orElse: () => availableMuazzins.first,
       );
 
-      final String assetPath;
+      final filePath = await _getExtractedPath(muazzin, isFajr: isFajr);
 
-      if (muazzin.id == 'tobar') {
-        assetPath = isFajr
-            ? 'assets/audio/azan/tobar/nasreldinfagr.mp3'
-            : 'assets/audio/azan/tobar/nasreldin.mp3';
-      } else {
-        final fileName = isFajr ? 'fajr.mp3' : 'normal.mp3';
-
-        assetPath = '${muazzin.folderPath}/$fileName';
+      if (filePath == null) {
+        developer.log('❌ No preview file for ${muazzin.id}', name: 'AzanService');
+        return;
       }
 
-      developer.log('🔊 Previewing azan: $assetPath', name: 'AzanService');
-
-      await _audioPlayer.setAsset(assetPath);
-
+      developer.log('🔊 Previewing azan from file: $filePath', name: 'AzanService');
+      await _audioPlayer.setFilePath(filePath);
       await _audioPlayer.setVolume(1.0);
-
       await _audioPlayer.play();
     } catch (e, st) {
-      developer.log(
-        '❌ Error previewing azan',
-        name: 'AzanService',
-        error: e,
-        stackTrace: st,
-      );
+      developer.log('❌ Error previewing azan', name: 'AzanService', error: e, stackTrace: st);
     }
   }
 

@@ -15,6 +15,7 @@ class RamadanPage extends StatelessWidget {
         backgroundColor: const Color(0xFF0A0E21),
         appBar: AppBar(
           backgroundColor: const Color(0xFF0A0E21),
+          foregroundColor: Colors.white,
           title: Text('🌙 مود رمضان', style: GoogleFonts.ibmPlexSansArabic(color: Colors.white, fontWeight: FontWeight.bold)),
           centerTitle: true,
         ),

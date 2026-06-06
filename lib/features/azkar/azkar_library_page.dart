@@ -34,7 +34,7 @@ class AzkarLibraryPage extends StatelessWidget {
       child: Scaffold(
         backgroundColor: bg,
         appBar: AppBar(
-          title: Text('الأذكار والأدعية', style: _f(fw: FontWeight.bold, sz: 18)),
+          title: Text('الأذكار والأدعية', style: _f(fw: FontWeight.bold, sz: 18, c: Colors.white)),
           backgroundColor: isDark ? const Color(0xFF0D2818) : AppColors.darkGreen,
           foregroundColor: Colors.white,
         ),

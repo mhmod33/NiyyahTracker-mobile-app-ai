@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math';
 import 'dart:ui';
 import 'package:flutter/material.dart';
@@ -64,6 +65,9 @@ class _DashboardPageState extends State<DashboardPage>
   bool _showAzkar = true;
   bool _fajrChecked = false;
   bool _charityChecked = false;
+  bool _quranChecked = false;
+  bool _azkarChecked = false;
+  bool _istighfarChecked = false;
   bool _isLoadingAccountability = true;
   bool _isAccountabilityDone = false;
   bool _isLoadingSummary = true;
@@ -201,7 +205,14 @@ class _DashboardPageState extends State<DashboardPage>
         setState(() {
           _fajrChecked = today.prayerCount > 0;
           _charityChecked = today.worships['charity'] == true;
-          _isAccountabilityDone = _fajrChecked && _charityChecked;
+          _quranChecked = today.worships['quran_read'] == true;
+          _azkarChecked = today.worships['azkar_done'] == true;
+          _istighfarChecked = today.worships['istighfar_done'] == true;
+          _isAccountabilityDone = _fajrChecked &&
+              _charityChecked &&
+              _quranChecked &&
+              _azkarChecked &&
+              _istighfarChecked;
           _isLoadingAccountability = false;
         });
       } else {
@@ -235,6 +246,9 @@ class _DashboardPageState extends State<DashboardPage>
         worships: {
           ...?worships.firstOrNull?.worships,
           'charity': _charityChecked,
+          'quran_read': _quranChecked,
+          'azkar_done': _azkarChecked,
+          'istighfar_done': _istighfarChecked,
         },
       );
 
@@ -400,7 +414,7 @@ class _DashboardPageState extends State<DashboardPage>
                         ],
                       ),
                       const SizedBox(height: 24),
-                      _HeaderQuote(date: _getArabicDate()),
+                      _QuoteCarousel(date: _getArabicDate()),
                     ],
                   ),
                 ),
@@ -1580,17 +1594,19 @@ class _DashboardPageState extends State<DashboardPage>
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
           gradient: LinearGradient(
+            begin: Alignment.topRight,
+            end: Alignment.bottomLeft,
             colors: isDark
                 ? [const Color(0xFF1A4D2E), const Color(0xFF0D2818)]
-                : [AppColors.paleGreen, AppColors.lightGreen.withOpacity(0.3)],
+                : [AppColors.darkGreen, AppColors.midGreen],
           ),
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: AppColors.gold.withOpacity(0.3)),
+          border: Border.all(color: AppColors.gold.withOpacity(0.4)),
           boxShadow: [
             BoxShadow(
-              color: AppColors.darkGreen.withOpacity(0.1),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
+              color: AppColors.darkGreen.withOpacity(isDark ? 0.2 : 0.25),
+              blurRadius: 14,
+              offset: const Offset(0, 6),
             ),
           ],
         ),
@@ -1621,14 +1637,14 @@ class _DashboardPageState extends State<DashboardPage>
                         style: _f(
                           sz: 16,
                           fw: FontWeight.w800,
-                          c: isDark ? Colors.white : AppColors.darkGreen,
+                          c: Colors.white,
                         ),
                       ),
                       Text(
                         'إنجازاتك الروحية لهذا اليوم 🤍',
                         style: _f(
                           sz: 12,
-                          c: isDark ? Colors.white70 : AppColors.gray,
+                          c: Colors.white70,
                         ),
                       ),
                     ],
@@ -1679,7 +1695,7 @@ class _DashboardPageState extends State<DashboardPage>
                 style: _f(
                   sz: 12,
                   fw: FontWeight.w600,
-                  c: isDark ? Colors.white70 : AppColors.gray,
+                  c: Colors.white70,
                 ),
               ),
               const SizedBox(height: 8),
@@ -1715,8 +1731,9 @@ class _DashboardPageState extends State<DashboardPage>
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.1),
+        color: Colors.white.withOpacity(0.12),
         borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.white.withOpacity(0.18)),
       ),
       child: Row(
         children: [
@@ -1728,10 +1745,7 @@ class _DashboardPageState extends State<DashboardPage>
               children: [
                 Text(
                   title,
-                  style: _f(
-                    sz: 11,
-                    c: isDark ? Colors.white70 : AppColors.gray,
-                  ),
+                  style: _f(sz: 11, c: Colors.white70),
                 ),
                 Text(
                   value,
@@ -1752,15 +1766,24 @@ class _DashboardPageState extends State<DashboardPage>
       case 'eveningRemembrance':
         return 'أذكار المساء';
       case 'quranRecitation':
+      case 'quran_read':
         return 'قراءة القرآن';
       case 'charity':
         return 'الصدقة';
       case 'nightPrayer':
+      case 'qiyam':
         return 'قيام الليل';
       case 'fasting':
         return 'الصيام';
       case 'taraweeh':
         return 'التراويح';
+      case 'dhikr':
+      case 'azkar_done':
+        return 'الأذكار';
+      case 'istighfar_done':
+        return 'الاستغفار';
+      case 'prayer':
+        return 'الصلوات';
       default:
         return key;
     }
@@ -1805,7 +1828,8 @@ class _DashboardPageState extends State<DashboardPage>
               'المحاسبة اليومية',
               style: _f(sz: 18, fw: FontWeight.w800),
             ),
-            content: Column(
+            content: SingleChildScrollView(
+              child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 _CheckItem(
@@ -1815,6 +1839,39 @@ class _DashboardPageState extends State<DashboardPage>
                   value: _fajrChecked,
                   onChanged: (v) {
                     setDialogState(() => _fajrChecked = v ?? false);
+                    setState(() {});
+                  },
+                ),
+                const SizedBox(height: 12),
+                _CheckItem(
+                  title: 'وردك من القرآن',
+                  subtitle: 'ولو صفحة واحدة',
+                  icon: Icons.menu_book_rounded,
+                  value: _quranChecked,
+                  onChanged: (v) {
+                    setDialogState(() => _quranChecked = v ?? false);
+                    setState(() {});
+                  },
+                ),
+                const SizedBox(height: 12),
+                _CheckItem(
+                  title: 'أذكار الصباح والمساء',
+                  subtitle: 'حصِّن نفسك',
+                  icon: Icons.spa_rounded,
+                  value: _azkarChecked,
+                  onChanged: (v) {
+                    setDialogState(() => _azkarChecked = v ?? false);
+                    setState(() {});
+                  },
+                ),
+                const SizedBox(height: 12),
+                _CheckItem(
+                  title: 'الاستغفار والتسبيح',
+                  subtitle: 'أكثِر منه اليوم',
+                  icon: Icons.favorite_rounded,
+                  value: _istighfarChecked,
+                  onChanged: (v) {
+                    setDialogState(() => _istighfarChecked = v ?? false);
                     setState(() {});
                   },
                 ),
@@ -1830,6 +1887,7 @@ class _DashboardPageState extends State<DashboardPage>
                   },
                 ),
               ],
+              ),
             ),
             actions: [
               TextButton(
@@ -1880,36 +1938,148 @@ class _IconButton extends StatelessWidget {
   );
 }
 
-class _HeaderQuote extends StatelessWidget {
+/// Auto-rotating, swipeable carousel of religious quotes shown at the top of
+/// the dashboard. Changes every few seconds with a smooth transition and a
+/// page-dot indicator.
+class _QuoteCarousel extends StatefulWidget {
   final String date;
-  const _HeaderQuote({required this.date});
+  const _QuoteCarousel({required this.date});
+
   @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
-    decoration: BoxDecoration(
-      color: Colors.white.withOpacity(0.12),
-      borderRadius: BorderRadius.circular(20),
-      border: Border.all(color: Colors.white.withOpacity(0.2)),
-    ),
-    child: Row(
-      children: [
-        const Icon(Icons.format_quote_rounded, color: AppColors.gold, size: 28),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+  State<_QuoteCarousel> createState() => _QuoteCarouselState();
+}
+
+class _QuoteCarouselState extends State<_QuoteCarousel> {
+  static const List<Map<String, String>> _quotes = [
+    {'text': 'فمن أبصر فلنفسه ومن عمي فعليها', 'source': 'سورة الأنعام'},
+    {'text': 'إنّما الأعمالُ بالنيّات', 'source': 'حديث شريف'},
+    {'text': 'وَمَن يَتَّقِ اللَّهَ يَجْعَل لَّهُ مَخْرَجًا', 'source': 'سورة الطلاق'},
+    {'text': 'فاذكروني أذكُركم واشكروا لي ولا تكفُرون', 'source': 'سورة البقرة'},
+    {'text': 'إنّ مع العُسرِ يُسرا', 'source': 'سورة الشرح'},
+    {'text': 'خيرُكم من تعلّم القرآن وعلّمه', 'source': 'حديث شريف'},
+    {'text': 'وقُل ربِّ زِدني عِلمًا', 'source': 'سورة طه'},
+  ];
+
+  final PageController _controller = PageController();
+  Timer? _timer;
+  int _index = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _timer = Timer.periodic(const Duration(seconds: 6), (_) {
+      if (!mounted || !_controller.hasClients) return;
+      final next = (_index + 1) % _quotes.length;
+      _controller.animateToPage(
+        next,
+        duration: const Duration(milliseconds: 600),
+        curve: Curves.easeInOut,
+      );
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(18, 14, 18, 12),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topRight,
+          end: Alignment.bottomLeft,
+          colors: [
+            Colors.white.withOpacity(0.18),
+            Colors.white.withOpacity(0.06),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: Colors.white.withOpacity(0.22)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
             children: [
-              Text(
-                'وإنما لكل امرئ ما نوى',
-                style: _f(sz: 18, fw: FontWeight.w700, c: Colors.white),
-              ),
-              Text(date, style: _f(sz: 11, c: Colors.white60)),
+              const Icon(Icons.auto_awesome_rounded, color: AppColors.gold, size: 18),
+              const SizedBox(width: 6),
+              Text('نورٌ وبصيرة', style: _f(sz: 12, fw: FontWeight.w700, c: AppColors.gold)),
+              const Spacer(),
+              Text(widget.date, style: _f(sz: 11, c: Colors.white70)),
             ],
           ),
-        ),
-      ],
-    ),
-  );
+          const SizedBox(height: 10),
+          SizedBox(
+            height: 60,
+            child: PageView.builder(
+              controller: _controller,
+              onPageChanged: (i) => setState(() => _index = i),
+              itemCount: _quotes.length,
+              itemBuilder: (_, i) {
+                final q = _quotes[i];
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Icon(Icons.format_quote_rounded, color: Colors.white54, size: 18),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            q['text']!,
+                            style: _f(sz: 16, fw: FontWeight.w700, c: Colors.white, h: 1.4),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Padding(
+                      padding: const EdgeInsets.only(right: 26),
+                      child: Text('— ${q['source']!}',
+                          style: _f(sz: 11, fw: FontWeight.w600, c: AppColors.gold)),
+                    ),
+                  ],
+                );
+              },
+            ),
+          ),
+          const SizedBox(height: 10),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: List.generate(_quotes.length, (i) {
+              final active = i == _index;
+              return AnimatedContainer(
+                duration: const Duration(milliseconds: 300),
+                margin: const EdgeInsets.symmetric(horizontal: 3),
+                width: active ? 16 : 6,
+                height: 6,
+                decoration: BoxDecoration(
+                  color: active ? AppColors.gold : Colors.white.withOpacity(0.3),
+                  borderRadius: BorderRadius.circular(3),
+                ),
+              );
+            }),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _SectionTitle extends StatelessWidget {

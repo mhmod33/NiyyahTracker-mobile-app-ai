@@ -58,6 +58,9 @@ class _DailyWirdPageState extends State<DailyWirdPage> with TickerProviderStateM
       return;
     }
     _wirdService.setUserId(userId);
+    // Pull cloud history so a reinstall / new device restores past records.
+    await _wirdService.syncFromCloud();
+    if (!mounted) return;
     setState(() {
       _todayRecord = _wirdService.getTodayRecord();
       _streak = _wirdService.getCurrentStreak();

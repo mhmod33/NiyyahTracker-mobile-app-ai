@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -56,36 +57,26 @@ void main() async {
     // Silently fail
   }
 
+  // Fast, local init only — opens Hive boxes / sets up the audio player so the
+  // UI can read service state safely. No network calls and no notification
+  // scheduling happen here (those are deferred below to keep startup snappy).
   try {
     await NotificationService().init();
-    await NotificationService().initializeAllSchedules();
   } catch (e) {
     // Silently fail
   }
-
   try {
     await AzanService().init();
-    await AzanService().scheduleAzanNotifications();
   } catch (e) {
     // Silently fail
   }
-
   try {
     await QuranAudioService().init();
   } catch (e) {
     // Silently fail
   }
   try {
-    await DailySummaryService().initializeNotifications();
-    await DailySummaryService().scheduleMidnightReminder();
-  } catch (e) {
-    // Silently fail
-  }
-
-  try {
     await WirdService().init();
-    await WirdNotificationService().init();
-    await WirdNotificationService().scheduleAll();
   } catch (e) {
     // Silently fail
   }
@@ -101,6 +92,30 @@ void main() async {
       child: const BasairApp(),
     ),
   );
+
+  // Defer slow, non-critical work until after the first frame so the splash
+  // appears instantly instead of waiting on notification scheduling and
+  // network calls.
+  unawaited(_deferredStartupWork());
+}
+
+/// Heavy startup work that does not need to block the first frame:
+/// notification scheduling (iterates many alarms) and similar background setup.
+Future<void> _deferredStartupWork() async {
+  try {
+    await NotificationService().initializeAllSchedules();
+  } catch (_) {}
+  try {
+    await AzanService().scheduleAzanNotifications();
+  } catch (_) {}
+  try {
+    await DailySummaryService().initializeNotifications();
+    await DailySummaryService().scheduleMidnightReminder();
+  } catch (_) {}
+  try {
+    await WirdNotificationService().init();
+    await WirdNotificationService().scheduleAll();
+  } catch (_) {}
 }
 
 class BasairApp extends StatelessWidget {

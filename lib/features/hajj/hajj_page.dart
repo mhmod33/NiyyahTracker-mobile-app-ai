@@ -21,6 +21,7 @@ class HajjPage extends StatelessWidget {
         backgroundColor: const Color(0xFF1A1200),
         appBar: AppBar(
           backgroundColor: const Color(0xFF1A1200),
+          foregroundColor: Colors.white,
           title: Text('🕋 مود الحج', style: GoogleFonts.ibmPlexSansArabic(color: Colors.white, fontWeight: FontWeight.bold)),
           centerTitle: true,
         ),

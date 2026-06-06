@@ -54,7 +54,8 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
       if (mounted) _slideController.forward();
     });
 
-    Timer(const Duration(seconds: 3), () {
+    // Short branding delay, then navigate as soon as auth is resolved.
+    Timer(const Duration(milliseconds: 1400), () {
       if (!mounted) return;
       _navigateBasedOnAuth();
     });

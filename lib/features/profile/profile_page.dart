@@ -16,7 +16,7 @@ TextStyle _f({double sz = 14, FontWeight fw = FontWeight.w400, Color? c, double?
 class ProfilePage extends StatelessWidget {
   const ProfilePage({super.key});
 
-  static const String _appVersion = '1.1.0';
+  static const String _appVersion = '1.0.1';
 
   @override
   Widget build(BuildContext context) {
@@ -200,7 +200,7 @@ class ProfilePage extends StatelessWidget {
                     Center(
                       child: Column(
                         children: [
-                          Text('وإنما لكل امرئ ما نوى', style: _f(sz: 14, c: isDark ? Colors.white38 : AppColors.gray, fw: FontWeight.w600)),
+                          Text('فمن أبصر فلنفسه', style: _f(sz: 14, c: isDark ? Colors.white38 : AppColors.gray, fw: FontWeight.w600)),
                           const SizedBox(height: 4),
                           Text('صنع بكل حب للمسلمين 🤍', style: _f(sz: 11, c: isDark ? Colors.white24 : AppColors.gray)),
                         ],

@@ -157,6 +157,7 @@ class _WorshipPageState extends State<WorshipPage> {
         backgroundColor: bg,
         appBar: AppBar(
           backgroundColor: isDark ? const Color(0xFF0D2818) : AppColors.darkGreen,
+          foregroundColor: Colors.white,
           title: Text('عبادات اليوم', style: GoogleFonts.ibmPlexSansArabic(color: Colors.white, fontWeight: FontWeight.bold)),
           centerTitle: true,
           actions: [
@@ -285,22 +286,30 @@ class _WorshipPageState extends State<WorshipPage> {
         border: Border.all(color: done ? AppColors.lightGreen : borderColor),
       ),
       child: ListTile(
-        leading: Text(type.emoji, style: const TextStyle(fontSize: 26)),
-        title: Text(type.label, style: GoogleFonts.ibmPlexSansArabic(fontWeight: FontWeight.w600, color: isDark ? AppColors.lightGreen : AppColors.darkGreen)),
-        trailing: GestureDetector(
-          onTap: () {
-            setState(() => _checked[type] = !done);
-            _autoSaveIfNeeded();
-          },
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 200), width: 30, height: 30,
-            decoration: BoxDecoration(
-              color: done ? AppColors.lightGreen : Colors.transparent, shape: BoxShape.circle,
-              border: Border.all(color: done ? AppColors.lightGreen : (isDark ? Colors.white24 : Colors.grey[300]!)),
+        leading: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          width: 40, height: 40,
+          decoration: BoxDecoration(
+            color: done
+                ? AppColors.lightGreen.withOpacity(0.2)
+                : (isDark ? Colors.white10 : AppColors.paleGreen),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: done ? AppColors.lightGreen : (isDark ? Colors.white24 : AppColors.lightGreen.withOpacity(0.4)),
             ),
-            child: done ? const Icon(Icons.check, color: Colors.white, size: 18) : null,
+          ),
+          child: Icon(
+            done ? Icons.check_rounded : Icons.radio_button_unchecked_rounded,
+            color: done ? AppColors.darkGreen : (isDark ? Colors.white38 : AppColors.gray),
+            size: 22,
           ),
         ),
+        onTap: () {
+          setState(() => _checked[type] = !done);
+          _autoSaveIfNeeded();
+        },
+        title: Text(type.label, style: GoogleFonts.ibmPlexSansArabic(fontWeight: FontWeight.w600, color: isDark ? AppColors.lightGreen : AppColors.darkGreen)),
+        trailing: null,
       ),
     );
   }
@@ -383,12 +392,14 @@ class _WorshipPageState extends State<WorshipPage> {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: isDark 
+          begin: Alignment.topRight,
+          end: Alignment.bottomLeft,
+          colors: isDark
               ? [const Color(0xFF1A4D2E), const Color(0xFF0D2818)]
-              : [AppColors.paleGreen, AppColors.lightGreen.withOpacity(0.3)],
+              : [AppColors.darkGreen, AppColors.midGreen],
         ),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.gold.withOpacity(0.3)),
+        border: Border.all(color: AppColors.gold.withOpacity(0.35)),
       ),
       child: Row(
         children: [
@@ -405,8 +416,8 @@ class _WorshipPageState extends State<WorshipPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('ملخص عباداتك اليوم', style: GoogleFonts.ibmPlexSansArabic(fontSize: 14, fontWeight: FontWeight.bold, color: isDark ? Colors.white : AppColors.darkGreen)),
-                Text('$_prayerCount صلوات • $_quranPages صفحة قرآن • $totalWorships إجمالي', style: GoogleFonts.ibmPlexSansArabic(fontSize: 12, color: isDark ? Colors.white70 : AppColors.gray)),
+                Text('ملخص عباداتك اليوم', style: GoogleFonts.ibmPlexSansArabic(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white)),
+                Text('$_prayerCount صلوات • $_quranPages صفحة قرآن • $totalWorships إجمالي', style: GoogleFonts.ibmPlexSansArabic(fontSize: 12, color: Colors.white70)),
               ],
             ),
           ),

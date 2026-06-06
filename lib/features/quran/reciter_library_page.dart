@@ -52,6 +52,20 @@ class _ReciterLibraryPageState extends State<ReciterLibraryPage> {
     );
   }
 
+  /// Pull-to-refresh / refresh button: re-fetch the shared library from the
+  /// cloud (replacing the in-memory list with the latest server data) and
+  /// refresh per-reciter download states.
+  Future<void> _refresh() async {
+    await QuranAudioService().refreshSharedLibrary(preserveExisting: false);
+    final dl = ReciterDownloadService();
+    for (final r in QuranAudioService.reciters) {
+      if (r.type == ReciterType.full) {
+        dl.refreshState(r.id);
+      }
+    }
+    if (mounted) setState(() {});
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -83,6 +97,11 @@ class _ReciterLibraryPageState extends State<ReciterLibraryPage> {
           ),
           centerTitle: true,
           actions: [
+            IconButton(
+              tooltip: 'تحديث',
+              icon: const Icon(Icons.refresh_rounded, color: Colors.white),
+              onPressed: _refresh,
+            ),
             if (_uploadFeatureEnabled && context.watch<AppAuthProvider>().canUpload)
               IconButton(
                 tooltip: 'إضافة مقطع برابط',
@@ -98,7 +117,11 @@ class _ReciterLibraryPageState extends State<ReciterLibraryPage> {
               _NowPlayingBanner(audioService: audioService, isDark: isDark),
 
             Expanded(
-              child: ListView(
+              child: RefreshIndicator(
+                onRefresh: _refresh,
+                color: AppColors.darkGreen,
+                child: ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
                 padding: const EdgeInsets.all(16),
                 children: [
                   // ── Shared snippets section (admin-added links) ──
@@ -153,6 +176,7 @@ class _ReciterLibraryPageState extends State<ReciterLibraryPage> {
 
                   const SizedBox(height: 80),
                 ],
+                ),
               ),
             ),
           ],
@@ -598,9 +622,23 @@ class _SnippetReciterCard extends StatelessWidget {
                               ),
                           ],
                         ),
-                        onTap: () {
+                        onTap: () async {
                           Navigator.pop(ctx);
-                          audioSvc.playSurah(i, reciterId: reciterId);
+                          await audioSvc.playSurah(i, reciterId: reciterId);
+                          if (audioSvc.lastPlaybackError != null &&
+                              context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  audioSvc.lastPlaybackError!,
+                                  style: GoogleFonts.ibmPlexSansArabic(
+                                      color: Colors.white),
+                                ),
+                                backgroundColor: Colors.red,
+                                duration: const Duration(seconds: 4),
+                              ),
+                            );
+                          }
                         },
                       );
                     },
