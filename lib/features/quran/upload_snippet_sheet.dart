@@ -5,11 +5,29 @@ import '../../core/app_colors.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/quran_audio_service.dart';
 
-/// Bottom sheet for adding a snippet by direct audio link (admin only).
+/// Bottom sheet for adding or editing a snippet (admin or canUpload users).
 Future<void> showUploadSnippetSheet({
   required BuildContext context,
   required Future<void> Function() onSaved,
+  String? editReciterId,
+  int? editTrackIndex,
+  String? initialReciterName,
+  String? initialTitle,
+  String? initialLink,
 }) {
+  if (!context.read<AppAuthProvider>().canUpload) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          'ليس لديك صلاحية رفع الروابط — اطلبها من المدير',
+          style: GoogleFonts.ibmPlexSansArabic(color: Colors.white),
+        ),
+        backgroundColor: Colors.red,
+      ),
+    );
+    return Future.value();
+  }
+
   return showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
@@ -17,14 +35,38 @@ Future<void> showUploadSnippetSheet({
     isDismissible: true,
     enableDrag: true,
     backgroundColor: Colors.transparent,
-    builder: (ctx) => _UploadSnippetSheet(onSaved: onSaved),
+    builder: (ctx) => _UploadSnippetSheet(
+      onSaved: onSaved,
+      editReciterId: editReciterId,
+      editTrackIndex: editTrackIndex,
+      initialReciterName: initialReciterName,
+      initialTitle: initialTitle,
+      initialLink: initialLink,
+    ),
   );
 }
 
 class _UploadSnippetSheet extends StatefulWidget {
   final Future<void> Function() onSaved;
+  final String? editReciterId;
+  final int? editTrackIndex;
+  final String? initialReciterName;
+  final String? initialTitle;
+  final String? initialLink;
 
-  const _UploadSnippetSheet({required this.onSaved});
+  const _UploadSnippetSheet({
+    required this.onSaved,
+    this.editReciterId,
+    this.editTrackIndex,
+    this.initialReciterName,
+    this.initialTitle,
+    this.initialLink,
+  });
+
+  bool get isEditing =>
+      editReciterId != null &&
+      editTrackIndex != null &&
+      editReciterId!.isNotEmpty;
 
   @override
   State<_UploadSnippetSheet> createState() => _UploadSnippetSheetState();
@@ -42,6 +84,12 @@ class _UploadSnippetSheetState extends State<_UploadSnippetSheet> {
   @override
   void initState() {
     super.initState();
+    if (widget.isEditing) {
+      _selectedReciterName = widget.initialReciterName;
+      _titleCtl.text = widget.initialTitle ?? '';
+      _linkCtl.text = widget.initialLink ?? '';
+      return;
+    }
     final reciters = QuranAudioService.reciters
         .where((r) => r.type == ReciterType.snippets)
         .toList();
@@ -78,34 +126,59 @@ class _UploadSnippetSheetState extends State<_UploadSnippetSheet> {
     );
   }
 
-  bool get _canSave =>
-      !_isSaving &&
-      _isValidUrl &&
-      _titleCtl.text.trim().isNotEmpty &&
-      _isNewReciterName;
+  bool get _canSave {
+    if (_isSaving || !_isValidUrl || _titleCtl.text.trim().isEmpty) {
+      return false;
+    }
+    if (widget.isEditing) return true;
+    return _isNewReciterName;
+  }
 
   Future<void> _save() async {
     if (!_canSave) return;
     final auth = context.read<AppAuthProvider>();
     final messenger = ScaffoldMessenger.of(context);
     final navigator = Navigator.of(context);
+    if (!auth.canUpload) {
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            'ليس لديك صلاحية رفع الروابط — اطلبها من المدير',
+            style: GoogleFonts.ibmPlexSansArabic(color: Colors.white),
+          ),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
     setState(() => _isSaving = true);
 
     try {
-      await QuranAudioService().addSharedLink(
-        reciterName: _reciterName,
-        trackTitle: _titleCtl.text.trim(),
-        remoteUrl: _linkCtl.text.trim(),
-        uploadedByUid: auth.userId,
-        uploadedByName: auth.displayName,
-      );
+      if (widget.isEditing) {
+        await QuranAudioService().editSharedLink(
+          reciterId: widget.editReciterId!,
+          trackIndex: widget.editTrackIndex!,
+          trackTitle: _titleCtl.text.trim(),
+          remoteUrl: _linkCtl.text.trim(),
+        );
+      } else {
+        await QuranAudioService().addSharedLink(
+          reciterName: _reciterName,
+          trackTitle: _titleCtl.text.trim(),
+          remoteUrl: _linkCtl.text.trim(),
+          uploadedByUid: auth.userId,
+          uploadedByName: auth.displayName,
+        );
+      }
       await widget.onSaved();
       if (!mounted) return;
       navigator.pop();
       messenger.showSnackBar(
         SnackBar(
           content: Text(
-            'تمت إضافة المقطع — سيظهر لجميع المستخدمين',
+            widget.isEditing
+                ? 'تم تحديث المقطع — سيظهر لجميع المستخدمين'
+                : 'تمت إضافة المقطع — سيظهر لجميع المستخدمين',
             style: GoogleFonts.ibmPlexSansArabic(color: Colors.white),
           ),
           backgroundColor: AppColors.darkGreen,
@@ -165,7 +238,7 @@ class _UploadSnippetSheetState extends State<_UploadSnippetSheet> {
                 ),
                 const SizedBox(height: 14),
                 Text(
-                  'إضافة مقطع برابط',
+                  widget.isEditing ? 'تعديل مقطع برابط' : 'إضافة مقطع برابط',
                   style: GoogleFonts.ibmPlexSansArabic(
                     fontSize: 17,
                     fontWeight: FontWeight.w800,
@@ -174,12 +247,15 @@ class _UploadSnippetSheetState extends State<_UploadSnippetSheet> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'اختر قارئاً موجوداً أو أضف قارئاً جديداً ثم احفظ الرابط الصوتي',
+                  widget.isEditing
+                      ? 'عدّل العنوان أو رابط SoundCloud / الملف الصوتي'
+                      : 'اختر قارئاً موجوداً أو أضف قارئاً جديداً ثم احفظ الرابط الصوتي',
                   style: GoogleFonts.ibmPlexSansArabic(
                     fontSize: 11,
                     color: isDark ? Colors.white60 : AppColors.gray,
                   ),
                 ),
+                if (!widget.isEditing) ...[
                 const SizedBox(height: 18),
                 Text(
                   '1. اختر القارئ',
@@ -244,9 +320,20 @@ class _UploadSnippetSheetState extends State<_UploadSnippetSheet> {
                     ),
                   ),
                 ],
+                ] else ...[
+                  const SizedBox(height: 18),
+                  Text(
+                    'القارئ: ${widget.initialReciterName ?? ''}',
+                    style: GoogleFonts.ibmPlexSansArabic(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      color: isDark ? Colors.white70 : AppColors.textPrimary,
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 18),
                 Text(
-                  '2. رابط الملف الصوتي',
+                  widget.isEditing ? 'رابط الملف الصوتي' : '2. رابط الملف الصوتي',
                   style: GoogleFonts.ibmPlexSansArabic(
                     fontSize: 14,
                     fontWeight: FontWeight.w800,
@@ -276,7 +363,7 @@ class _UploadSnippetSheetState extends State<_UploadSnippetSheet> {
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  '3. عنوان المقطع',
+                  widget.isEditing ? 'عنوان المقطع' : '3. عنوان المقطع',
                   style: GoogleFonts.ibmPlexSansArabic(
                     fontSize: 14,
                     fontWeight: FontWeight.w800,
@@ -321,7 +408,9 @@ class _UploadSnippetSheetState extends State<_UploadSnippetSheet> {
                           )
                         : const Icon(Icons.check_rounded, color: Colors.white),
                     label: Text(
-                      _isSaving ? 'جاري الحفظ...' : 'حفظ المقطع',
+                      _isSaving
+                          ? 'جاري الحفظ...'
+                          : (widget.isEditing ? 'حفظ التعديلات' : 'حفظ المقطع'),
                       style: GoogleFonts.ibmPlexSansArabic(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
@@ -349,6 +438,12 @@ class _UploadSnippetSheetState extends State<_UploadSnippetSheet> {
   }
 
   String _hintMessage() {
+    if (widget.isEditing) {
+      if (_linkCtl.text.trim().isEmpty) return 'أدخل رابط الملف الصوتي';
+      if (!_isValidUrl) return 'الرابط غير صالح — يجب أن يبدأ بـ http أو https';
+      if (_titleCtl.text.trim().isEmpty) return 'اكتب عنوان المقطع';
+      return '';
+    }
     if (_reciterName.isEmpty) return 'اختر قارئاً أو أدخل اسم قارئ جديد';
     if (!_isNewReciterName) return 'هذا القارئ موجود بالفعل — أدخل اسماً جديداً';
     if (_linkCtl.text.trim().isEmpty) return 'أدخل رابط الملف الصوتي';

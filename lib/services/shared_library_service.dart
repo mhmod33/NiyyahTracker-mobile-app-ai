@@ -43,7 +43,10 @@ class SharedLibraryService {
         .replaceAll(RegExp(r'\s+'), ' ');
   }
 
+  /// Hides only the old bundled reciter id — NOT admin-added shared entries
+  /// (those use ids like `shared_أحمد_فؤاد` in Firestore).
   static bool _isLegacyAhmedFouadReciter(String reciterId, String nameAr) {
+    if (reciterId.startsWith('shared_')) return false;
     final normalizedId = _normalizeArabicName(reciterId.replaceAll('_', ' '));
     final normalizedName = _normalizeArabicName(nameAr);
     return reciterId == 'snippets_ahmed_fouad' ||
@@ -93,9 +96,8 @@ class SharedLibraryService {
     final reciterId = reciterIdFor(reciterName);
 
     try {
-      await _db
-          .collection(collection)
-          .doc(trackId)
+      final docRef = _db.collection(collection).doc(trackId);
+      await docRef
           .set({
             'reciterId': reciterId,
             'reciterNameAr': reciterName.trim(),
@@ -107,6 +109,8 @@ class SharedLibraryService {
             'encoding': 'link',
           })
           .timeout(metaWriteTimeout);
+
+      await _verifyOnServer(docRef);
 
       developer.log(
         '🔗 Shared link snippet added: $trackId ($url)',
@@ -121,15 +125,76 @@ class SharedLibraryService {
     }
   }
 
-  /// Fetch all shared snippets grouped as [Reciter]s (metadata only).
-  Future<List<Reciter>> fetchSharedReciters() async {
+  /// Update an existing link snippet (admin only — Firestore rules).
+  Future<void> updateLinkSnippet({
+    required String trackId,
+    required String trackTitle,
+    required String remoteUrl,
+  }) async {
+    final url = remoteUrl.trim();
+    final uri = Uri.tryParse(url);
+    if (url.isEmpty ||
+        uri == null ||
+        !(uri.isScheme('http') || uri.isScheme('https'))) {
+      throw Exception('رابط غير صالح — يجب أن يبدأ بـ http أو https');
+    }
+
     try {
-      final snap =
-          await _db.collection(collection).get().timeout(fetchTimeout);
+      final docRef = _db.collection(collection).doc(trackId);
+      await docRef
+          .update({
+            'title': trackTitle.trim(),
+            'remoteUrl': url,
+            'updatedAt': FieldValue.serverTimestamp(),
+          })
+          .timeout(metaWriteTimeout);
+
+      await _verifyOnServer(docRef);
+
+      developer.log(
+        '✏️ Shared link snippet updated: $trackId ($url)',
+        name: 'SharedLibrary',
+      );
+    } catch (e, st) {
+      developer.log('⚠️ updateLinkSnippet failed',
+          name: 'SharedLibrary', error: e, stackTrace: st);
+      throw Exception(_firestoreErrorMessage(e));
+    }
+  }
+
+  /// Confirms the write reached Firestore (not just the local offline cache).
+  Future<void> _verifyOnServer(DocumentReference<Map<String, dynamic>> docRef) async {
+    final snap = await docRef
+        .get(const GetOptions(source: Source.server))
+        .timeout(metaWriteTimeout);
+    if (!snap.exists) {
+      throw Exception(
+        'فشل الحفظ على السحابة — تأكد أن لديك صلاحية الرفع وأن قواعد Firestore منشورة',
+      );
+    }
+  }
+
+  /// Fetch all shared snippets grouped as [Reciter]s (metadata only).
+  Future<List<Reciter>> fetchSharedReciters({bool preferServer = true}) async {
+    try {
+      QuerySnapshot<Map<String, dynamic>> snap;
+      if (preferServer) {
+        try {
+          snap = await _db
+              .collection(collection)
+              .get(const GetOptions(source: Source.server))
+              .timeout(fetchTimeout);
+        } catch (_) {
+          snap = await _db.collection(collection).get().timeout(fetchTimeout);
+        }
+      } else {
+        snap = await _db.collection(collection).get().timeout(fetchTimeout);
+      }
 
       final Map<String, List<SnippetTrack>> byReciter = {};
       final Map<String, String> names = {};
       final Map<String, String> descriptions = {};
+      var skippedLegacy = 0;
 
       for (final doc in snap.docs) {
         final d = doc.data();
@@ -138,6 +203,7 @@ class SharedLibraryService {
         final title = d['title'] as String? ?? 'مقطع';
 
         if (_isLegacyAhmedFouadReciter(reciterId, nameAr)) {
+          skippedLegacy++;
           continue;
         }
 
@@ -154,7 +220,7 @@ class SharedLibraryService {
         ));
       }
 
-      return byReciter.entries
+      final reciters = byReciter.entries
           .map((e) => Reciter(
                 id: e.key,
                 nameAr: names[e.key]!,
@@ -164,6 +230,14 @@ class SharedLibraryService {
                 snippetTracks: e.value,
               ))
           .toList();
+
+      developer.log(
+        '📚 fetchSharedReciters: ${snap.docs.length} docs → '
+        '${reciters.length} reciters (skipped legacy: $skippedLegacy)',
+        name: 'SharedLibrary',
+      );
+
+      return reciters;
     } catch (e, st) {
       developer.log('⚠️ fetchSharedReciters failed',
           name: 'SharedLibrary', error: e, stackTrace: st);

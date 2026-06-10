@@ -261,12 +261,8 @@ class QuranAudioService extends ChangeNotifier {
       _settingsBox = Hive.box('quran_audio_settings');
     }
 
-    // Cache-first: show the last-known shared library immediately (offline /
-    // before the network refresh lands), then refresh from Firestore.
+    // Cache-first, then refresh from Firestore (works for guests and signed-in users).
     _loadCachedSharedReciters();
-
-    // Refresh cloud shared library in the background — do NOT await, so a slow
-    // network never blocks startup. The cache above is shown meanwhile.
     unawaited(refreshSharedLibrary());
 
     // Subscribe to player streams
@@ -619,7 +615,7 @@ class QuranAudioService extends ChangeNotifier {
 
   /// Reload shared snippets from Firestore (call when opening library page).
   Future<void> refreshSharedLibrary({
-    bool preserveExisting = true,
+    bool preserveExisting = false,
     bool allowEmpty = false,
   }) async {
     final fetched = await SharedLibraryService().fetchSharedReciters();
@@ -759,7 +755,60 @@ class QuranAudioService extends ChangeNotifier {
     }
   }
 
-  /// Remove a shared (cloud) track — admin only, enforced by rules.
+  /// Update a shared link snippet — admin only, enforced by Firestore rules.
+  Future<void> editSharedLink({
+    required String reciterId,
+    required int trackIndex,
+    required String trackTitle,
+    required String remoteUrl,
+  }) async {
+    if (!_initialized) await init();
+
+    final idx = _sharedReciters.indexWhere((r) => r.id == reciterId);
+    if (idx < 0) return;
+    final tracks = [...?_sharedReciters[idx].snippetTracks];
+    if (trackIndex < 0 || trackIndex >= tracks.length) return;
+    final track = tracks[trackIndex];
+    if (track.cloudTrackId == null) {
+      throw Exception('لا يمكن تعديل هذا المقطع');
+    }
+
+    await SharedLibraryService().updateLinkSnippet(
+      trackId: track.cloudTrackId!,
+      trackTitle: trackTitle,
+      remoteUrl: remoteUrl,
+    );
+
+    tracks[trackIndex] = SnippetTrack(
+      title: trackTitle.trim(),
+      assetPath: track.assetPath,
+      remoteUrl: remoteUrl.trim(),
+      reciterId: track.reciterId,
+      cloudTrackId: track.cloudTrackId,
+      storagePath: track.storagePath,
+    );
+    final reciter = _sharedReciters[idx];
+    _sharedReciters = [
+      ..._sharedReciters.take(idx),
+      Reciter(
+        id: reciter.id,
+        nameAr: reciter.nameAr,
+        nameEn: reciter.nameEn,
+        description: reciter.description,
+        type: reciter.type,
+        snippetTracks: tracks,
+      ),
+      ..._sharedReciters.skip(idx + 1),
+    ];
+    await _cacheSharedReciters();
+    notifyListeners();
+
+    try {
+      await refreshSharedLibrary().timeout(const Duration(seconds: 20));
+    } catch (_) {}
+  }
+
+  /// Remove a shared (cloud) track — admin only, enforced by Firestore rules.
   Future<void> removeSharedSnippet(String reciterId, int trackIndex) async {
     final idx = _sharedReciters.indexWhere((r) => r.id == reciterId);
     if (idx < 0) return;

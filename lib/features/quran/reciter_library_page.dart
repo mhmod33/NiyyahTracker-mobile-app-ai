@@ -20,13 +20,17 @@ class ReciterLibraryPage extends StatefulWidget {
 }
 
 class _ReciterLibraryPageState extends State<ReciterLibraryPage> {
-  static const bool _uploadFeatureEnabled = true;
+  /// Add / edit / delete — admin or users granted canUpload (لوحة الإدارة).
+  bool _canManageSharedSnippets(BuildContext context) =>
+      context.watch<AppAuthProvider>().canUpload;
 
   @override
   void initState() {
     super.initState();
     // Refresh download states from disk every time page opens
     WidgetsBinding.instance.addPostFrameCallback((_) async {
+      // Pick up canUpload changes granted by admin while app was open.
+      await context.read<AppAuthProvider>().reloadProfile();
       await QuranAudioService().refreshSharedLibrary();
       if (mounted) setState(() {});
       final dl = ReciterDownloadService();
@@ -39,6 +43,8 @@ class _ReciterLibraryPageState extends State<ReciterLibraryPage> {
   }
 
   Future<void> _openUploadSheet(BuildContext rootContext) async {
+    if (!rootContext.read<AppAuthProvider>().canUpload) return;
+
     await QuranAudioService().refreshSharedLibrary();
     if (!mounted) return;
     setState(() {});
@@ -102,7 +108,7 @@ class _ReciterLibraryPageState extends State<ReciterLibraryPage> {
               icon: const Icon(Icons.refresh_rounded, color: Colors.white),
               onPressed: _refresh,
             ),
-            if (_uploadFeatureEnabled && context.watch<AppAuthProvider>().canUpload)
+            if (_canManageSharedSnippets(context))
               IconButton(
                 tooltip: 'إضافة مقطع برابط',
                 icon: const Icon(Icons.add_link_rounded, color: Colors.white),
@@ -140,14 +146,13 @@ class _ReciterLibraryPageState extends State<ReciterLibraryPage> {
                               audioService: audioService,
                               surahToPlay: widget.surahToPlay,
                               isDark: isDark,
-                              showManageActions:
-                                  context.watch<AppAuthProvider>().isAdmin,
+                              showManageActions: _canManageSharedSnippets(context),
                               isSharedLibrary: true,
                             )),
                   ],
 
                   // ── Add link card (admin) ──
-                  if (_uploadFeatureEnabled && context.watch<AppAuthProvider>().canUpload) ...[
+                  if (_canManageSharedSnippets(context)) ...[
                     const SizedBox(height: 16),
                     _UploadCard(
                       isDark: isDark,
@@ -437,8 +442,8 @@ class _SnippetReciterCard extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final audioSvc = context.read<QuranAudioService>();
     final isShared = reciter.id.startsWith('shared_');
-    final canDeleteTrack =
-        isShared && context.read<AppAuthProvider>().isAdmin;
+    final canManageTrack =
+        isShared && context.read<AppAuthProvider>().canUpload;
     final tracks = reciter.snippetTracks ?? [];
     int? downloadingTrackIndex;
     final Set<int> downloadedIndices = {};
@@ -591,7 +596,34 @@ class _SnippetReciterCard extends StatelessWidget {
                                 padding: EdgeInsets.only(left: 8.0, right: 8.0),
                                 child: Icon(Icons.check_circle_rounded, color: AppColors.darkGreen, size: 20),
                               ),
-                            if (canDeleteTrack)
+                            if (canManageTrack)
+                              IconButton(
+                                icon: const Icon(Icons.edit_outlined,
+                                    color: AppColors.gold, size: 22),
+                                tooltip: 'تعديل المقطع',
+                                onPressed: () async {
+                                  Navigator.pop(ctx);
+                                  await showUploadSnippetSheet(
+                                    context: context,
+                                    editReciterId: reciterId,
+                                    editTrackIndex: i,
+                                    initialReciterName: reciter.nameAr,
+                                    initialTitle: track.title,
+                                    initialLink: track.remoteUrl ?? '',
+                                    onSaved: () async {
+                                      await QuranAudioService()
+                                          .refreshSharedLibrary();
+                                      if (context.mounted) {
+                                        (context
+                                                .findAncestorStateOfType<
+                                                    _ReciterLibraryPageState>())
+                                            ?.setState(() {});
+                                      }
+                                    },
+                                  );
+                                },
+                              ),
+                            if (canManageTrack)
                               IconButton(
                                 icon: const Icon(Icons.delete_outline_rounded,
                                     color: Colors.redAccent, size: 22),
