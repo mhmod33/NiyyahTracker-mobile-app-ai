@@ -133,6 +133,18 @@ Key services for the shared audio library:
 6. Confirm non-admin users do **not** see add/edit/delete buttons.
 7. Grant `canUpload` from **إدارة صلاحية الرفع** and verify that user can manage links.
 
+### App icon (launcher)
+
+The Play Store listing icon and the on-device launcher icon must come from the same source: `assets/icon.png`.
+
+After changing the icon, regenerate Android launcher assets:
+
+```bash
+dart run flutter_launcher_icons
+```
+
+Then rebuild the release bundle. Upload the same `assets/icon.png` (512×512) as the Play Console **App icon** so the store and device match.
+
 ---
 
 ## 🛠️ Technology Stack
