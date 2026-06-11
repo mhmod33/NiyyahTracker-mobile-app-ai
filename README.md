@@ -133,6 +133,46 @@ Key services for the shared audio library:
 6. Confirm non-admin users do **not** see add/edit/delete buttons.
 7. Grant `canUpload` from **إدارة صلاحية الرفع** and verify that user can manage links.
 
+### Release signing (Google Play)
+
+Release builds require a signing keystore. Without `android/key.properties`, `flutter build appbundle --release` will fail.
+
+**First time only** — create a keystore in the `android/` folder.
+
+**Windows** (`keytool` is not in PATH by default — use Android Studio’s JDK or the helper script):
+
+```powershell
+powershell -ExecutionPolicy Bypass -File android/create-keystore.ps1
+```
+
+Or run `keytool` with the full path:
+
+```powershell
+& "C:\Program Files\Android\Android Studio\jbr\bin\keytool.exe" -genkey -v -keystore android/upload-keystore.jks -keyalg RSA -keysize 2048 -validity 10000 -alias upload
+```
+
+**macOS / Linux:**
+
+```bash
+keytool -genkey -v -keystore android/upload-keystore.jks -keyalg RSA -keysize 2048 -validity 10000 -alias upload
+```
+
+Then:
+
+```bash
+copy android\key.properties.example android\key.properties
+```
+
+Edit `android/key.properties` with your keystore passwords. Build:
+
+```bash
+flutter build appbundle --release
+```
+
+Output: `build/app/outputs/bundle/release/app-release.aab`
+
+> Keep `upload-keystore.jks` and `key.properties` safe — you need the same key for every Play Store update. They are gitignored.
+
 ### App icon (launcher)
 
 The Play Store listing icon and the on-device launcher icon must come from the same source: `assets/icon.png`.
