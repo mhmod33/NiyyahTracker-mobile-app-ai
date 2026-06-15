@@ -110,7 +110,6 @@ class _AzanSettingsPageState extends State<AzanSettingsPage> {
       context,
       MaterialPageRoute(builder: (_) => const MuazzinSelectionPage()),
     );
-    // Refresh after returning
     _loadSettings();
   }
 
@@ -305,8 +304,6 @@ class _AzanSettingsPageState extends State<AzanSettingsPage> {
                             ),
                           ),
                         ),
-
-                        const SizedBox(height: 20),
 
                         const SizedBox(height: 32),
                       ]),
