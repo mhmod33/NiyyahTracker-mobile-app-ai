@@ -94,7 +94,8 @@ class _ManageUploadsPageState extends State<ManageUploadsPage> {
                   border: Border.all(color: AppColors.darkGreen.withValues(alpha: 0.3)),
                 ),
                 child: Text(
-                  'فعّل المفتاح ليستطيع المستخدم رفع مقاطع صوتية إلى مزامير القرآن. المديرون لديهم هذه الصلاحية دائماً.',
+                  'فعّل المفتاح ليستطيع المستخدم إضافة وتعديل وحذف روابط SoundCloud في مزامير القرآن. '
+                  'الروابط تظهر لجميع المستخدمين والضيوف. المديرون لديهم هذه الصلاحية دائماً.',
                   style: GoogleFonts.ibmPlexSansArabic(
                     fontSize: 12,
                     color: isDark ? Colors.white70 : AppColors.darkGreen,

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../config/admin_config.dart';
+import '../services/quran_audio_service.dart';
 import '../services/wird_service.dart';
 
 /// Centralized authentication provider that manages Firebase Auth state
@@ -41,10 +42,14 @@ class AppAuthProvider extends ChangeNotifier {
         await _loadUserProfile();
         // Scope WirdService data to this user
         WirdService().setUserId(user.uid);
+        // Shared snippets live in Firestore — refresh after auth is ready.
+        unawaited(QuranAudioService().refreshSharedLibrary());
       } else {
         _userProfile = null;
         // Clear user scope on logout
         WirdService().setUserId('');
+        // Guest mode — shared snippets are public in Firestore.
+        unawaited(QuranAudioService().refreshSharedLibrary());
       }
       _isLoading = false;
       notifyListeners();
@@ -91,6 +96,13 @@ class AppAuthProvider extends ChangeNotifier {
     if (_user == null) return;
     final doc = await _db.collection('users').doc(_user!.uid).get();
     if (doc.exists) _userProfile = doc.data();
+  }
+
+  /// Reload profile from Firestore (e.g. after admin grants canUpload).
+  Future<void> reloadProfile() async {
+    if (_user == null) return;
+    await _loadUserProfile();
+    notifyListeners();
   }
 
   /// Admin: grant or revoke upload permission for another user (مزامير القرآن).

@@ -10,6 +10,15 @@ service cloud.firestore {
         && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
+    // Admin or users granted canUpload by admin (إدارة صلاحية الرفع).
+    function canManageLibrary() {
+      return isSignedIn()
+        && (
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'
+          || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.canUpload == true
+        );
+    }
+
     match /users/{userId} {
       // Owner reads own profile; admins read all profiles (manage uploads page).
       allow read: if isSignedIn() && (request.auth.uid == userId || isAdmin());
@@ -28,14 +37,14 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
-    // Shared audio library — Firestore chunks only (no Storage / Blaze)
+    // Shared audio library — public read; write for admin or canUpload users
     match /library_snippets/{trackId} {
-      allow read: if isSignedIn();
-      allow create, update, delete: if isAdmin();
+      allow read: if true;
+      allow create, update, delete: if canManageLibrary();
 
       match /chunks/{chunkId} {
-        allow read: if isSignedIn();
-        allow create, update, delete: if isAdmin();
+        allow read: if true;
+        allow create, update, delete: if canManageLibrary();
       }
     }
   }

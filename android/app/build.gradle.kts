@@ -14,6 +14,15 @@ if (keystorePropertiesFile.exists()) {
     keystoreProperties.load(FileInputStream(keystorePropertiesFile))
 }
 
+val releaseStoreFile = keystoreProperties.getProperty("storeFile")?.let { rootProject.file(it) }
+val hasReleaseKeystore =
+    keystorePropertiesFile.exists() &&
+        !keystoreProperties.getProperty("keyAlias").isNullOrBlank() &&
+        !keystoreProperties.getProperty("keyPassword").isNullOrBlank() &&
+        !keystoreProperties.getProperty("storePassword").isNullOrBlank() &&
+        releaseStoreFile != null &&
+        releaseStoreFile.exists()
+
 android {
     namespace = "com.mahmoudsayed.niyyahtracker"
     compileSdk = flutter.compileSdkVersion
@@ -38,18 +47,46 @@ android {
     }
 
     signingConfigs {
-        create("release") {
-            keyAlias = keystoreProperties["keyAlias"] as String?
-            keyPassword = keystoreProperties["keyPassword"] as String?
-            storeFile = keystoreProperties["storeFile"]?.let { file(it as String) }
-            storePassword = keystoreProperties["storePassword"] as String?
+        if (hasReleaseKeystore) {
+            create("release") {
+                keyAlias = keystoreProperties.getProperty("keyAlias")
+                keyPassword = keystoreProperties.getProperty("keyPassword")
+                storeFile = releaseStoreFile
+                storePassword = keystoreProperties.getProperty("storePassword")
+            }
         }
     }
 
     buildTypes {
         release {
-            signingConfig = signingConfigs.getByName("release")
+            if (hasReleaseKeystore) {
+                signingConfig = signingConfigs.getByName("release")
+            }
         }
+    }
+}
+
+// Fail with a clear message instead of a NullPointerException during bundleRelease.
+gradle.taskGraph.whenReady {
+    val isReleaseBuild = allTasks.any {
+        it.name.contains("Release", ignoreCase = true) ||
+            it.name.contains("bundleRelease", ignoreCase = true)
+    }
+    if (isReleaseBuild && !hasReleaseKeystore) {
+        throw GradleException(
+            """
+            Release signing is not configured.
+
+            1. Create a keystore (once):
+               keytool -genkey -v -keystore android/upload-keystore.jks -keyalg RSA -keysize 2048 -validity 10000 -alias upload
+
+            2. Copy android/key.properties.example to android/key.properties and fill in your passwords.
+
+            3. Run: flutter build appbundle --release
+
+            See README.md → "Release signing (Google Play)".
+            """.trimIndent()
+        )
     }
 }
 
