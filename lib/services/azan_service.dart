@@ -630,7 +630,6 @@ class AzanService {
   /// Check if current time matches any prayer time and play azan.
   Future<void> _checkAndPlayAzan() async {
     if (!azanEnabled) return;
-    if (Platform.isAndroid) return;
 
     try {
       // Skip if native service is already playing (notification ID 4006)

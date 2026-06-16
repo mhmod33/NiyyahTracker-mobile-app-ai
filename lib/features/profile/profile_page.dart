@@ -16,7 +16,7 @@ TextStyle _f({double sz = 14, FontWeight fw = FontWeight.w400, Color? c, double?
 class ProfilePage extends StatelessWidget {
   const ProfilePage({super.key});
 
-  static const String _appVersion = '1.0.6';
+  static const String _appVersion = '1.0.7';
 
   @override
   Widget build(BuildContext context) {
