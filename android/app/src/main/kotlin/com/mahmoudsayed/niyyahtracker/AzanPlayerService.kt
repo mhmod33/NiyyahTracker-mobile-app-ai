@@ -17,7 +17,9 @@ import android.os.IBinder
 import android.os.Looper
 import android.os.PowerManager
 import android.provider.Settings
+import android.util.Log
 import androidx.core.app.NotificationCompat
+import java.io.File
 
 class AzanPlayerService : Service() {
     companion object {
@@ -38,12 +40,14 @@ class AzanPlayerService : Service() {
 
     override fun onCreate() {
         super.onCreate()
+        AzanAlarmReceiver.writeLog(this, "AzanPlayerService.onCreate")
         createNotificationChannel()
         acquireWakeLock()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (intent?.action == ACTION_STOP) {
+            AzanAlarmReceiver.writeLog(this, "AzanPlayerService: ACTION_STOP received")
             stopPlayback()
             return START_NOT_STICKY
         }
@@ -51,13 +55,20 @@ class AzanPlayerService : Service() {
         val filePath = intent?.getStringExtra(AzanAlarmReceiver.EXTRA_FILE_PATH)
         val prayerName = intent?.getStringExtra(AzanAlarmReceiver.EXTRA_PRAYER_NAME) ?: "الصلاة"
 
+        AzanAlarmReceiver.writeLog(this, "AzanPlayerService.onStartCommand prayer=$prayerName filePath=$filePath")
+
         if (filePath == null) {
+            AzanAlarmReceiver.writeLog(this, "AzanPlayerService: filePath null — stopping self")
             stopSelf()
             return START_NOT_STICKY
         }
 
+        val file = File(filePath)
+        AzanAlarmReceiver.writeLog(this, "AzanPlayerService: fileExists=${file.exists()} size=${if (file.exists()) file.length() else -1}")
+
         // Start foreground immediately to avoid ANR
         startForeground(NOTIFICATION_ID, createNotification(prayerName))
+        AzanAlarmReceiver.writeLog(this, "AzanPlayerService: startForeground called")
 
         // Play audio
         playAzan(filePath)
@@ -75,6 +86,8 @@ class AzanPlayerService : Service() {
                 } catch (_: Exception) {}
             }
 
+            AzanAlarmReceiver.writeLog(this, "AzanPlayerService.playAzan: creating MediaPlayer for $filePath")
+
             mediaPlayer = MediaPlayer().apply {
                 setAudioAttributes(
                     AudioAttributes.Builder()
@@ -85,16 +98,22 @@ class AzanPlayerService : Service() {
                 setDataSource(filePath)
                 prepare()
                 setOnCompletionListener {
+                    AzanAlarmReceiver.writeLog(this@AzanPlayerService, "AzanPlayerService: playback completed normally")
                     stopPlayback()
                 }
-                setOnErrorListener { _, _, _ ->
+                setOnErrorListener { _, what, extra ->
+                    Log.e("AzanPlayerService", "MediaPlayer error what=$what extra=$extra")
+                    AzanAlarmReceiver.writeLog(this@AzanPlayerService, "AzanPlayerService: MediaPlayer ERROR what=$what extra=$extra")
                     stopPlayback()
                     true
                 }
                 start()
             }
+            AzanAlarmReceiver.writeLog(this, "AzanPlayerService: MediaPlayer.start() called OK")
             registerVolumeDownObserver()
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            Log.e("AzanPlayerService", "playAzan exception: $e")
+            AzanAlarmReceiver.writeLog(this, "AzanPlayerService: playAzan EXCEPTION: $e")
             stopPlayback()
         }
     }
@@ -102,6 +121,7 @@ class AzanPlayerService : Service() {
     private fun stopPlayback() {
         if (isStopping) return
         isStopping = true
+        AzanAlarmReceiver.writeLog(this, "AzanPlayerService.stopPlayback called")
         unregisterVolumeDownObserver()
         try {
             mediaPlayer?.apply {
@@ -132,6 +152,7 @@ class AzanPlayerService : Service() {
             val audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
             lastAlarmVolume = audioManager.getStreamVolume(AudioManager.STREAM_ALARM)
             lastMusicVolume = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
+            AzanAlarmReceiver.writeLog(this, "AzanPlayerService: alarm volume=$lastAlarmVolume music volume=$lastMusicVolume")
             volumeObserver = object : ContentObserver(Handler(Looper.getMainLooper())) {
                 override fun onChange(selfChange: Boolean) {
                     super.onChange(selfChange)
@@ -164,6 +185,7 @@ class AzanPlayerService : Service() {
             val alarmLowered = lastAlarmVolume >= 0 && currentAlarmVolume < lastAlarmVolume
             val musicLowered = lastMusicVolume >= 0 && currentMusicVolume < lastMusicVolume
             if (alarmLowered || musicLowered) {
+                AzanAlarmReceiver.writeLog(this, "AzanPlayerService: volume lowered — stopping")
                 stopPlayback()
                 return
             }
@@ -242,6 +264,7 @@ class AzanPlayerService : Service() {
     }
 
     override fun onDestroy() {
+        AzanAlarmReceiver.writeLog(this, "AzanPlayerService.onDestroy")
         stopPlayback()
         super.onDestroy()
     }

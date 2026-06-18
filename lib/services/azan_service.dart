@@ -11,6 +11,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:path_provider/path_provider.dart';
+import 'azan_debug_log.dart';
 
 /// Native MethodChannel for scheduling azan alarms via Android AlarmManager.
 /// The native side (Kotlin) handles: AlarmManager → BroadcastReceiver → ForegroundService → MediaPlayer.
@@ -463,7 +464,10 @@ class AzanService {
 
   /// Play the azan for a specific prayer.
   Future<void> playAzan({required bool isFajr}) async {
-    if (!azanEnabled) return;
+    if (!azanEnabled) {
+      AzanDebugLog.write('playAzan skipped: azanEnabled=false');
+      return;
+    }
 
     try {
       final muazzin = selectedMuazzin;
@@ -471,6 +475,16 @@ class AzanService {
 
       if (filePath == null) {
         developer.log('❌ No audio file for ${muazzin.id}', name: 'AzanService');
+        AzanDebugLog.write('playAzan FAILED: no file path for muazzin=${muazzin.id} isFajr=$isFajr');
+        return;
+      }
+
+      final fileExists = await File(filePath).exists();
+      AzanDebugLog.write(
+        'playAzan muazzin=${muazzin.id} isFajr=$isFajr path=$filePath exists=$fileExists',
+      );
+      if (!fileExists) {
+        AzanDebugLog.write('playAzan FAILED: file does not exist on disk');
         return;
       }
 
@@ -478,6 +492,7 @@ class AzanService {
       await _audioPlayer.setFilePath(filePath);
       await _audioPlayer.setVolume(1.0);
       await _audioPlayer.play();
+      AzanDebugLog.write('playAzan started successfully');
 
       _volumeSubscription?.cancel();
       _volumeSubscription = _audioPlayer.volumeStream.listen((volume) {
@@ -490,6 +505,7 @@ class AzanService {
       });
     } catch (e, st) {
       developer.log('❌ Error playing azan', name: 'AzanService', error: e, stackTrace: st);
+      AzanDebugLog.write('playAzan EXCEPTION: $e');
     }
   }
 
@@ -602,7 +618,12 @@ class AzanService {
     final params = CalculationMethod.egyptian.getParameters()
       ..madhab = Madhab.shafi;
 
-    return PrayerTimes(coords, DateComponents.from(DateTime.now()), params);
+    final pt = PrayerTimes(coords, DateComponents.from(DateTime.now()), params);
+    AzanDebugLog.write(
+      'PrayerTimes coords=(${coords.latitude.toStringAsFixed(4)},${coords.longitude.toStringAsFixed(4)}) '
+      'fajr=${pt.fajr} dhuhr=${pt.dhuhr} asr=${pt.asr} maghrib=${pt.maghrib} isha=${pt.isha}',
+    );
+    return pt;
   }
 
   /// Start a periodic timer that checks if it's time for azan.
@@ -636,9 +657,11 @@ class AzanService {
       try {
         final active = await _notificationsPlugin.getActiveNotifications();
         if (active.any((n) => n.id == 4006)) {
+          AzanDebugLog.write('_checkAndPlayAzan: native service active, skipping');
           return;
         }
       } catch (_) {}
+      AzanDebugLog.write('_checkAndPlayAzan tick at ${DateTime.now()}');
 
       final pt = await _getPrayerTimes();
       final now = DateTime.now();
@@ -658,7 +681,8 @@ class AzanService {
 
         // Check if we're within 30 seconds of prayer time
         final diff = now.difference(prayerTime).inSeconds.abs();
-        if (diff <= 30 && isPrayerAzanEnabled(prayerName)) {
+        final enabled = isPrayerAzanEnabled(prayerName);
+        if (diff <= 30 && enabled) {
           // Avoid playing if already playing
           if (!_audioPlayer.playing) {
             // Dedup: skip if background alarm already played recently
@@ -670,17 +694,23 @@ class AzanService {
                 '⏭️ Azan recently played (dedup), skipping timer',
                 name: 'AzanService',
               );
+              AzanDebugLog.write('_checkAndPlayAzan: $prayerName dedup-skipped (last played ${nowMs - lastPlayedMs}ms ago)');
               break;
             }
             await _settingsBox.put('last_azan_played_ms', nowMs);
 
             developer.log('🕌 Time for $prayerName azan!', name: 'AzanService');
+            AzanDebugLog.write('_checkAndPlayAzan: MATCH $prayerName diff=${diff}s → playing');
 
             await _showAzanNotification(prayerName);
 
             await playAzan(isFajr: isFajr);
+          } else {
+            AzanDebugLog.write('_checkAndPlayAzan: $prayerName match but audioPlayer already playing');
           }
           break;
+        } else if (diff <= 120) {
+          AzanDebugLog.write('_checkAndPlayAzan: $prayerName diff=${diff}s enabled=$enabled (not within 30s or disabled)');
         }
       }
     } catch (e, st) {
@@ -850,7 +880,11 @@ class AzanService {
   /// Uses native Android AlarmManager → BroadcastReceiver → ForegroundService → MediaPlayer
   /// for reliable background audio playback.
   Future<void> scheduleAzanNotifications() async {
-    if (!azanEnabled) return;
+    if (!azanEnabled) {
+      AzanDebugLog.write('scheduleAzanNotifications: skipped (azanEnabled=false)');
+      return;
+    }
+    AzanDebugLog.write('scheduleAzanNotifications: called');
 
     try {
       // Cancel existing azan notifications and alarms
@@ -916,6 +950,10 @@ class AzanService {
 
         // Get file path for this prayer's azan audio
         final filePath = await _getAzanFilePath(isFajr: isFajr);
+        final fileExists = filePath != null && await File(filePath).exists();
+        AzanDebugLog.write(
+          'schedule $prayerName at $prayerTime filePath=$filePath fileExists=$fileExists',
+        );
 
         // ── PRIMARY: Schedule native Android alarm (plays audio via ForegroundService) ──
         try {
@@ -929,11 +967,13 @@ class AzanService {
             '⏰ Native alarm scheduled for $prayerName at $prayerTime (id=$alarmId)',
             name: 'AzanService',
           );
+          AzanDebugLog.write('native alarm OK for $prayerName alarmId=$alarmId triggerMs=${prayerTime.millisecondsSinceEpoch}');
         } catch (e) {
           developer.log(
             '⚠️ Native alarm scheduling failed for $prayerName: $e',
             name: 'AzanService',
           );
+          AzanDebugLog.write('native alarm FAILED for $prayerName: $e');
         }
 
         // ── FALLBACK: Schedule zonedSchedule notification (visual only) ──
@@ -1004,14 +1044,81 @@ class AzanService {
 
   /// Cancel all azan notifications and native AlarmManager alarms.
   Future<void> cancelAzanNotifications() async {
+    developer.log('🔕 cancelAzanNotifications() called', name: 'AzanService');
     // Cancel scheduled notifications
     for (int id = 4000; id <= 4006; id++) {
-      await _notificationsPlugin.cancel(id);
+      try {
+        await _notificationsPlugin.cancel(id);
+        developer.log('🔕 Cancelled notification id=$id', name: 'AzanService');
+      } catch (e, st) {
+        developer.log(
+          '❌ Failed to cancel notification id=$id',
+          name: 'AzanService',
+          error: e,
+          stackTrace: st,
+        );
+      }
     }
     // Cancel native AlarmManager alarms
     try {
       await _azanChannel.invokeMethod('cancelAllAzan');
-    } catch (_) {}
+      developer.log('🔕 Native cancelAllAzan succeeded', name: 'AzanService');
+    } catch (e, st) {
+      developer.log(
+        '❌ Native cancelAllAzan failed',
+        name: 'AzanService',
+        error: e,
+        stackTrace: st,
+      );
+    }
+  }
+
+  // ── Test / Debug helpers ──
+
+  /// Immediately plays the azan through Flutter's audio player.
+  /// Bypasses the azanEnabled guard so it works even when disabled.
+  Future<void> testFlutterAzan() async {
+    AzanDebugLog.write('TEST: testFlutterAzan() called');
+    try {
+      final muazzin = selectedMuazzin;
+      final filePath = await _getExtractedPath(muazzin, isFajr: false);
+      if (filePath == null) {
+        AzanDebugLog.write('TEST: no file path for muazzin=${muazzin.id}');
+        return;
+      }
+      final exists = await File(filePath).exists();
+      AzanDebugLog.write('TEST: Flutter path=$filePath exists=$exists');
+      if (!exists) return;
+      await _audioPlayer.setFilePath(filePath);
+      await _audioPlayer.setVolume(1.0);
+      await _audioPlayer.play();
+      AzanDebugLog.write('TEST: Flutter audio.play() called OK');
+    } catch (e) {
+      AzanDebugLog.write('TEST: testFlutterAzan EXCEPTION: $e');
+    }
+  }
+
+  /// Schedules a native AlarmManager alarm [delaySeconds] from now.
+  /// Fires the full native chain: BroadcastReceiver → ForegroundService → MediaPlayer.
+  Future<String> testNativeAlarm({int delaySeconds = 15}) async {
+    AzanDebugLog.write('TEST: testNativeAlarm() delay=$delaySeconds');
+    try {
+      final filePath = await _getAzanFilePath(isFajr: false);
+      final exists = await File(filePath).exists();
+      AzanDebugLog.write('TEST: native path=$filePath exists=$exists');
+      final triggerMs = DateTime.now().millisecondsSinceEpoch + (delaySeconds * 1000);
+      await _azanChannel.invokeMethod('scheduleAzan', {
+        'alarmId': 9999,
+        'triggerAtMs': triggerMs,
+        'filePath': filePath,
+        'prayerName': 'اختبار الأذان',
+      });
+      AzanDebugLog.write('TEST: native alarm scheduled for ${delaySeconds}s from now');
+      return 'تم جدولة الأذان الأصلي بعد $delaySeconds ثانية';
+    } catch (e) {
+      AzanDebugLog.write('TEST: testNativeAlarm FAILED: $e');
+      return 'فشل جدولة الأذان الأصلي: $e';
+    }
   }
 
   /// Dispose resources.

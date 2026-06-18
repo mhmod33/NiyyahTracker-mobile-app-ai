@@ -4,6 +4,7 @@ import '../../core/app_colors.dart';
 import '../../core/directional_icon.dart';
 import '../../services/azan_service.dart';
 import 'muazzin_selection_page.dart';
+import 'azan_debug_screen.dart';
 
 TextStyle _f({
   double sz = 14,
@@ -305,6 +306,11 @@ class _AzanSettingsPageState extends State<AzanSettingsPage> {
                           ),
                         ),
 
+                        const SizedBox(height: 20),
+
+                        // Debug Log Button
+                        _DebugLogTile(isDark: isDark),
+
                         const SizedBox(height: 32),
                       ]),
                     ),
@@ -446,6 +452,71 @@ class _SettingsTile extends StatelessWidget {
                 : Colors.black.withOpacity(0.05),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _DebugLogTile extends StatelessWidget {
+  final bool isDark;
+  const _DebugLogTile({required this.isDark});
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const AzanDebugScreen()),
+      ),
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF1A1F1C) : Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isDark
+                ? Colors.white.withOpacity(0.06)
+                : Colors.black.withOpacity(0.04),
+          ),
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+        child: Row(
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: Colors.orange.withOpacity(0.12),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(Icons.bug_report_rounded, color: Colors.orange, size: 20),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'سجل التشخيص',
+                    style: _f(
+                      sz: 16,
+                      fw: FontWeight.w600,
+                      c: isDark ? Colors.white : AppColors.textPrimary,
+                    ),
+                  ),
+                  Text(
+                    'عرض سجلات الأذان للمساعدة في التشخيص',
+                    style: _f(
+                      sz: 12,
+                      c: isDark ? Colors.white60 : AppColors.textSecondary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Icons.chevron_left_rounded, color: Colors.orange),
+          ],
+        ),
       ),
     );
   }
