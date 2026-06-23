@@ -15,11 +15,9 @@ class AdminNotificationService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
   StreamSubscription<QuerySnapshot>? _subscription;
   String? _lastSeenId;
-  DateTime? _listeningSince;
 
   void startListening() {
     _subscription?.cancel();
-    _listeningSince = DateTime.now();
 
     _subscription = _db
         .collection('admin_notifications')
@@ -37,24 +35,7 @@ class AdminNotificationService {
             await _loadLastSeenId();
             if (id == _lastSeenId) return;
 
-            final createdAt = data['createdAt'];
-            final createdAtDate = createdAt is Timestamp
-                ? createdAt.toDate()
-                : null;
-            final isOldNotification =
-                createdAtDate != null &&
-                _listeningSince != null &&
-                createdAtDate.isBefore(_listeningSince!);
-
             await _markNotificationSeen(id);
-
-            if (isOldNotification) {
-              developer.log(
-                'Skipping old admin notification: $id',
-                name: 'AdminNotificationService',
-              );
-              return;
-            }
 
             final title =
                 data['title'] as String? ?? 'إشعار من الإدارة';
@@ -82,7 +63,6 @@ class AdminNotificationService {
   void stopListening() {
     _subscription?.cancel();
     _subscription = null;
-    _listeningSince = null;
   }
 
   Future<bool> sendNotification({

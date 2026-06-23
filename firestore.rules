@@ -37,6 +37,20 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // FCM tokens for push notifications — any authenticated user can manage their tokens.
+    // Token strings are opaque and harmless in isolation; only Cloud Functions
+    // (using Admin SDK, bypassing rules) can send actual push messages.
+    match /fcm_tokens/{tokenId} {
+      allow read, create, delete: if isSignedIn();
+      allow update: if isSignedIn();
+    }
+
+    // App config (latest version, etc.) — any authenticated user can read, only admin can write
+    match /app_config/{docId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
     // Shared audio library — public read; write for admin or canUpload users
     match /library_snippets/{trackId} {
       allow read: if true;

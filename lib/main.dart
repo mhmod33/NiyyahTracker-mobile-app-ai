@@ -18,6 +18,10 @@ import 'services/quran_audio_service.dart';
 import 'services/reciter_download_service.dart';
 import 'services/wird_service.dart';
 import 'services/wird_notification_service.dart';
+import 'services/fcm_service.dart';
+import 'services/app_update_service.dart';
+import 'services/admin_notification_service.dart';
+import 'services/admin_background_checker.dart';
 
 /// App-wide font helper — IBM Plex Sans Arabic everywhere.
 TextStyle _font({
@@ -115,6 +119,18 @@ Future<void> _deferredStartupWork() async {
   try {
     await WirdNotificationService().init();
     await WirdNotificationService().scheduleAll();
+  } catch (_) {}
+  try {
+    await FcmService().init();
+  } catch (_) {}
+  try {
+    await AppUpdateService().checkForUpdate();
+  } catch (_) {}
+  try {
+    AdminNotificationService().startListening();
+  } catch (_) {}
+  try {
+    await registerAdminBackgroundCheck();
   } catch (_) {}
 }
 
