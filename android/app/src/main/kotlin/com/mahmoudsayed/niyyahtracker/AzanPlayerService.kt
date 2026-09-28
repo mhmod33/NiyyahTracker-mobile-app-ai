@@ -7,7 +7,6 @@ import android.app.PendingIntent
 import android.app.Service
 import android.content.Context
 import android.content.Intent
-import android.database.ContentObserver
 import android.media.AudioManager
 import android.media.AudioAttributes
 import android.media.MediaPlayer
@@ -16,7 +15,6 @@ import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
 import android.os.PowerManager
-import android.provider.Settings
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import java.io.File
@@ -31,9 +29,10 @@ class AzanPlayerService : Service() {
 
     private var mediaPlayer: MediaPlayer? = null
     private var wakeLock: PowerManager.WakeLock? = null
-    private var volumeObserver: ContentObserver? = null
-    private var lastAlarmVolume: Int = -1
-    private var lastMusicVolume: Int = -1
+    private var volumeHandler: Handler? = null
+    private var volumeCheckRunnable: Runnable? = null
+    private var initialAlarmVolume: Int = -1
+    private var initialMusicVolume: Int = -1
     private var isStopping = false
 
     override fun onBind(intent: Intent?): IBinder? = null
@@ -110,7 +109,7 @@ class AzanPlayerService : Service() {
                 start()
             }
             AzanAlarmReceiver.writeLog(this, "AzanPlayerService: MediaPlayer.start() called OK")
-            registerVolumeDownObserver()
+            startVolumeMonitoring()
         } catch (e: Exception) {
             Log.e("AzanPlayerService", "playAzan exception: $e")
             AzanAlarmReceiver.writeLog(this, "AzanPlayerService: playAzan EXCEPTION: $e")
@@ -122,7 +121,7 @@ class AzanPlayerService : Service() {
         if (isStopping) return
         isStopping = true
         AzanAlarmReceiver.writeLog(this, "AzanPlayerService.stopPlayback called")
-        unregisterVolumeDownObserver()
+        stopVolumeMonitoring()
         try {
             mediaPlayer?.apply {
                 if (isPlaying) stop()
@@ -146,52 +145,65 @@ class AzanPlayerService : Service() {
         stopSelf()
     }
 
-    private fun registerVolumeDownObserver() {
-        unregisterVolumeDownObserver()
+    /// Periodically check system volume. If volume drops to 0 while playing,
+    /// assume the user pressed volume down to stop the azan.
+    private fun startVolumeMonitoring() {
+        stopVolumeMonitoring()
         try {
             val audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
-            lastAlarmVolume = audioManager.getStreamVolume(AudioManager.STREAM_ALARM)
-            lastMusicVolume = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
-            AzanAlarmReceiver.writeLog(this, "AzanPlayerService: alarm volume=$lastAlarmVolume music volume=$lastMusicVolume")
-            volumeObserver = object : ContentObserver(Handler(Looper.getMainLooper())) {
-                override fun onChange(selfChange: Boolean) {
-                    super.onChange(selfChange)
-                    stopIfVolumeWasLowered()
+            initialAlarmVolume = audioManager.getStreamVolume(AudioManager.STREAM_ALARM)
+            initialMusicVolume = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
+            AzanAlarmReceiver.writeLog(
+                this,
+                "AzanPlayerService: initial alarm vol=$initialAlarmVolume music vol=$initialMusicVolume"
+            )
+
+            volumeHandler = Handler(Looper.getMainLooper())
+            volumeCheckRunnable = object : Runnable {
+                override fun run() {
+                    if (isStopping || mediaPlayer == null) return
+                    val audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
+                    val alarmVol = audioManager.getStreamVolume(AudioManager.STREAM_ALARM)
+                    val musicVol = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
+
+                    // If volume dropped to 0 from a non-zero initial, stop
+                    if ((initialAlarmVolume > 0 && alarmVol == 0) ||
+                        (initialMusicVolume > 0 && musicVol == 0)) {
+                        AzanAlarmReceiver.writeLog(
+                            this@AzanPlayerService,
+                            "AzanPlayerService: volume=0 → stopping azan"
+                        )
+                        stopPlayback()
+                        return
+                    }
+
+                    // Also detect rapid decrease: if volume dropped by 2+ steps at once
+                    if ((initialAlarmVolume >= 0 && alarmVol < initialAlarmVolume - 1) ||
+                        (initialMusicVolume >= 0 && musicVol < initialMusicVolume - 1)) {
+                        AzanAlarmReceiver.writeLog(
+                            this@AzanPlayerService,
+                            "AzanPlayerService: rapid volume decrease → stopping azan"
+                        )
+                        stopPlayback()
+                        return
+                    }
+
+                    // Check again in 400ms
+                    volumeHandler?.postDelayed(this, 400)
                 }
             }
-            contentResolver.registerContentObserver(
-                Settings.System.CONTENT_URI,
-                true,
-                volumeObserver!!
-            )
+            volumeHandler?.post(volumeCheckRunnable!!)
         } catch (_: Exception) {}
     }
 
-    private fun unregisterVolumeDownObserver() {
+    private fun stopVolumeMonitoring() {
         try {
-            volumeObserver?.let { contentResolver.unregisterContentObserver(it) }
+            volumeCheckRunnable?.let { volumeHandler?.removeCallbacks(it) }
         } catch (_: Exception) {}
-        volumeObserver = null
-        lastAlarmVolume = -1
-        lastMusicVolume = -1
-    }
-
-    private fun stopIfVolumeWasLowered() {
-        try {
-            if (isStopping || mediaPlayer == null) return
-            val audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
-            val currentAlarmVolume = audioManager.getStreamVolume(AudioManager.STREAM_ALARM)
-            val currentMusicVolume = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
-            val alarmLowered = lastAlarmVolume >= 0 && currentAlarmVolume < lastAlarmVolume
-            val musicLowered = lastMusicVolume >= 0 && currentMusicVolume < lastMusicVolume
-            if (alarmLowered || musicLowered) {
-                AzanAlarmReceiver.writeLog(this, "AzanPlayerService: volume lowered — stopping")
-                stopPlayback()
-                return
-            }
-            lastAlarmVolume = currentAlarmVolume
-            lastMusicVolume = currentMusicVolume
-        } catch (_: Exception) {}
+        volumeCheckRunnable = null
+        volumeHandler = null
+        initialAlarmVolume = -1
+        initialMusicVolume = -1
     }
 
     private fun createNotificationChannel() {
@@ -205,6 +217,7 @@ class AzanPlayerService : Service() {
                 setSound(null, null) // Sound is played via MediaPlayer
                 enableVibration(true)
                 lockscreenVisibility = Notification.VISIBILITY_PUBLIC
+                setShowBadge(false)
             }
             val manager = getSystemService(NotificationManager::class.java)
             manager.createNotificationChannel(channel)

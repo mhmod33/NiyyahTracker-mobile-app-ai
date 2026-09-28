@@ -37,7 +37,7 @@ import '../../services/wird_service.dart';
 import '../study_tracker/study_tracker_page.dart';
 import '../../models/study_track_model.dart';
 import '../../services/study_track_service.dart';
-import '../../services/admin_notification_service.dart';
+
 
 TextStyle _f({
   double sz = 14,
@@ -89,9 +89,6 @@ class _DashboardPageState extends State<DashboardPage>
     _loadTodaySummary();
     _loadWirdData();
     _loadStudyData();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) AdminNotificationService().startListening();
-    });
   }
 
   Future<void> _loadAzkarPref() async {
@@ -121,7 +118,6 @@ class _DashboardPageState extends State<DashboardPage>
 
   @override
   void dispose() {
-    AdminNotificationService().stopListening();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }

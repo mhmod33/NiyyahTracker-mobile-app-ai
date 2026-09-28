@@ -57,6 +57,9 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
       });
     }
 
+    // Track Al-Kahf reading on Fridays
+    _maybeTrackKahf(_currentPage);
+
     // Start wird session tracking
     _startWirdSession();
   }
@@ -309,6 +312,27 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
     });
   }
 
+  // ─── Al-Kahf Friday tracking ───
+  void _maybeTrackKahf(int pageIndex) {
+    final pageNum = pageIndex + 1;
+    try {
+      final pageData = quran.getPageData(pageNum);
+      if (pageData.any((d) => d['surah'] == 18)) {
+        _trackKahfFridayReading();
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _trackKahfFridayReading() async {
+    final now = DateTime.now();
+    if (now.weekday != DateTime.friday) return;
+    final dayKey = '${now.year}-${now.month}-${now.day}';
+    final box = await Hive.openBox('kahf_tracker');
+    if (!box.containsKey(dayKey)) {
+      await box.put(dayKey, {'timestamp': now.millisecondsSinceEpoch});
+    }
+  }
+
   /// Marks the current page as completed (reading rate: 30 sec/page).
   /// Updates the wird record live, restarts the session anchor at the next
   /// page so subsequent swipes don't double-count, and shows a confirmation.
@@ -364,6 +388,7 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
                 physics: const _SinglePagePhysics(),
                 onPageChanged: (i) {
                   setState(() => _currentPage = i);
+                  _maybeTrackKahf(i);
                 },
                 itemBuilder: (ctx, index) => _MushafPageWidget(
                   pageNumber: index + 1,
@@ -469,11 +494,38 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
   }
 
   Widget _buildFooter(bool isDark, Color bgColor, Color subtextColor) {
+    final canPrev = _currentPage > 0;
+    final canNext = _currentPage < 603;
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 4),
+      padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 16),
       color: bgColor,
-      child: Center(
-        child: Text('${_currentPage + 1}', style: GoogleFonts.inter(fontSize: 14, color: subtextColor, fontWeight: FontWeight.bold)),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          // In RTL: right side = previous page (chevron_right →)
+          _navBtn(Icons.chevron_right_rounded, canPrev, isDark, () {
+            _pageController.animateToPage(_currentPage - 1, duration: const Duration(milliseconds: 250), curve: Curves.easeInOut);
+          }),
+          Text('${_currentPage + 1}', style: GoogleFonts.inter(fontSize: 14, color: subtextColor, fontWeight: FontWeight.bold)),
+          // In RTL: left side = next page (chevron_left ←)
+          _navBtn(Icons.chevron_left_rounded, canNext, isDark, () {
+            _pageController.animateToPage(_currentPage + 1, duration: const Duration(milliseconds: 250), curve: Curves.easeInOut);
+          }),
+        ],
+      ),
+    );
+  }
+
+  Widget _navBtn(IconData icon, bool enabled, bool isDark, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: enabled ? onTap : null,
+      child: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: enabled ? AppColors.darkGreen.withValues(alpha: 0.10) : Colors.transparent,
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Icon(icon, size: 22, color: enabled ? AppColors.darkGreen : (isDark ? Colors.white12 : Colors.black12)),
       ),
     );
   }

@@ -5,6 +5,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../config/admin_config.dart';
 import '../services/quran_audio_service.dart';
 import '../services/wird_service.dart';
+import '../services/fcm_service.dart';
 
 /// Centralized authentication provider that manages Firebase Auth state
 /// and user profile data from Firestore.
@@ -42,12 +43,16 @@ class AppAuthProvider extends ChangeNotifier {
         await _loadUserProfile();
         // Scope WirdService data to this user
         WirdService().setUserId(user.uid);
+        // Register FCM push token
+        unawaited(FcmService().registerToken());
         // Shared snippets live in Firestore — refresh after auth is ready.
         unawaited(QuranAudioService().refreshSharedLibrary());
       } else {
         _userProfile = null;
         // Clear user scope on logout
         WirdService().setUserId('');
+        // Remove FCM token on logout
+        unawaited(FcmService().removeToken());
         // Guest mode — shared snippets are public in Firestore.
         unawaited(QuranAudioService().refreshSharedLibrary());
       }
