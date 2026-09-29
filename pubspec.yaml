@@ -78,6 +78,7 @@ dependencies:
   flutter_svg: ^2.0.17
   soundcloud_explode_dart: ^1.1.0
   workmanager: ^0.5.2
+  wakelock_plus: ^1.3.3
 
 
 dev_dependencies:
@@ -126,6 +127,9 @@ flutter:
     - family: KFGQPC Uthmanic Script Hafs
       fonts:
         - asset: "assets/fonts/KFGQPC Uthmanic Script HAFS.otf"
+    - family: Al Mushaf
+      fonts:
+        - asset: "assets/fonts/Al Mushaf Quran.ttf"
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

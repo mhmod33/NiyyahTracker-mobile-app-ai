@@ -61,5 +61,72 @@ service cloud.firestore {
         allow create, update, delete: if canManageLibrary();
       }
     }
+
+    // ── Dawri (Islamic League) ──────────────────────────────────────────────
+    // Helper functions
+    function dawriData(dawriId) {
+      return get(/databases/$(database)/documents/dawri/$(dawriId)).data;
+    }
+
+    match /dawri/{dawriId} {
+      // Any signed-in user can read a dawri (needed for invite-code lookup queries).
+      allow read: if isSignedIn();
+
+      // Only authenticated users can create; they must be the supervisor and in memberIds.
+      allow create: if isSignedIn()
+        && request.resource.data.supervisorId == request.auth.uid
+        && request.auth.uid in request.resource.data.memberIds;
+
+      // Supervisor can update settings/inviteCode.
+      // Members can update memberIds (join — arrayUnion their own uid).
+      allow update: if isSignedIn()
+        && (resource.data.supervisorId == request.auth.uid
+            || request.auth.uid in resource.data.memberIds);
+
+      // Only supervisor can delete the dawri doc itself.
+      allow delete: if isSignedIn()
+        && resource.data.supervisorId == request.auth.uid;
+
+      // Per-member aggregate sub-collection
+      match /members/{memberId} {
+        // Members of the league can read all member docs.
+        allow read: if isSignedIn()
+          && request.auth.uid in dawriData(dawriId).memberIds;
+
+        // A user can create their own member doc; supervisor can create any.
+        allow create: if isSignedIn()
+          && (memberId == request.auth.uid
+              || dawriData(dawriId).supervisorId == request.auth.uid);
+
+        // Members update their own doc; supervisor updates any.
+        allow update: if isSignedIn()
+          && (memberId == request.auth.uid
+              || dawriData(dawriId).supervisorId == request.auth.uid);
+
+        allow delete: if isSignedIn()
+          && (memberId == request.auth.uid
+              || dawriData(dawriId).supervisorId == request.auth.uid);
+      }
+
+      // Daily prayer/extra entry sub-collection
+      match /entries/{entryId} {
+        // Members can read all entries.
+        allow read: if isSignedIn()
+          && request.auth.uid in dawriData(dawriId).memberIds;
+
+        // Entry id must be {userId}_{date} — only that user can write their own entry.
+        allow create, update: if isSignedIn()
+          && request.auth.uid in dawriData(dawriId).memberIds
+          && entryId.matches(request.auth.uid + '_.*');
+
+        allow delete: if isSignedIn()
+          && dawriData(dawriId).supervisorId == request.auth.uid;
+      }
+    }
+
+    // Index doc — maps each user to their list of dawriIds.
+    match /dawri_index/{userId} {
+      allow read, write: if isSignedIn() && request.auth.uid == userId;
+    }
   }
 }

@@ -7,7 +7,6 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart' as uuid;
 import '../../core/app_colors.dart';
-import '../../core/app_models.dart';
 import '../worship/worship_page.dart';
 import '../goals/goals_page.dart';
 import '../plan/smart_plan_page.dart';
@@ -34,6 +33,11 @@ import '../../widgets/mini_player.dart';
 import '../quran/reciter_library_page.dart';
 import '../wird/daily_wird_page.dart';
 import '../../services/wird_service.dart';
+import '../../services/azan_service.dart';
+import '../dawri/dawri_page.dart';
+import '../dawri/dawri_detail_page.dart';
+import '../../services/dawri_service.dart';
+import '../../models/dawri_model.dart';
 import '../study_tracker/study_tracker_page.dart';
 import '../../models/study_track_model.dart';
 import '../../services/study_track_service.dart';
@@ -79,6 +83,15 @@ class _DashboardPageState extends State<DashboardPage>
   int _wirdStreak = 0;
   final StudyTrackService _studyService = StudyTrackService();
   List<StudyPlaylist> _studyPlaylists = [];
+  // Dawri (leagues) dashboard state
+  final DawriService _dawriService = DawriService();
+  Dawri? _featuredDawri;
+  List<DawriMemberWeekStats> _featuredLeaderboard = [];
+  bool _loadingDawri = false;
+  // Next prayer state
+  String _nextPrayerName = '';
+  DateTime? _nextPrayerTime;
+  bool _loadingPrayer = false;
 
   @override
   void initState() {
@@ -89,6 +102,8 @@ class _DashboardPageState extends State<DashboardPage>
     _loadTodaySummary();
     _loadWirdData();
     _loadStudyData();
+    _loadDawriWidget();
+    _loadNextPrayer();
   }
 
   Future<void> _loadAzkarPref() async {
@@ -127,6 +142,7 @@ class _DashboardPageState extends State<DashboardPage>
     if (state == AppLifecycleState.resumed) {
       _loadWirdData();
       _loadTodaySummary();
+      _loadNextPrayer();
     }
   }
 
@@ -160,12 +176,53 @@ class _DashboardPageState extends State<DashboardPage>
       _loadWirdData(),
     ]);
     _loadStudyData();
+    _loadDawriWidget();
+    _loadNextPrayer();
   }
 
   Future<void> _loadStudyData() async {
     await _studyService.init();
     if (mounted) {
       setState(() => _studyPlaylists = _studyService.getAllPlaylists());
+    }
+  }
+
+  Future<void> _loadDawriWidget() async {
+    final userId = context.read<AppAuthProvider>().userId;
+    if (userId.isEmpty) return;
+    setState(() => _loadingDawri = true);
+    try {
+      final list = await _dawriService.getUserDawriList(userId);
+      if (list.isEmpty) {
+        if (mounted) setState(() { _featuredDawri = null; _loadingDawri = false; });
+        return;
+      }
+      // Pick first active league as featured
+      final dawri = list.firstWhere((d) => d.isActive, orElse: () => list.first);
+      final board = await _dawriService.getLeaderboard(dawri: dawri, period: 'today');
+      if (mounted) setState(() {
+        _featuredDawri = dawri;
+        _featuredLeaderboard = board;
+        _loadingDawri = false;
+      });
+    } catch (_) {
+      if (mounted) setState(() => _loadingDawri = false);
+    }
+  }
+
+  Future<void> _loadNextPrayer() async {
+    setState(() => _loadingPrayer = true);
+    try {
+      final info = await AzanService().getNextPrayerInfo();
+      if (mounted) {
+        setState(() {
+          _nextPrayerName = info['name'] as String? ?? '';
+          _nextPrayerTime = info['time'] as DateTime?;
+          _loadingPrayer = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _loadingPrayer = false);
     }
   }
 
@@ -450,6 +507,11 @@ class _DashboardPageState extends State<DashboardPage>
                 SliverToBoxAdapter(child: _buildDailySummaryCard(isDark)),
               ],
 
+              // ── Next Prayer + Quick Actions Widget ──
+              SliverToBoxAdapter(
+                child: _buildNextPrayerWidget(isDark),
+              ),
+
               // ── Daily Wird Section ──
               SliverToBoxAdapter(
                 child: _SectionTitle(
@@ -469,6 +531,19 @@ class _DashboardPageState extends State<DashboardPage>
                 ),
               ),
               SliverToBoxAdapter(child: _buildStudyTrackerSection(isDark)),
+
+              // ── Leagues (Dawri) Widget ──
+              if (!isGuest) ...[
+                SliverToBoxAdapter(
+                  child: _SectionTitle(
+                    title: 'الأصدقاء',
+                    icon: Icons.emoji_events_rounded,
+                  ),
+                ),
+                SliverToBoxAdapter(
+                  child: _buildDawriWidget(isDark),
+                ),
+              ],
 
               // ── Quick Access Section ──
               SliverToBoxAdapter(
@@ -1563,6 +1638,609 @@ class _DashboardPageState extends State<DashboardPage>
     );
   }
 
+  // ── Next Prayer + Quick Actions Widget ────────────────────────────────────
+  Widget _buildNextPrayerWidget(bool isDark) {
+    final now = DateTime.now();
+    final prayerTime = _nextPrayerTime;
+
+    // Format time as "٤:١٠ م"
+    String formatTime(DateTime t) {
+      final hour = t.hour > 12 ? t.hour - 12 : (t.hour == 0 ? 12 : t.hour);
+      final min = t.minute.toString().padLeft(2, '0');
+      final period = t.hour >= 12 ? 'م' : 'ص';
+      return '$hour:$min $period';
+    }
+
+    // Format countdown as "خلال ١س ٤٧د"
+    String formatCountdown(DateTime t) {
+      final diff = t.difference(now);
+      if (diff.isNegative) return '';
+      final hours = diff.inHours;
+      final mins = diff.inMinutes % 60;
+      if (hours > 0) return 'خلال ${hours}س ${mins}د';
+      return 'خلال ${mins}د';
+    }
+
+    // Check if azkar was done today
+    final azkarDone = _azkarChecked;
+    // Check if quran/wird was registered today
+    final wirdDone = (_wirdRecord?.pagesRead ?? 0) > 0;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+      child: IntrinsicHeight(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // ── Left: Next prayer card ──────────────────────────────────────
+            Expanded(
+              flex: 5,
+              child: GestureDetector(
+                onTap: () => _to(const PrayerTimesPage()),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 18, vertical: 20),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topRight,
+                      end: Alignment.bottomLeft,
+                      colors: isDark
+                          ? [const Color(0xFF1A4D3A), const Color(0xFF0D2818)]
+                          : [const Color(0xFF4EBFA0), const Color(0xFF2A9D82)],
+                    ),
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF2A9D82).withOpacity(0.3),
+                        blurRadius: 12,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Stack(
+                    children: [
+                      // Decorative crescent
+                      Positioned(
+                        right: -8,
+                        top: 0,
+                        child: Opacity(
+                          opacity: 0.15,
+                          child: Text(
+                            '☽',
+                            style: TextStyle(
+                              fontSize: 60,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            'الصلاة القادمة',
+                            style: _f(sz: 11, c: Colors.white70, fw: FontWeight.w500),
+                          ),
+                          const SizedBox(height: 6),
+                          _loadingPrayer
+                              ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    color: Colors.white54, strokeWidth: 2))
+                              : Text(
+                                  _nextPrayerName.isEmpty ? '...' : _nextPrayerName,
+                                  style: _f(
+                                    sz: 26,
+                                    fw: FontWeight.w900,
+                                    c: Colors.white,
+                                  ),
+                                ),
+                          const SizedBox(height: 8),
+                          if (prayerTime != null && !_loadingPrayer) ...[
+                            Text(
+                              formatTime(prayerTime),
+                              style: _f(
+                                  sz: 15, fw: FontWeight.w700, c: Colors.white),
+                            ),
+                            const SizedBox(height: 3),
+                            Text(
+                              formatCountdown(prayerTime),
+                              style: _f(sz: 11, c: Colors.white70),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            // ── Right: Quick action chips ───────────────────────────────────
+            Expanded(
+              flex: 5,
+              child: Column(
+                children: [
+                  // Azkar chip
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () => _to(const AzkarLibraryPage()),
+                      child: Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 14, vertical: 12),
+                        decoration: BoxDecoration(
+                          color: azkarDone
+                              ? AppColors.paleGreen
+                              : const Color(0xFFFFF0F0),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(
+                            color: azkarDone
+                                ? AppColors.lightGreen.withOpacity(0.5)
+                                : Colors.red.withOpacity(0.15),
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(6),
+                              decoration: BoxDecoration(
+                                color: azkarDone
+                                    ? AppColors.lightGreen.withOpacity(0.2)
+                                    : Colors.red.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Icon(
+                                azkarDone
+                                    ? Icons.check_circle_rounded
+                                    : Icons.warning_amber_rounded,
+                                size: 16,
+                                color: azkarDone
+                                    ? AppColors.darkGreen
+                                    : Colors.red.shade400,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                azkarDone
+                                    ? 'قرأت الأذكار اليوم'
+                                    : 'لم تقرأ الأذكار اليوم',
+                                style: _f(
+                                  sz: 11,
+                                  fw: FontWeight.w700,
+                                  c: azkarDone
+                                      ? AppColors.darkGreen
+                                      : Colors.red.shade600,
+                                ),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            Icon(
+                              Icons.chevron_left_rounded,
+                              size: 16,
+                              color: azkarDone
+                                  ? AppColors.darkGreen.withOpacity(0.5)
+                                  : Colors.red.withOpacity(0.4),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  // Quran/Wird chip
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () async {
+                        await Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (_) => const DailyWirdPage()),
+                        );
+                        _loadWirdData();
+                      },
+                      child: Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 14, vertical: 12),
+                        decoration: BoxDecoration(
+                          color: wirdDone
+                              ? AppColors.paleGreen
+                              : const Color(0xFFFFF8EC),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(
+                            color: wirdDone
+                                ? AppColors.lightGreen.withOpacity(0.5)
+                                : AppColors.gold.withOpacity(0.4),
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(6),
+                              decoration: BoxDecoration(
+                                color: wirdDone
+                                    ? AppColors.lightGreen.withOpacity(0.2)
+                                    : AppColors.gold.withOpacity(0.15),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Icon(
+                                Icons.menu_book_rounded,
+                                size: 16,
+                                color: wirdDone
+                                    ? AppColors.darkGreen
+                                    : AppColors.gold,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                wirdDone
+                                    ? 'الورد: ${_wirdRecord!.pagesRead} صفحة ✓'
+                                    : 'اضغط لتسجيل القر...',
+                                style: _f(
+                                  sz: 11,
+                                  fw: FontWeight.w700,
+                                  c: wirdDone
+                                      ? AppColors.darkGreen
+                                      : AppColors.gold,
+                                ),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            Icon(
+                              Icons.chevron_left_rounded,
+                              size: 16,
+                              color: wirdDone
+                                  ? AppColors.darkGreen.withOpacity(0.5)
+                                  : AppColors.gold.withOpacity(0.6),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ── Dawri (Leagues) Dashboard Widget ──────────────────────────────────────
+  Widget _buildDawriWidget(bool isDark) {
+    final cardBg = isDark ? const Color(0xFF151C17) : Colors.white;
+
+    // Loading state
+    if (_loadingDawri) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: Container(
+          height: 100,
+          decoration: BoxDecoration(
+            color: cardBg,
+            borderRadius: BorderRadius.circular(18),
+          ),
+          child: const Center(
+            child: CircularProgressIndicator(
+                color: AppColors.darkGreen, strokeWidth: 2),
+          ),
+        ),
+      );
+    }
+
+    // No leagues yet
+    if (_featuredDawri == null) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: GestureDetector(
+          onTap: () async {
+            await Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const DawriPage()),
+            );
+            _loadDawriWidget();
+          },
+          child: Container(
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(
+              color: cardBg,
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(
+                color: AppColors.gold.withOpacity(0.3),
+              ),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AppColors.gold.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: const Icon(Icons.emoji_events_rounded,
+                      color: AppColors.gold, size: 26),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'ابدأ دورياً مع أصدقائك',
+                        style: _f(
+                          sz: 15,
+                          fw: FontWeight.w800,
+                          c: isDark ? Colors.white : AppColors.darkGreen,
+                        ),
+                      ),
+                      Text(
+                        'تنافسوا على الصلوات والعبادات',
+                        style: _f(sz: 12, c: AppColors.gray),
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppColors.gold,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(Icons.add_rounded,
+                      color: Colors.white, size: 18),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    // Featured league card
+    final dawri = _featuredDawri!;
+    final board = _featuredLeaderboard;
+    final me = context.read<AppAuthProvider>().userId;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: GestureDetector(
+        onTap: () async {
+          await Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => DawriDetailPage(dawriId: dawri.id),
+            ),
+          );
+          _loadDawriWidget();
+        },
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: cardBg,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(
+              color: AppColors.darkGreen.withOpacity(isDark ? 0.3 : 0.12),
+            ),
+            boxShadow: isDark
+                ? []
+                : [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.04),
+                      blurRadius: 10,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header row: league name + "عرض الدوري المفضل"
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'عرض الدوري المفضل',
+                      style: _f(
+                        sz: 13,
+                        c: isDark ? Colors.white54 : AppColors.gray,
+                      ),
+                    ),
+                  ),
+                  Text(
+                    dawri.name,
+                    style: _f(
+                      sz: 15,
+                      fw: FontWeight.w800,
+                      c: isDark ? Colors.white : AppColors.darkGreen,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 14),
+
+              // Member avatars with rank numbers and points
+              board.isEmpty
+                  ? Center(
+                      child: Text(
+                        'لا يوجد أعضاء بعد',
+                        style: _f(sz: 13, c: AppColors.gray),
+                      ),
+                    )
+                  : SizedBox(
+                      height: 84,
+                      child: ListView.separated(
+                        scrollDirection: Axis.horizontal,
+                        physics: const BouncingScrollPhysics(),
+                        itemCount:
+                            board.length > 6 ? 6 : board.length,
+                        separatorBuilder: (_, __) =>
+                            const SizedBox(width: 14),
+                        itemBuilder: (ctx, i) {
+                          final stat = board[i];
+                          final isMe = stat.userId == me;
+                          final avatarColors = [
+                            AppColors.darkGreen, AppColors.midGreen,
+                            Colors.purple, Colors.blue,
+                            Colors.orange, Colors.pink,
+                          ];
+                          final color = avatarColors[
+                              stat.name.codeUnits.fold(0, (a, b) => a + b) %
+                                  avatarColors.length];
+                          return Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Stack(
+                                clipBehavior: Clip.none,
+                                children: [
+                                  // Avatar circle
+                                  Container(
+                                    width: 46,
+                                    height: 46,
+                                    decoration: BoxDecoration(
+                                      color: color,
+                                      shape: BoxShape.circle,
+                                      border: Border.all(
+                                        color: isMe
+                                            ? AppColors.gold
+                                            : Colors.transparent,
+                                        width: 2.5,
+                                      ),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: color.withOpacity(0.35),
+                                          blurRadius: 6,
+                                          offset: const Offset(0, 2),
+                                        ),
+                                      ],
+                                    ),
+                                    child: Center(
+                                      child: Text(
+                                        stat.name.isNotEmpty
+                                            ? stat.name[0].toUpperCase()
+                                            : '؟',
+                                        style: _f(
+                                            sz: 16,
+                                            fw: FontWeight.bold,
+                                            c: Colors.white),
+                                      ),
+                                    ),
+                                  ),
+                                  // Rank badge
+                                  if (i < 3)
+                                    Positioned(
+                                      top: -6,
+                                      right: -6,
+                                      child: Text(
+                                        i == 0
+                                            ? '🥇'
+                                            : i == 1
+                                                ? '🥈'
+                                                : '🥉',
+                                        style:
+                                            const TextStyle(fontSize: 14),
+                                      ),
+                                    )
+                                  else
+                                    Positioned(
+                                      top: -4,
+                                      right: -4,
+                                      child: Container(
+                                        width: 18,
+                                        height: 18,
+                                        decoration: BoxDecoration(
+                                          color: AppColors.gray,
+                                          shape: BoxShape.circle,
+                                          border: Border.all(
+                                              color: cardBg, width: 1.5),
+                                        ),
+                                        child: Center(
+                                          child: Text(
+                                            '${i + 1}',
+                                            style: _f(
+                                                sz: 9,
+                                                fw: FontWeight.w900,
+                                                c: Colors.white),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                ],
+                              ),
+                              const SizedBox(height: 5),
+                              // Name
+                              SizedBox(
+                                width: 48,
+                                child: Text(
+                                  isMe ? 'أنت' : stat.name.split(' ').first,
+                                  style: _f(
+                                    sz: 10,
+                                    fw: FontWeight.w700,
+                                    c: isMe
+                                        ? AppColors.gold
+                                        : isDark
+                                            ? Colors.white70
+                                            : AppColors.textPrimary,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              // Points
+                              Text(
+                                '${stat.weekPoints}',
+                                style: _f(
+                                  sz: 11,
+                                  fw: FontWeight.w900,
+                                  c: isDark
+                                      ? Colors.white54
+                                      : AppColors.gray,
+                                ),
+                              ),
+                            ],
+                          );
+                        },
+                      ),
+                    ),
+
+              const SizedBox(height: 12),
+
+              // Footer: today's date label
+              Row(
+                children: [
+                  Icon(Icons.calendar_today_rounded,
+                      size: 12,
+                      color: AppColors.gray.withOpacity(0.6)),
+                  const SizedBox(width: 5),
+                  Text(
+                    _getArabicDate(),
+                    style: _f(sz: 11, c: AppColors.gray),
+                  ),
+                  const Spacer(),
+                  Text(
+                    'اليوم • بالنقاط',
+                    style: _f(
+                      sz: 11,
+                      fw: FontWeight.w700,
+                      c: isDark ? Colors.white54 : AppColors.darkGreen,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildDailySummaryCard(bool isDark) {
     if (_isLoadingSummary) {
       return const Padding(
@@ -2377,10 +3055,13 @@ class _ModernNavBar extends StatelessWidget {
                 onTap: () => onTap(0),
               ),
               _NavButton(
-                icon: Icons.mosque_rounded,
-                label: 'المساجد',
+                icon: Icons.emoji_events_rounded,
+                label: 'الدوريات',
                 selected: currentIndex == 1,
-                onTap: () => NearbyMosquesPage.show(context),
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const DawriPage()),
+                ),
               ),
               _NavButton(
                 icon: Icons.auto_stories_rounded,
@@ -2392,9 +3073,18 @@ class _ModernNavBar extends StatelessWidget {
                 ),
               ),
               _NavButton(
-                icon: isGuest ? Icons.login_rounded : Icons.person_rounded,
-                label: isGuest ? 'تسجيل الدخول' : 'حسابي',
+                icon: Icons.explore_rounded,
+                label: 'القبلة',
                 selected: currentIndex == 3,
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const QiblaPage()),
+                ),
+              ),
+              _NavButton(
+                icon: isGuest ? Icons.login_rounded : Icons.person_rounded,
+                label: isGuest ? 'تسجيل الدخول' : 'المزيد',
+                selected: currentIndex == 4,
                 onTap: () => Navigator.push(
                   context,
                   MaterialPageRoute(

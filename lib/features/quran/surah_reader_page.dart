@@ -72,6 +72,7 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
       final userId = context.read<AppAuthProvider>().userId;
       if (userId.isNotEmpty) {
         _wirdService.setUserId(userId);
+        setState(() {});
       }
     }
     if (_wirdService.hasUser) {
@@ -408,11 +409,17 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
   Widget _buildHeader(int page, bool isDark, Color bgColor, Color textColor, Color subtextColor) {
     final data = quran.getPageData(page).first;
     final s = data['surah'] as int;
-    final j = quran.getJuzNumber(s, data['start']);
+    final startVerse = data['start'] as int;
+    final j = quran.getJuzNumber(s, startVerse);
     final h = ((j - 1) * 2 + 1);
     final audioService = QuranAudioService();
     final isPlayingThisSurah = audioService.state.currentSurah == s &&
         audioService.state.isPlaying;
+
+    // Use Muhaf font for surah name on regular pages;
+    // skip for Al-Fatihah (s==1) and pages that start a new surah (startVerse==1)
+    final bool useMushafFont = !(s == 1 || startVerse == 1);
+    const double mushafHeaderFontSize = 14.0;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
@@ -424,7 +431,17 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
             onTap: () => Navigator.pop(context),
             child: DirectionalIcon(isBack: true, size: 18, color: isDark ? Colors.white70 : AppColors.textSecondary),
           ),
-          Text(quran.getSurahNameArabic(s), style: GoogleFonts.amiri(color: textColor, fontWeight: FontWeight.bold, fontSize: 14)),
+          Text(
+            quran.getSurahNameArabic(s),
+            style: useMushafFont
+                ? TextStyle(
+                    fontFamily: 'Al Mushaf',
+                    fontSize: mushafHeaderFontSize,
+                    fontWeight: FontWeight.bold,
+                    color: textColor,
+                  )
+                : GoogleFonts.amiri(color: textColor, fontWeight: FontWeight.bold, fontSize: mushafHeaderFontSize),
+          ),
           Text('Juz $j', style: GoogleFonts.inter(color: subtextColor, fontSize: 12)),
           Text('Hizb $h', style: GoogleFonts.inter(color: subtextColor, fontSize: 12)),
           // Audio button
@@ -496,6 +513,13 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
   Widget _buildFooter(bool isDark, Color bgColor, Color subtextColor) {
     final canPrev = _currentPage > 0;
     final canNext = _currentPage < 603;
+    // Determine if this page starts a new surah or is Al-Fatihah
+    final pageData = quran.getPageData(_currentPage + 1).first;
+    final s = pageData['surah'] as int;
+    final startVerse = pageData['start'] as int;
+    final bool useMushafFont = !(s == 1 || startVerse == 1);
+    const double mushafFooterFontSize = 14.0;
+
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 16),
       color: bgColor,
@@ -506,7 +530,17 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
           _navBtn(Icons.chevron_right_rounded, canPrev, isDark, () {
             _pageController.animateToPage(_currentPage - 1, duration: const Duration(milliseconds: 250), curve: Curves.easeInOut);
           }),
-          Text('${_currentPage + 1}', style: GoogleFonts.inter(fontSize: 14, color: subtextColor, fontWeight: FontWeight.bold)),
+          Text(
+            '${_currentPage + 1}',
+            style: useMushafFont
+                ? const TextStyle(
+                    fontFamily: 'Al Mushaf',
+                    fontSize: mushafFooterFontSize,
+                    color: Colors.grey,
+                    fontWeight: FontWeight.bold,
+                  )
+                : GoogleFonts.inter(fontSize: mushafFooterFontSize, color: subtextColor, fontWeight: FontWeight.bold),
+          ),
           // In RTL: left side = next page (chevron_left ←)
           _navBtn(Icons.chevron_left_rounded, canNext, isDark, () {
             _pageController.animateToPage(_currentPage + 1, duration: const Duration(milliseconds: 250), curve: Curves.easeInOut);
@@ -600,6 +634,33 @@ class _MushafPageWidgetState extends State<_MushafPageWidget> with AutomaticKeep
             final availableH = constraints.maxHeight;
             final fontSize = _computeFontSize(pageData, availableW, availableH);
 
+            // Build the list of surah blocks, making the last one Expanded
+            // so the verse text stretches to fill the full page height.
+            // This anchors the final verse line to the bottom of the frame,
+            // mirroring how printed Mushafs look.
+            final blocks = <Widget>[];
+            for (int i = 0; i < pageData.length; i++) {
+              final data = pageData[i];
+              final surah = data['surah'] as int;
+              final start = data['start'] as int;
+              final end   = data['end']   as int;
+              final isLast = i == pageData.length - 1;
+
+              final block = Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  if (start == 1) _buildSurahHeader(context, surah, fontSize),
+                  if (start == 1 && surah != 1 && surah != 9) _buildBasmala(fontSize),
+                  _buildVersesBlock(context, surah, start, end, fontSize),
+                ],
+              );
+
+              // The last block gets Expanded so it fills remaining space,
+              // pushing its content to justify against the bottom border.
+              blocks.add(isLast ? Expanded(child: block) : block);
+            }
+
             return SizedBox(
               width: availableW,
               height: availableH,
@@ -607,24 +668,9 @@ class _MushafPageWidgetState extends State<_MushafPageWidget> with AutomaticKeep
                 padding: const EdgeInsets.symmetric(
                     horizontal: _hPad, vertical: _vPad),
                 child: Column(
-                  mainAxisAlignment: pageData.length > 1
-                      ? MainAxisAlignment.spaceBetween
-                      : MainAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: pageData.map((data) {
-                    final surah = data['surah'] as int;
-                    final start = data['start'] as int;
-                    final end = data['end'] as int;
-                    return Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        if (start == 1) _buildSurahHeader(context, surah, fontSize),
-                        if (start == 1 && surah != 1 && surah != 9) _buildBasmala(fontSize),
-                        _buildVersesBlock(context, surah, start, end, fontSize),
-                      ],
-                    );
-                  }).toList(),
+                  children: blocks,
                 ),
               ),
             );

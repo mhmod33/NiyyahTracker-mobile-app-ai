@@ -582,6 +582,38 @@ class AzanService {
   // ── Prayer Times & Scheduling ──
 
   /// Get current prayer times based on user location.
+  /// Public wrapper — used by dashboard and other UI components.
+  Future<Map<String, dynamic>> getNextPrayerInfo() async {
+    try {
+      final pt = await _getPrayerTimes();
+      final now = DateTime.now();
+      final prayers = [
+        {'name': 'الفجر',  'key': 'fajr',    'time': pt.fajr},
+        {'name': 'الظهر',  'key': 'dhuhr',   'time': pt.dhuhr},
+        {'name': 'العصر',  'key': 'asr',     'time': pt.asr},
+        {'name': 'المغرب', 'key': 'maghrib', 'time': pt.maghrib},
+        {'name': 'العشاء', 'key': 'isha',    'time': pt.isha},
+      ];
+      // Find the next prayer after now
+      Map<String, dynamic>? next;
+      for (final p in prayers) {
+        final t = p['time'] as DateTime;
+        if (t.isAfter(now)) {
+          next = p;
+          break;
+        }
+      }
+      // If all prayers passed, next is tomorrow's Fajr
+      next ??= {
+        'name': 'الفجر',
+        'key': 'fajr',
+        'time': pt.fajr.add(const Duration(days: 1)),
+      };
+      return next;
+    } catch (_) {
+      return {'name': '—', 'key': '', 'time': DateTime.now()};
+    }
+  }
 
   Future<PrayerTimes> _getPrayerTimes() async {
     Coordinates coords = Coordinates(30.0444, 31.2357); // Default: Cairo
