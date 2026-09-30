@@ -41,6 +41,8 @@ import '../../models/dawri_model.dart';
 import '../study_tracker/study_tracker_page.dart';
 import '../../models/study_track_model.dart';
 import '../../services/study_track_service.dart';
+import '../badges/badges_page.dart';
+import '../../widgets/closest_badge_widget.dart';
 
 
 TextStyle _f({
@@ -512,6 +514,19 @@ class _DashboardPageState extends State<DashboardPage>
                 child: _buildNextPrayerWidget(isDark),
               ),
 
+              // ── Closest Badge Widget ──
+              if (!isGuest) ...[
+                SliverToBoxAdapter(
+                  child: _SectionTitle(
+                    title: 'أقرب وسام',
+                    icon: Icons.military_tech_rounded,
+                  ),
+                ),
+                SliverToBoxAdapter(
+                  child: ClosestBadgeWidget(isDark: isDark),
+                ),
+              ],
+
               // ── Daily Wird Section ──
               SliverToBoxAdapter(
                 child: _SectionTitle(
@@ -662,6 +677,13 @@ class _DashboardPageState extends State<DashboardPage>
                       color: Colors.blueGrey,
                       isDark: isDark,
                       onTap: () => _toProtected(const ReportsPage()),
+                    ),
+                    _FeatureCard(
+                      icon: Icons.military_tech_rounded,
+                      label: 'الأوسمة',
+                      color: AppColors.gold,
+                      isDark: isDark,
+                      onTap: () => _toProtected(const BadgesPage()),
                     ),
                   ],
                 ),
