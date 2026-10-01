@@ -329,7 +329,7 @@ class _FajrTreeWidgetState extends State<FajrTreeWidget>
   }
 }
 
-// ── Island scene widget ───────────────────────────────────────────────────────
+// ── Tree scene widget (Lottie only, no island) ───────────────────────────────
 
 class _IslandScene extends StatelessWidget {
   final TreeStage stage;
@@ -338,112 +338,8 @@ class _IslandScene extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: 280,
-      height: 200,
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          // Island body (CustomPaint)
-          Positioned(
-            bottom: 0,
-            child: CustomPaint(
-              size: const Size(260, 130),
-              painter: _IslandPainter(),
-            ),
-          ),
-          // Tree (Lottie animation, positioned above island center)
-          Positioned(
-            bottom: 55,
-            child: _TreeLottie(stage: stage),
-          ),
-        ],
-      ),
-    );
+    return _TreeLottie(stage: stage);
   }
-}
-
-// ── Island painter ────────────────────────────────────────────────────────────
-
-class _IslandPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final cx = size.width / 2;
-    final cy = 38.0; // top of grass
-
-    // ── Grass top ellipse ──
-    final grassShader = RadialGradient(
-      colors: const [Color(0xFF7BCF6E), Color(0xFF3DA547)],
-      center: const Alignment(-0.2, -0.5),
-    ).createShader(Rect.fromCenter(
-        center: Offset(cx, cy), width: 230, height: 70));
-
-    final grassPath = Path()
-      ..moveTo(cx - 115, cy + 8)
-      ..cubicTo(cx - 115, cy - 30, cx + 115, cy - 30, cx + 115, cy + 8)
-      ..cubicTo(cx + 115, cy + 26, cx - 115, cy + 26, cx - 115, cy + 8)
-      ..close();
-    canvas.drawPath(grassPath, Paint()..shader = grassShader);
-
-    // Grass rim highlight
-    canvas.drawPath(
-      grassPath,
-      Paint()
-        ..color = const Color(0xFF9AE08E).withValues(alpha: 0.6)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 2.5,
-    );
-
-    // ── Water pond ──
-    canvas.drawOval(
-      Rect.fromCenter(
-          center: Offset(cx - 45, cy + 4), width: 38, height: 17),
-      Paint()..color = const Color(0xFF64B5F6).withValues(alpha: 0.75),
-    );
-    // Pond shine
-    canvas.drawOval(
-      Rect.fromCenter(
-          center: Offset(cx - 50, cy + 1), width: 14, height: 5),
-      Paint()..color = Colors.white.withValues(alpha: 0.55),
-    );
-
-    // ── Rock underside ──
-    final rockTop = cy + 14.0;
-    final rockShader = LinearGradient(
-      begin: Alignment.topCenter,
-      end: Alignment.bottomCenter,
-      colors: const [Color(0xFF6B4C3B), Color(0xFF3E2215)],
-    ).createShader(Rect.fromLTWH(cx - 115, rockTop, 230, size.height - rockTop));
-
-    // Rock faces
-    final rockLeft = Path()
-      ..moveTo(cx - 115, rockTop)
-      ..lineTo(cx - 30, size.height)
-      ..lineTo(cx, size.height)
-      ..lineTo(cx + 115, rockTop)
-      ..close();
-    canvas.drawPath(rockLeft, Paint()..shader = rockShader);
-
-    // Facet highlights
-    final facetPaint = Paint()
-      ..color = const Color(0xFF8B6048).withValues(alpha: 0.5)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.5;
-    canvas.drawLine(
-        Offset(cx - 70, rockTop + 18), Offset(cx - 15, size.height - 4), facetPaint);
-    canvas.drawLine(
-        Offset(cx + 20, rockTop + 10), Offset(cx + 60, rockTop + 55), facetPaint);
-
-    // Rock bottom shadow
-    canvas.drawOval(
-      Rect.fromCenter(
-          center: Offset(cx, size.height + 6), width: 140, height: 18),
-      Paint()..color = Colors.black.withValues(alpha: 0.18),
-    );
-  }
-
-  @override
-  bool shouldRepaint(_IslandPainter _) => false;
 }
 
 // ── Tree widget (Lottie + emoji fallback) ────────────────────────────────────
@@ -470,11 +366,11 @@ class _TreeLottie extends StatelessWidget {
 
   double get _size {
     switch (stage) {
-      case TreeStage.seed:      return 90;
-      case TreeStage.sprout:    return 110;
-      case TreeStage.sapling:   return 140;
-      case TreeStage.youngTree: return 165;
-      case TreeStage.fullTree:  return 185;
+      case TreeStage.seed:      return 160;
+      case TreeStage.sprout:    return 180;
+      case TreeStage.sapling:   return 210;
+      case TreeStage.youngTree: return 230;
+      case TreeStage.fullTree:  return 250;
     }
   }
 
