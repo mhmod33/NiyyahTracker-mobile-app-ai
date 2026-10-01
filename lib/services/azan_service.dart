@@ -615,6 +615,69 @@ class AzanService {
     }
   }
 
+  /// Returns both the next prayer and the one after it.
+  /// Map keys: 'next' and 'after', each a Map with 'name' and 'time'.
+  Future<Map<String, Map<String, dynamic>>> getNextTwoPrayersInfo() async {
+    try {
+      final pt = await _getPrayerTimes();
+      final now = DateTime.now();
+      final prayers = [
+        {'name': 'الفجر',  'key': 'fajr',    'time': pt.fajr},
+        {'name': 'الظهر',  'key': 'dhuhr',   'time': pt.dhuhr},
+        {'name': 'العصر',  'key': 'asr',     'time': pt.asr},
+        {'name': 'المغرب', 'key': 'maghrib', 'time': pt.maghrib},
+        {'name': 'العشاء', 'key': 'isha',    'time': pt.isha},
+      ];
+      int nextIdx = -1;
+      for (int i = 0; i < prayers.length; i++) {
+        final t = prayers[i]['time'] as DateTime;
+        if (t.isAfter(now)) { nextIdx = i; break; }
+      }
+      Map<String, dynamic> next;
+      Map<String, dynamic> after;
+      if (nextIdx == -1) {
+        // All passed today — next is tomorrow Fajr, after is tomorrow Dhuhr
+        next = {'name': 'الفجر', 'key': 'fajr',
+            'time': pt.fajr.add(const Duration(days: 1))};
+        after = {'name': 'الظهر', 'key': 'dhuhr',
+            'time': pt.dhuhr.add(const Duration(days: 1))};
+      } else {
+        next = prayers[nextIdx];
+        after = nextIdx + 1 < prayers.length
+            ? prayers[nextIdx + 1]
+            : {'name': 'الفجر', 'key': 'fajr',
+                'time': pt.fajr.add(const Duration(days: 1))};
+      }
+      return {
+        'next': Map<String, dynamic>.from(next),
+        'after': Map<String, dynamic>.from(after),
+      };
+    } catch (_) {
+      return {
+        'next': {'name': '—', 'key': '', 'time': DateTime.now()},
+        'after': {'name': '—', 'key': '', 'time': DateTime.now()},
+      };
+    }
+  }
+
+  /// Returns all 6 prayer times for today as an ordered list.
+  /// Each item: {'name': String, 'key': String, 'time': DateTime}
+  Future<List<Map<String, dynamic>>> getAllPrayerTimes() async {
+    try {
+      final pt = await _getPrayerTimes();
+      return [
+        {'name': 'الفجر',  'key': 'fajr',    'time': pt.fajr},
+        {'name': 'الشروق', 'key': 'sunrise',  'time': pt.sunrise},
+        {'name': 'الظهر',  'key': 'dhuhr',   'time': pt.dhuhr},
+        {'name': 'العصر',  'key': 'asr',     'time': pt.asr},
+        {'name': 'المغرب', 'key': 'maghrib', 'time': pt.maghrib},
+        {'name': 'العشاء', 'key': 'isha',    'time': pt.isha},
+      ];
+    } catch (_) {
+      return [];
+    }
+  }
+
   Future<PrayerTimes> _getPrayerTimes() async {
     Coordinates coords = Coordinates(30.0444, 31.2357); // Default: Cairo
 

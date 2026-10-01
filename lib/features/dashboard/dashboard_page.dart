@@ -30,6 +30,9 @@ import '../../services/firebase_service.dart';
 import '../../services/daily_summary_service.dart';
 import '../../models/worship_model.dart' as db_model;
 import '../../widgets/mini_player.dart';
+import '../../widgets/prayer_times_card.dart';
+import '../../widgets/fajr_tree_widget.dart';
+import '../fajr/fajr_streak_page.dart';
 import '../quran/reciter_library_page.dart';
 import '../wird/daily_wird_page.dart';
 import '../../services/wird_service.dart';
@@ -93,7 +96,14 @@ class _DashboardPageState extends State<DashboardPage>
   // Next prayer state
   String _nextPrayerName = '';
   DateTime? _nextPrayerTime;
+  String _afterPrayerName = '';
+  DateTime? _afterPrayerTime;
+  List<Map<String, dynamic>> _allPrayerTimes = [];
   bool _loadingPrayer = false;
+  // Fajr tree state
+  int _fajrStreak = 0;
+  List<bool> _fajrWeekDays = List.filled(7, false);
+  DateTime _fajrWeekStart = DateTime.now().subtract(const Duration(days: 6));
 
   @override
   void initState() {
@@ -106,6 +116,7 @@ class _DashboardPageState extends State<DashboardPage>
     _loadStudyData();
     _loadDawriWidget();
     _loadNextPrayer();
+    _loadFajrWeekly();
   }
 
   Future<void> _loadAzkarPref() async {
@@ -145,6 +156,7 @@ class _DashboardPageState extends State<DashboardPage>
       _loadWirdData();
       _loadTodaySummary();
       _loadNextPrayer();
+      _loadFajrWeekly();
     }
   }
 
@@ -180,6 +192,7 @@ class _DashboardPageState extends State<DashboardPage>
     _loadStudyData();
     _loadDawriWidget();
     _loadNextPrayer();
+    _loadFajrWeekly();
   }
 
   Future<void> _loadStudyData() async {
@@ -215,17 +228,111 @@ class _DashboardPageState extends State<DashboardPage>
   Future<void> _loadNextPrayer() async {
     setState(() => _loadingPrayer = true);
     try {
-      final info = await AzanService().getNextPrayerInfo();
+      final results = await Future.wait([
+        AzanService().getNextTwoPrayersInfo(),
+        AzanService().getAllPrayerTimes(),
+      ]);
       if (mounted) {
+        final twoInfo = results[0] as Map<String, Map<String, dynamic>>;
+        final allTimes = results[1] as List<Map<String, dynamic>>;
+        final next  = twoInfo['next']!;
+        final after = twoInfo['after']!;
         setState(() {
-          _nextPrayerName = info['name'] as String? ?? '';
-          _nextPrayerTime = info['time'] as DateTime?;
-          _loadingPrayer = false;
+          _nextPrayerName  = next['name']  as String? ?? '';
+          _nextPrayerTime  = next['time']  as DateTime?;
+          _afterPrayerName = after['name'] as String? ?? '';
+          _afterPrayerTime = after['time'] as DateTime?;
+          _allPrayerTimes  = allTimes;
+          _loadingPrayer   = false;
         });
       }
     } catch (_) {
       if (mounted) setState(() => _loadingPrayer = false);
     }
+  }
+
+  Future<void> _loadFajrWeekly() async {
+    final userId = context.read<AppAuthProvider>().userId;
+    if (userId.isEmpty) return;
+
+    final today = DateTime.now();
+    // Week starts on Saturday (weekday == 6 in Dart, Mon=1…Sun=7)
+    // We show 7 days ending today
+    final weekStart = DateTime(today.year, today.month, today.day)
+        .subtract(const Duration(days: 6));
+
+    try {
+      final records = await _firebaseService.getWorshipsInRange(
+        userId,
+        weekStart,
+        today,
+      );
+
+      // Build a map keyed by date string "yyyy-MM-dd"
+      final map = <String, bool>{};
+      for (final r in records) {
+        final key =
+            '${r.date.year}-${r.date.month.toString().padLeft(2, '0')}-${r.date.day.toString().padLeft(2, '0')}';
+        map[key] = r.prayerCount > 0;
+      }
+
+      final days = List.generate(7, (i) {
+        final d = weekStart.add(Duration(days: i));
+        final key =
+            '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+        return map[key] ?? false;
+      });
+
+      // Count streak (consecutive days ending today)
+      int streak = 0;
+      for (int i = days.length - 1; i >= 0; i--) {
+        if (days[i]) {
+          streak++;
+        } else {
+          break;
+        }
+      }
+
+      // Also count further back beyond the 7-day window to get a true streak
+      // (use monthly worships if available — best-effort)
+      try {
+        final monthRecords = await _firebaseService.getMonthlyWorships(
+          userId,
+          today.year,
+          today.month,
+        );
+        // Build per-day fajr map for the month
+        final monthMap = <String, bool>{};
+        for (final r in monthRecords) {
+          final key =
+              '${r.date.year}-${r.date.month.toString().padLeft(2, '0')}-${r.date.day.toString().padLeft(2, '0')}';
+          monthMap[key] = r.prayerCount > 0;
+        }
+        // Walk backwards from today counting streak
+        int fullStreak = 0;
+        for (int offset = 0; offset <= today.day - 1; offset++) {
+          final d = today.subtract(Duration(days: offset));
+          final key =
+              '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+          if (monthMap[key] == true) {
+            fullStreak++;
+          } else {
+            break;
+          }
+        }
+        streak = fullStreak;
+      } catch (_) {
+        // Keep 7-day streak as fallback
+      }
+
+      if (mounted) {
+        setState(() {
+          _fajrWeekDays = days;
+          _fajrWeekStart = weekStart;
+          _fajrStreak = streak;
+        });
+      }
+    } catch (_) {}
   }
 
   Future<void> _loadTodaySummary() async {
@@ -509,10 +616,50 @@ class _DashboardPageState extends State<DashboardPage>
                 SliverToBoxAdapter(child: _buildDailySummaryCard(isDark)),
               ],
 
-              // ── Next Prayer + Quick Actions Widget ──
+              // ── Prayer Times Card ──
               SliverToBoxAdapter(
-                child: _buildNextPrayerWidget(isDark),
+                child: _SectionTitle(
+                  title: 'مواقيت الصلاة',
+                  icon: Icons.access_time_filled_rounded,
+                ),
               ),
+              SliverToBoxAdapter(
+                child: PrayerTimesCard(
+                  allPrayers: _allPrayerTimes,
+                  nextPrayerName: _nextPrayerName,
+                  nextPrayerTime: _nextPrayerTime,
+                  afterPrayerTime: _afterPrayerTime,
+                  loading: _loadingPrayer,
+                  isDark: isDark,
+                  onTap: () => _to(const PrayerTimesPage()),
+                ),
+              ),
+
+              // ── Fajr Tree Section ──
+              SliverToBoxAdapter(
+                child: _SectionTitle(
+                  title: 'شجرتك تنمو باستيقاظك للفجر',
+                  icon: Icons.park_rounded,
+                ),
+              ),
+              SliverToBoxAdapter(
+                child: FajrTreeWidget(
+                  streak: _fajrStreak,
+                  weekDays: _fajrWeekDays,
+                  weekStart: _fajrWeekStart,
+                  isDark: isDark,
+                  onTap: () async {
+                    await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => const FajrStreakPage()),
+                    );
+                    // Refresh fajr data when returning
+                    _loadFajrWeekly();
+                  },
+                ),
+              ),
+              const SliverToBoxAdapter(child: SizedBox(height: 8)),
 
               // ── Closest Badge Widget ──
               if (!isGuest) ...[
@@ -1659,283 +1806,6 @@ class _DashboardPageState extends State<DashboardPage>
       ],
     );
   }
-
-  // ── Next Prayer + Quick Actions Widget ────────────────────────────────────
-  Widget _buildNextPrayerWidget(bool isDark) {
-    final now = DateTime.now();
-    final prayerTime = _nextPrayerTime;
-
-    // Format time as "٤:١٠ م"
-    String formatTime(DateTime t) {
-      final hour = t.hour > 12 ? t.hour - 12 : (t.hour == 0 ? 12 : t.hour);
-      final min = t.minute.toString().padLeft(2, '0');
-      final period = t.hour >= 12 ? 'م' : 'ص';
-      return '$hour:$min $period';
-    }
-
-    // Format countdown as "خلال ١س ٤٧د"
-    String formatCountdown(DateTime t) {
-      final diff = t.difference(now);
-      if (diff.isNegative) return '';
-      final hours = diff.inHours;
-      final mins = diff.inMinutes % 60;
-      if (hours > 0) return 'خلال ${hours}س ${mins}د';
-      return 'خلال ${mins}د';
-    }
-
-    // Check if azkar was done today
-    final azkarDone = _azkarChecked;
-    // Check if quran/wird was registered today
-    final wirdDone = (_wirdRecord?.pagesRead ?? 0) > 0;
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-      child: IntrinsicHeight(
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // ── Left: Next prayer card ──────────────────────────────────────
-            Expanded(
-              flex: 5,
-              child: GestureDetector(
-                onTap: () => _to(const PrayerTimesPage()),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 18, vertical: 20),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topRight,
-                      end: Alignment.bottomLeft,
-                      colors: isDark
-                          ? [const Color(0xFF1A4D3A), const Color(0xFF0D2818)]
-                          : [const Color(0xFF4EBFA0), const Color(0xFF2A9D82)],
-                    ),
-                    borderRadius: BorderRadius.circular(20),
-                    boxShadow: [
-                      BoxShadow(
-                        color: const Color(0xFF2A9D82).withOpacity(0.3),
-                        blurRadius: 12,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: Stack(
-                    children: [
-                      // Decorative crescent
-                      Positioned(
-                        right: -8,
-                        top: 0,
-                        child: Opacity(
-                          opacity: 0.15,
-                          child: Text(
-                            '☽',
-                            style: TextStyle(
-                              fontSize: 60,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ),
-                      ),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            'الصلاة القادمة',
-                            style: _f(sz: 11, c: Colors.white70, fw: FontWeight.w500),
-                          ),
-                          const SizedBox(height: 6),
-                          _loadingPrayer
-                              ? const SizedBox(
-                                  width: 20,
-                                  height: 20,
-                                  child: CircularProgressIndicator(
-                                    color: Colors.white54, strokeWidth: 2))
-                              : Text(
-                                  _nextPrayerName.isEmpty ? '...' : _nextPrayerName,
-                                  style: _f(
-                                    sz: 26,
-                                    fw: FontWeight.w900,
-                                    c: Colors.white,
-                                  ),
-                                ),
-                          const SizedBox(height: 8),
-                          if (prayerTime != null && !_loadingPrayer) ...[
-                            Text(
-                              formatTime(prayerTime),
-                              style: _f(
-                                  sz: 15, fw: FontWeight.w700, c: Colors.white),
-                            ),
-                            const SizedBox(height: 3),
-                            Text(
-                              formatCountdown(prayerTime),
-                              style: _f(sz: 11, c: Colors.white70),
-                            ),
-                          ],
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(width: 12),
-            // ── Right: Quick action chips ───────────────────────────────────
-            Expanded(
-              flex: 5,
-              child: Column(
-                children: [
-                  // Azkar chip
-                  Expanded(
-                    child: GestureDetector(
-                      onTap: () => _to(const AzkarLibraryPage()),
-                      child: Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 14, vertical: 12),
-                        decoration: BoxDecoration(
-                          color: azkarDone
-                              ? AppColors.paleGreen
-                              : const Color(0xFFFFF0F0),
-                          borderRadius: BorderRadius.circular(14),
-                          border: Border.all(
-                            color: azkarDone
-                                ? AppColors.lightGreen.withOpacity(0.5)
-                                : Colors.red.withOpacity(0.15),
-                          ),
-                        ),
-                        child: Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(6),
-                              decoration: BoxDecoration(
-                                color: azkarDone
-                                    ? AppColors.lightGreen.withOpacity(0.2)
-                                    : Colors.red.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Icon(
-                                azkarDone
-                                    ? Icons.check_circle_rounded
-                                    : Icons.warning_amber_rounded,
-                                size: 16,
-                                color: azkarDone
-                                    ? AppColors.darkGreen
-                                    : Colors.red.shade400,
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                azkarDone
-                                    ? 'قرأت الأذكار اليوم'
-                                    : 'لم تقرأ الأذكار اليوم',
-                                style: _f(
-                                  sz: 11,
-                                  fw: FontWeight.w700,
-                                  c: azkarDone
-                                      ? AppColors.darkGreen
-                                      : Colors.red.shade600,
-                                ),
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                            Icon(
-                              Icons.chevron_left_rounded,
-                              size: 16,
-                              color: azkarDone
-                                  ? AppColors.darkGreen.withOpacity(0.5)
-                                  : Colors.red.withOpacity(0.4),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  // Quran/Wird chip
-                  Expanded(
-                    child: GestureDetector(
-                      onTap: () async {
-                        await Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (_) => const DailyWirdPage()),
-                        );
-                        _loadWirdData();
-                      },
-                      child: Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 14, vertical: 12),
-                        decoration: BoxDecoration(
-                          color: wirdDone
-                              ? AppColors.paleGreen
-                              : const Color(0xFFFFF8EC),
-                          borderRadius: BorderRadius.circular(14),
-                          border: Border.all(
-                            color: wirdDone
-                                ? AppColors.lightGreen.withOpacity(0.5)
-                                : AppColors.gold.withOpacity(0.4),
-                          ),
-                        ),
-                        child: Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(6),
-                              decoration: BoxDecoration(
-                                color: wirdDone
-                                    ? AppColors.lightGreen.withOpacity(0.2)
-                                    : AppColors.gold.withOpacity(0.15),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Icon(
-                                Icons.menu_book_rounded,
-                                size: 16,
-                                color: wirdDone
-                                    ? AppColors.darkGreen
-                                    : AppColors.gold,
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                wirdDone
-                                    ? 'الورد: ${_wirdRecord!.pagesRead} صفحة ✓'
-                                    : 'اضغط لتسجيل القر...',
-                                style: _f(
-                                  sz: 11,
-                                  fw: FontWeight.w700,
-                                  c: wirdDone
-                                      ? AppColors.darkGreen
-                                      : AppColors.gold,
-                                ),
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                            Icon(
-                              Icons.chevron_left_rounded,
-                              size: 16,
-                              color: wirdDone
-                                  ? AppColors.darkGreen.withOpacity(0.5)
-                                  : AppColors.gold.withOpacity(0.6),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   // ── Dawri (Leagues) Dashboard Widget ──────────────────────────────────────
   Widget _buildDawriWidget(bool isDark) {
     final cardBg = isDark ? const Color(0xFF151C17) : Colors.white;
