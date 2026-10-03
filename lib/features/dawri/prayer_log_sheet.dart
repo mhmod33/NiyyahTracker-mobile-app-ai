@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/app_colors.dart';
 import '../../models/dawri_model.dart';
+import '../../services/azan_service.dart';
 import '../../services/dawri_service.dart';
 
 TextStyle _f({
@@ -32,6 +33,7 @@ class _PrayerLogSheetState extends State<PrayerLogSheet> {
   final Map<String, int> _extras = {};
   bool _saving = false;
   bool _loadingExisting = true;
+  Map<String, DateTime> _prayerTimes = {};
 
   // Points per prayer status for quick reference display
   static const List<_PrayerOption> _options = [
@@ -76,6 +78,7 @@ class _PrayerLogSheetState extends State<PrayerLogSheet> {
   void initState() {
     super.initState();
     _loadExisting();
+    _loadPrayerTimes();
   }
 
   Future<void> _loadExisting() async {
@@ -599,16 +602,22 @@ class _PrayerLogSheetState extends State<PrayerLogSheet> {
     );
   }
 
+  Future<void> _loadPrayerTimes() async {
+    final times = await AzanService().getAllPrayerTimes();
+    if (!mounted) return;
+    setState(() {
+      _prayerTimes = {
+        for (final t in times) t['key'] as String: t['time'] as DateTime,
+      };
+    });
+  }
+
   String _prayerTime(String prayer) {
-    // Simplified — in production, use adhan package for actual times
-    switch (prayer) {
-      case DawriPrayer.fajr:    return '4:45 ص';
-      case DawriPrayer.dhuhr:   return '12:10 م';
-      case DawriPrayer.asr:     return '3:30 م';
-      case DawriPrayer.maghrib: return '6:45 م';
-      case DawriPrayer.isha:    return '8:15 م';
-      default:                  return '';
-    }
+    final t = _prayerTimes[prayer];
+    if (t == null) return '';
+    final hour = t.hour % 12 == 0 ? 12 : t.hour % 12;
+    final minute = t.minute.toString().padLeft(2, '0');
+    return '$hour:$minute ${t.hour < 12 ? 'ص' : 'م'}';
   }
 
   String _prayerNameEn(String prayer) {

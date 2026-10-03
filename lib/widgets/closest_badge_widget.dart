@@ -6,8 +6,6 @@ import '../core/app_colors.dart';
 import '../models/badge_model.dart';
 import '../providers/auth_provider.dart';
 import '../services/badge_service.dart';
-import '../services/firebase_service.dart';
-import '../services/wird_service.dart';
 import '../features/badges/badges_page.dart';
 
 TextStyle _f({
@@ -29,8 +27,6 @@ class ClosestBadgeWidget extends StatefulWidget {
 
 class _ClosestBadgeWidgetState extends State<ClosestBadgeWidget> {
   final BadgeService _badgeService = BadgeService();
-  final FirebaseService _firebase = FirebaseService();
-  final WirdService _wird = WirdService();
 
   bool _loading = true;
   BadgeDefinition? _closest;
@@ -52,8 +48,17 @@ class _ClosestBadgeWidgetState extends State<ClosestBadgeWidget> {
 
     try {
       // Build lightweight stats
-      final stats = await _buildStats(userId);
+      final stats = await _badgeService.buildStats(userId);
+      // Keep stored badge progress in sync whenever the dashboard loads.
+      final newlyEarned =
+          await _badgeService.evaluateAndUpdate(userId: userId, stats: stats);
       final badgesMap = await _badgeService.getUserBadgesMap(userId);
+      if (newlyEarned.isNotEmpty && mounted) {
+        final names = newlyEarned.map((b) => b.title).join('، ');
+        ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+          SnackBar(content: Text('🏅 مبروك! حصلت على وسام: $names')),
+        );
+      }
       final closest = _badgeService.getClosestUnearned(badgesMap, stats);
 
       int earned = badgesMap.values.where((b) => b.isEarned).length;
@@ -71,79 +76,6 @@ class _ClosestBadgeWidgetState extends State<ClosestBadgeWidget> {
     } catch (_) {
       if (mounted) setState(() => _loading = false);
     }
-  }
-
-  Future<BadgeStats> _buildStats(String userId) async {
-    final now = DateTime.now();
-    final allWorships = await _firebase.getWorshipsInRange(
-      userId,
-      DateTime(2020),
-      now,
-    );
-
-    int totalPrayers = 0;
-    int completedPrayerDays = 0;
-    int noMissDays = 0;
-    int fajrDays = 0;
-    int morningAzkar = 0;
-    int eveningAzkar = 0;
-    int fastingDays = 0;
-    int ayyamBeedDays = 0;
-    int quranPages = 0;
-    final completeDaySet = <String>{};
-
-    for (final w in allWorships) {
-      totalPrayers += w.prayerCount;
-      quranPages += w.quranPages;
-      if (w.prayerCount > 0) noMissDays++;
-      if (w.prayerCount >= 5) {
-        completedPrayerDays++;
-        final key =
-            '${w.date.year}-${w.date.month.toString().padLeft(2, '0')}-${w.date.day.toString().padLeft(2, '0')}';
-        completeDaySet.add(key);
-      }
-      if (w.prayerCount >= 1) fajrDays++;
-      if (w.worships['azkar_done'] == true) morningAzkar++;
-      if (w.worships['evening_azkar_done'] == true) eveningAzkar++;
-      if (w.worships['fasting'] == true) fastingDays++;
-      if (w.worships['fasting_ayyam_beed'] == true) ayyamBeedDays++;
-    }
-
-    // Current prayer streak
-    int streak = 0;
-    {
-      final today = DateTime(now.year, now.month, now.day);
-      var check = today;
-      for (int i = 0; i < 400; i++) {
-        final key =
-            '${check.year}-${check.month.toString().padLeft(2, '0')}-${check.day.toString().padLeft(2, '0')}';
-        if (completeDaySet.contains(key)) {
-          streak++;
-          check = check.subtract(const Duration(days: 1));
-        } else {
-          break;
-        }
-      }
-    }
-
-    await _wird.init();
-    _wird.setUserId(userId);
-    final wirdStreak = _wird.getCurrentStreak();
-    final wirdPages = _wird.getTotalPagesRead();
-
-    return BadgeStats(
-      totalPrayers: totalPrayers,
-      completedPrayerDays: completedPrayerDays,
-      prayerStreak: streak,
-      noMissDays: noMissDays,
-      fajrDays: fajrDays,
-      morningAzkarCount: morningAzkar,
-      eveningAzkarCount: eveningAzkar,
-      fastingDays: fastingDays,
-      ayyamBeedDays: ayyamBeedDays,
-      quranPagesTotal: quranPages + wirdPages,
-      wirdStreak: wirdStreak,
-    );
   }
 
   @override

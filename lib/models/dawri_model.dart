@@ -239,6 +239,8 @@ class DawriMember {
   final Map<String, int> todayExtras;
   // Badges earned
   final List<String> badges;
+  // yyyy-MM-dd of the day the "today*" fields belong to
+  final String todayDate;
 
   const DawriMember({
     required this.userId,
@@ -252,7 +254,13 @@ class DawriMember {
     this.todayPrayers = const {},
     this.todayExtras = const {},
     this.badges = const [],
+    this.todayDate = '',
   });
+
+  static String todayKey() {
+    final n = DateTime.now();
+    return '${n.year}-${n.month.toString().padLeft(2, '0')}-${n.day.toString().padLeft(2, '0')}';
+  }
 
   Map<String, dynamic> toJson() => {
         'userId': userId,
@@ -266,26 +274,36 @@ class DawriMember {
         'todayPrayers': todayPrayers.map((k, v) => MapEntry(k, v.id)),
         'todayExtras': todayExtras,
         'badges': badges,
+        'todayDate': todayDate,
       };
 
-  factory DawriMember.fromJson(Map<String, dynamic> json) => DawriMember(
+  /// The "today*" fields are only valid for the day stored in `todayDate`;
+  /// on any other day they are reset so stale data is never shown or reused.
+  factory DawriMember.fromJson(Map<String, dynamic> json) {
+    final storedDate = json['todayDate'] as String? ?? '';
+    final isToday = storedDate == todayKey();
+    return DawriMember(
         userId: json['userId'] as String? ?? '',
         name: json['name'] as String? ?? 'مستخدم',
         isSupervisor: json['isSupervisor'] as bool? ?? false,
         totalPoints: json['totalPoints'] as int? ?? 0,
         currentStreak: json['currentStreak'] as int? ?? 0,
-        missedToday: json['missedToday'] as int? ?? 0,
-        onTimeToday: json['onTimeToday'] as int? ?? 0,
+        missedToday: isToday ? json['missedToday'] as int? ?? 0 : 0,
+        onTimeToday: isToday ? json['onTimeToday'] as int? ?? 0 : 0,
         joinedAt:
             (json['joinedAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
-        todayPrayers:
-            (json['todayPrayers'] as Map<String, dynamic>? ?? {}).map(
-          (k, v) => MapEntry(k, PrayerStatusExt.fromId(v as String?)),
-        ),
-        todayExtras:
-            Map<String, int>.from(json['todayExtras'] as Map? ?? {}),
+        todayPrayers: isToday
+            ? (json['todayPrayers'] as Map<String, dynamic>? ?? {}).map(
+                (k, v) => MapEntry(k, PrayerStatusExt.fromId(v as String?)),
+              )
+            : const {},
+        todayExtras: isToday
+            ? Map<String, int>.from(json['todayExtras'] as Map? ?? {})
+            : const {},
         badges: List<String>.from(json['badges'] as List? ?? []),
+        todayDate: storedDate,
       );
+  }
 
   DawriMember copyWith({
     int? totalPoints,
@@ -308,6 +326,7 @@ class DawriMember {
         todayPrayers: todayPrayers ?? this.todayPrayers,
         todayExtras: todayExtras ?? this.todayExtras,
         badges: badges ?? this.badges,
+        todayDate: todayDate,
       );
 }
 
@@ -343,6 +362,23 @@ class Dawri {
     required this.endDate,
     this.isActive = true,
   });
+
+  static const Duration cycleLength = Duration(days: 7);
+
+  /// Leagues renew automatically every week: returns the end of the cycle
+  /// that contains [now] (the stored [endDate] rolled forward as needed).
+  DateTime currentCycleEnd([DateTime? now]) {
+    final ref = now ?? DateTime.now();
+    var end = endDate;
+    if (!end.isAfter(ref)) {
+      final cycles = ref.difference(end).inDays ~/ cycleLength.inDays + 1;
+      end = end.add(cycleLength * cycles);
+    }
+    return end;
+  }
+
+  DateTime currentCycleStart([DateTime? now]) =>
+      currentCycleEnd(now).subtract(cycleLength);
 
   bool isSupervisor(String userId) => supervisorId == userId;
   bool isMember(String userId) => memberIds.contains(userId);

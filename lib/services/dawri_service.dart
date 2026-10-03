@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:developer' as developer;
 import 'dart:math';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../models/dawri_model.dart';
 
 /// DawriService handles all Firestore operations for the league (دوريات) feature.
@@ -27,6 +28,37 @@ class DawriService {
 
   static String _dateKey(DateTime d) =>
       '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+
+  /// How far back history is read when recomputing streaks and badges.
+  static const int _historyDays = 400;
+
+  /// Firestore batches are limited to 500 operations.
+  static const int _maxBatchOps = 450;
+
+  CollectionReference<Map<String, dynamic>> _entriesCol(String dawriId) =>
+      _db.collection('dawri').doc(dawriId).collection('entries');
+
+  /// All entries of [userId] between [from] and [to] (inclusive) in one query.
+  /// Entry ids are `{uid}_{yyyy-MM-dd}`, so a document-id range selects
+  /// exactly that user's days in chronological order.
+  Future<List<DawriDayEntry>> _userEntries({
+    required String dawriId,
+    required String userId,
+    required DateTime from,
+    required DateTime to,
+  }) async {
+    final snap = await _entriesCol(dawriId)
+        .where(
+          FieldPath.documentId,
+          isGreaterThanOrEqualTo: '${userId}_${_dateKey(from)}',
+        )
+        .where(
+          FieldPath.documentId,
+          isLessThanOrEqualTo: '${userId}_${_dateKey(to)}',
+        )
+        .get();
+    return snap.docs.map((d) => DawriDayEntry.fromJson(d.data())).toList();
+  }
 
   /// Generate a random 8-character uppercase alphanumeric invite code (no ambiguous chars)
   static String generateInviteCode() {
@@ -79,11 +111,9 @@ class DawriService {
     // Step 2: Write member sub-doc + user index in a batch.
     final batch = _db.batch();
     batch.set(ref.collection('members').doc(supervisorId), member.toJson());
-    batch.set(
-      _db.collection('dawri_index').doc(supervisorId),
-      {'dawriIds': FieldValue.arrayUnion([ref.id])},
-      SetOptions(merge: true),
-    );
+    batch.set(_db.collection('dawri_index').doc(supervisorId), {
+      'dawriIds': FieldValue.arrayUnion([ref.id]),
+    }, SetOptions(merge: true));
     await batch.commit();
 
     developer.log('✅ Created dawri ${ref.id}', name: 'DawriService');
@@ -125,19 +155,16 @@ class DawriService {
     // Step 2: Write member sub-doc + user index.
     final batch = _db.batch();
     final memberRef = doc.reference.collection('members').doc(userId);
-    final member = DawriMember(
-      userId: userId,
-      name: userName,
-      joinedAt: now,
-    );
+    final member = DawriMember(userId: userId, name: userName, joinedAt: now);
     batch.set(memberRef, member.toJson());
-    batch.set(
-      _db.collection('dawri_index').doc(userId),
-      {'dawriIds': FieldValue.arrayUnion([dawri.id])},
-      SetOptions(merge: true),
-    );
+    batch.set(_db.collection('dawri_index').doc(userId), {
+      'dawriIds': FieldValue.arrayUnion([dawri.id]),
+    }, SetOptions(merge: true));
     await batch.commit();
-    developer.log('✅ ${userName} joined dawri ${dawri.id}', name: 'DawriService');
+    developer.log(
+      '✅ ${userName} joined dawri ${dawri.id}',
+      name: 'DawriService',
+    );
     return dawri;
   }
 
@@ -151,32 +178,42 @@ class DawriService {
       'memberIds': FieldValue.arrayRemove([userId]),
     });
     batch.delete(
-        _db.collection('dawri').doc(dawriId).collection('members').doc(userId));
-    batch.set(
-      _db.collection('dawri_index').doc(userId),
-      {'dawriIds': FieldValue.arrayRemove([dawriId])},
-      SetOptions(merge: true),
+      _db.collection('dawri').doc(dawriId).collection('members').doc(userId),
     );
+    batch.set(_db.collection('dawri_index').doc(userId), {
+      'dawriIds': FieldValue.arrayRemove([dawriId]),
+    }, SetOptions(merge: true));
     await batch.commit();
   }
 
   /// Delete entire league (supervisor only).
   Future<void> deleteDawri(String dawriId) async {
-    // Delete all member sub-docs
-    final membersSnap =
-        await _db.collection('dawri').doc(dawriId).collection('members').get();
+    final dawriRef = _db.collection('dawri').doc(dawriId);
+    final membersSnap = await dawriRef.collection('members').get();
+    final entriesSnap = await dawriRef.collection('entries').get();
+    final refs = <DocumentReference>[
+      ...membersSnap.docs.map((d) => d.reference),
+      ...entriesSnap.docs.map((d) => d.reference),
+    ];
+
+    // Sub-collections first (in chunks), main doc last so the rules can
+    // still resolve supervisorId while the children are deleted.
+    for (int i = 0; i < refs.length; i += _maxBatchOps) {
+      final batch = _db.batch();
+      for (final ref in refs.skip(i).take(_maxBatchOps)) {
+        batch.delete(ref);
+      }
+      await batch.commit();
+    }
+
+    final uid = FirebaseAuth.instance.currentUser?.uid;
     final batch = _db.batch();
-    for (final m in membersSnap.docs) {
-      batch.delete(m.reference);
+    batch.delete(dawriRef);
+    if (uid != null) {
+      batch.set(_db.collection('dawri_index').doc(uid), {
+        'dawriIds': FieldValue.arrayRemove([dawriId]),
+      }, SetOptions(merge: true));
     }
-    // Delete entries
-    final entriesSnap =
-        await _db.collection('dawri').doc(dawriId).collection('entries').get();
-    for (final e in entriesSnap.docs) {
-      batch.delete(e.reference);
-    }
-    // Delete main doc
-    batch.delete(_db.collection('dawri').doc(dawriId));
     await batch.commit();
   }
 
@@ -184,16 +221,41 @@ class DawriService {
 
   /// Get all leagues the user belongs to (via index doc).
   Future<List<Dawri>> getUserDawriList(String userId) async {
-    final indexDoc =
-        await _db.collection('dawri_index').doc(userId).get();
+    final indexDoc = await _db.collection('dawri_index').doc(userId).get();
     if (!indexDoc.exists) return [];
     final ids = List<String>.from(
-        (indexDoc.data()?['dawriIds'] as List?) ?? []);
+      (indexDoc.data()?['dawriIds'] as List?) ?? [],
+    );
     if (ids.isEmpty) return [];
 
-    final futures = ids.map((id) => getDawri(id));
-    final results = await Future.wait(futures);
-    return results.whereType<Dawri>().toList();
+    final results = await Future.wait(
+      ids.map((id) async {
+        try {
+          return await getDawri(id);
+        } catch (_) {
+          return null;
+        }
+      }),
+    );
+
+    // Drop ids of leagues that were deleted (or that we were removed from).
+    final stale = <String>[
+      for (int i = 0; i < ids.length; i++)
+        if (results[i] == null || !results[i]!.memberIds.contains(userId))
+          ids[i],
+    ];
+    if (stale.isNotEmpty) {
+      try {
+        await _db.collection('dawri_index').doc(userId).set({
+          'dawriIds': FieldValue.arrayRemove(stale),
+        }, SetOptions(merge: true));
+      } catch (_) {}
+    }
+
+    return results
+        .whereType<Dawri>()
+        .where((d) => d.memberIds.contains(userId))
+        .toList();
   }
 
   Future<Dawri?> getDawri(String dawriId) async {
@@ -201,21 +263,45 @@ class DawriService {
     if (!doc.exists) return null;
     final dawri = Dawri.fromJson(doc.data()!, doc.id);
     // Load members
-    final membersSnap =
-        await _db.collection('dawri').doc(dawriId).collection('members').get();
+    final membersSnap = await _db
+        .collection('dawri')
+        .doc(dawriId)
+        .collection('members')
+        .get();
     final members = membersSnap.docs
         .map((d) => DawriMember.fromJson(d.data()))
         .toList();
-    return dawri.copyWith(members: members);
+    return (await _rollCycleIfNeeded(dawri)).copyWith(members: members);
+  }
+
+  /// Leagues renew weekly. When the stored cycle has ended, move it forward;
+  /// only the supervisor is allowed to persist the new dates.
+  Future<Dawri> _rollCycleIfNeeded(Dawri dawri) async {
+    final now = DateTime.now();
+    if (dawri.endDate.isAfter(now)) return dawri;
+    final end = dawri.currentCycleEnd(now);
+    final start = dawri.currentCycleStart(now);
+    if (FirebaseAuth.instance.currentUser?.uid == dawri.supervisorId) {
+      try {
+        await _db.collection('dawri').doc(dawri.id).update({
+          'startDate': Timestamp.fromDate(start),
+          'endDate': Timestamp.fromDate(end),
+        });
+      } catch (e) {
+        developer.log(
+          '⚠️ Could not roll dawri cycle: $e',
+          name: 'DawriService',
+        );
+      }
+    }
+    return dawri.copyWith(startDate: start, endDate: end);
   }
 
   /// Real-time stream of a single dawri + its members.
   Stream<Dawri?> watchDawri(String dawriId) {
-    return _db
-        .collection('dawri')
-        .doc(dawriId)
-        .snapshots()
-        .asyncMap((snap) async {
+    return _db.collection('dawri').doc(dawriId).snapshots().asyncMap((
+      snap,
+    ) async {
       if (!snap.exists) return null;
       final dawri = Dawri.fromJson(snap.data()!, snap.id);
       final membersSnap = await _db
@@ -239,22 +325,11 @@ class DawriService {
     required Map<String, PrayerStatus> prayers,
     Map<String, int> extras = const {},
   }) async {
+    final now = DateTime.now();
     final date = _today();
     final entryId = '${userId}_$date';
 
-    // Calculate points
-    int pts = 0;
-    for (final status in prayers.values) {
-      pts += status.points;
-    }
-    // Extra points: activityId → count * pointsPerUnit
-    for (final entry in extras.entries) {
-      final activity = DawriExtraActivity.all
-          .firstWhere((a) => a.id == entry.key, orElse: () => const DawriExtraActivity(
-              id: '', nameAr: '', description: '', icon: '', pointsPerUnit: 0));
-      pts += entry.value * activity.pointsPerUnit;
-    }
-
+    final pts = calculatePoints(prayers, extras);
     final dayEntry = DawriDayEntry(
       date: date,
       prayers: prayers,
@@ -262,43 +337,75 @@ class DawriService {
       totalPoints: pts,
     );
 
-    final batch = _db.batch();
-    // Save entry doc
-    batch.set(
-      _db.collection('dawri').doc(dawriId).collection('entries').doc(entryId),
-      dayEntry.toJson(),
+    // History (one query) — used for the points delta, streak and badges.
+    final history = await _userEntries(
+      dawriId: dawriId,
+      userId: userId,
+      from: now.subtract(const Duration(days: _historyDays)),
+      to: now,
     );
+    final previousToday = history.where((e) => e.date == date).firstOrNull;
+    final byDate = {for (final e in history) e.date: e, date: dayEntry};
 
-    // Update member aggregate
-    final memberRef =
-        _db.collection('dawri').doc(dawriId).collection('members').doc(userId);
+    final memberRef = _db
+        .collection('dawri')
+        .doc(dawriId)
+        .collection('members')
+        .doc(userId);
     final memberSnap = await memberRef.get();
-    if (memberSnap.exists) {
-      final existing = DawriMember.fromJson(memberSnap.data()!);
-      // Recalculate today's summary for the member
-      final missedToday =
-          prayers.values.where((s) => s == PrayerStatus.missed).length;
-      final onTimeToday = prayers.values
-          .where((s) =>
+    final existingBadges = memberSnap.exists
+        ? DawriMember.fromJson(memberSnap.data()!).badges
+        : const <String>[];
+
+    final missedToday = prayers.values
+        .where((s) => s == PrayerStatus.missed)
+        .length;
+    final onTimeToday = prayers.values
+        .where(
+          (s) =>
               s == PrayerStatus.onTime ||
               s == PrayerStatus.congregation ||
-              s == PrayerStatus.mosque)
-          .length;
-      // Recalculate streak (simplified: streak = currentStreak if has entry today)
-      final streak = await _computeStreak(dawriId, userId);
+              s == PrayerStatus.mosque,
+        )
+        .length;
 
-      batch.update(memberRef, {
-        'todayPrayers': prayers.map((k, v) => MapEntry(k, v.id)),
-        'todayExtras': extras,
-        'missedToday': missedToday,
-        'onTimeToday': onTimeToday,
-        'currentStreak': streak,
-        'totalPoints': FieldValue.increment(
-            pts - (existing.todayPrayers.values.fold(0, (s, v) => s + v.points))),
-      });
-    }
+    final batch = _db.batch();
+    batch.set(_entriesCol(dawriId).doc(entryId), dayEntry.toJson());
+    batch.set(memberRef, {
+      'userId': userId,
+      'todayDate': date,
+      'todayPrayers': prayers.map((k, v) => MapEntry(k, v.id)),
+      'todayExtras': extras,
+      'missedToday': missedToday,
+      'onTimeToday': onTimeToday,
+      'currentStreak': _currentStreak(byDate, now),
+      'badges': computeLeagueBadges(byDate.values, existing: existingBadges),
+      // Only add the difference vs. what was already saved for today.
+      'totalPoints': FieldValue.increment(
+        pts - (previousToday?.totalPoints ?? 0),
+      ),
+    }, SetOptions(merge: true));
     await batch.commit();
-    developer.log('✅ Saved day entry for $userId in $dawriId', name: 'DawriService');
+    developer.log(
+      '✅ Saved day entry for $userId in $dawriId',
+      name: 'DawriService',
+    );
+  }
+
+  static int calculatePoints(
+    Map<String, PrayerStatus> prayers,
+    Map<String, int> extras,
+  ) {
+    int pts = 0;
+    for (final status in prayers.values) {
+      pts += status.points;
+    }
+    for (final entry in extras.entries) {
+      for (final a in DawriExtraActivity.all) {
+        if (a.id == entry.key) pts += entry.value * a.pointsPerUnit;
+      }
+    }
+    return pts;
   }
 
   /// Get today's entry for a user in a league.
@@ -324,24 +431,16 @@ class DawriService {
     required String userId,
     required DateTime weekStart,
   }) async {
-    final entries = <DawriDayEntry>[];
-    for (int i = 0; i < 7; i++) {
-      final d = weekStart.add(Duration(days: i));
-      final date = _dateKey(d);
-      final entryId = '${userId}_$date';
-      try {
-        final doc = await _db
-            .collection('dawri')
-            .doc(dawriId)
-            .collection('entries')
-            .doc(entryId)
-            .get();
-        if (doc.exists) {
-          entries.add(DawriDayEntry.fromJson(doc.data()!));
-        }
-      } catch (_) {}
+    try {
+      return await _userEntries(
+        dawriId: dawriId,
+        userId: userId,
+        from: weekStart,
+        to: weekStart.add(const Duration(days: 6)),
+      );
+    } catch (_) {
+      return [];
     }
-    return entries;
   }
 
   // ── Leaderboard ───────────────────────────────────────────────────────────
@@ -365,46 +464,37 @@ class DawriService {
         rangeStart = DateTime(now.year, now.month, now.day);
     }
 
-    final List<DawriMemberWeekStats> stats = [];
-    for (final member in dawri.members) {
-      int pts = 0;
-      if (period == 'today') {
-        final entry = await getTodayEntry(
-            dawriId: dawri.id, userId: member.userId);
-        pts = entry?.totalPoints ?? 0;
-      } else {
-        // Sum over range
-        for (int i = 0; i <= rangeEnd.difference(rangeStart).inDays; i++) {
-          final d = rangeStart.add(Duration(days: i));
-          final entryId = '${member.userId}_${_dateKey(d)}';
-          try {
-            final doc = await _db
-                .collection('dawri')
-                .doc(dawri.id)
-                .collection('entries')
-                .doc(entryId)
-                .get();
-            if (doc.exists) {
-              pts += (doc.data()?['totalPoints'] as int? ?? 0);
-            }
-          } catch (_) {}
-        }
-      }
-      stats.add(DawriMemberWeekStats(
-        userId: member.userId,
-        name: member.name,
-        rank: 0,
-        weekPoints: pts,
-        totalPoints: member.totalPoints,
-        streak: member.currentStreak,
-        missedCount: member.missedToday,
-        onTimeCount: member.onTimeToday,
-        todayPrayers: member.todayPrayers,
-        todayExtras: member.todayExtras,
-        isSupervisor: member.isSupervisor,
-        badges: member.badges,
-      ));
-    }
+    // One range query per member, all members in parallel.
+    final stats = await Future.wait(
+      dawri.members.map((member) async {
+        int pts = 0;
+        try {
+          final entries = await _userEntries(
+            dawriId: dawri.id,
+            userId: member.userId,
+            from: rangeStart,
+            to: rangeEnd,
+          );
+          for (final e in entries) {
+            pts += e.totalPoints;
+          }
+        } catch (_) {}
+        return DawriMemberWeekStats(
+          userId: member.userId,
+          name: member.name,
+          rank: 0,
+          weekPoints: pts,
+          totalPoints: member.totalPoints,
+          streak: member.currentStreak,
+          missedCount: member.missedToday,
+          onTimeCount: member.onTimeToday,
+          todayPrayers: member.todayPrayers,
+          todayExtras: member.todayExtras,
+          isSupervisor: member.isSupervisor,
+          badges: member.badges,
+        );
+      }),
+    );
 
     // Sort by weekPoints descending, then totalPoints
     stats.sort((a, b) {
@@ -418,20 +508,22 @@ class DawriService {
     final ranked = <DawriMemberWeekStats>[];
     for (int i = 0; i < stats.length; i++) {
       final s = stats[i];
-      ranked.add(DawriMemberWeekStats(
-        userId: s.userId,
-        name: s.name,
-        rank: i + 1,
-        weekPoints: s.weekPoints,
-        totalPoints: s.totalPoints,
-        streak: s.streak,
-        missedCount: s.missedCount,
-        onTimeCount: s.onTimeCount,
-        todayPrayers: s.todayPrayers,
-        todayExtras: s.todayExtras,
-        isSupervisor: s.isSupervisor,
-        badges: s.badges,
-      ));
+      ranked.add(
+        DawriMemberWeekStats(
+          userId: s.userId,
+          name: s.name,
+          rank: i + 1,
+          weekPoints: s.weekPoints,
+          totalPoints: s.totalPoints,
+          streak: s.streak,
+          missedCount: s.missedCount,
+          onTimeCount: s.onTimeCount,
+          todayPrayers: s.todayPrayers,
+          todayExtras: s.todayExtras,
+          isSupervisor: s.isSupervisor,
+          badges: s.badges,
+        ),
+      );
     }
     return ranked;
   }
@@ -440,10 +532,7 @@ class DawriService {
 
   Future<void> regenerateInviteCode(String dawriId) async {
     final newCode = generateInviteCode();
-    await _db
-        .collection('dawri')
-        .doc(dawriId)
-        .update({'inviteCode': newCode});
+    await _db.collection('dawri').doc(dawriId).update({'inviteCode': newCode});
   }
 
   // ── Settings update ────────────────────────────────────────────────────────
@@ -458,34 +547,82 @@ class DawriService {
     await _db.collection('dawri').doc(dawriId).update({
       'name': name,
       'description': description,
-      'trackingMode':
-          trackingMode == DawriTrackingMode.custom ? 'custom' : 'basic',
+      'trackingMode': trackingMode == DawriTrackingMode.custom
+          ? 'custom'
+          : 'basic',
       'selectedActivityIds': selectedActivityIds,
     });
   }
 
   // ── Private helpers ────────────────────────────────────────────────────────
 
-  /// Compute consecutive-day streak (simplified: count backwards from today).
-  Future<int> _computeStreak(String dawriId, String userId) async {
+  /// Consecutive days with points, ending today — or yesterday when today
+  /// hasn't been logged yet, so the streak doesn't drop before you log.
+  int _currentStreak(Map<String, DawriDayEntry> byDate, DateTime now) {
+    bool active(DateTime d) => (byDate[_dateKey(d)]?.totalPoints ?? 0) > 0;
+    var day = DateTime(now.year, now.month, now.day);
+    if (!active(day)) day = day.subtract(const Duration(days: 1));
     int streak = 0;
-    final now = DateTime.now();
-    for (int i = 0; i < 365; i++) {
-      final d = now.subtract(Duration(days: i));
-      final entryId = '${userId}_${_dateKey(d)}';
-      final doc = await _db
-          .collection('dawri')
-          .doc(dawriId)
-          .collection('entries')
-          .doc(entryId)
-          .get();
-      if (doc.exists && (doc.data()?['totalPoints'] as int? ?? 0) > 0) {
-        streak++;
-      } else if (i > 0) {
-        break;
-      }
+    while (active(day)) {
+      streak++;
+      day = day.subtract(const Duration(days: 1));
     }
     return streak;
+  }
+
+  /// League badges (ids match `member_profile_sheet.dart`). Badges already
+  /// earned are kept even if the history window no longer contains them.
+  static List<String> computeLeagueBadges(
+    Iterable<DawriDayEntry> entries, {
+    List<String> existing = const [],
+  }) {
+    final earned = <String>{...existing};
+    int mosquePrayers = 0;
+    final activeDays = <String>{};
+    final quranDays = <String>{};
+    final azkarDays = <String>{};
+
+    for (final e in entries) {
+      if (e.prayers[DawriPrayer.fajr] == PrayerStatus.mosque) {
+        earned.add('mosque_fajr');
+      }
+      mosquePrayers += e.prayers.values
+          .where((s) => s == PrayerStatus.mosque)
+          .length;
+      if (e.totalPoints > 0) activeDays.add(e.date);
+      if ((e.extras[DawriExtraActivity.quranReading.id] ?? 0) > 0) {
+        quranDays.add(e.date);
+      }
+      if ((e.extras[DawriExtraActivity.azkar.id] ?? 0) > 0) {
+        azkarDays.add(e.date);
+      }
+    }
+
+    if (mosquePrayers >= 40) earned.add('mosque_steps');
+    final longestActive = _longestRun(activeDays);
+    if (longestActive >= 7) earned.add('streak_7');
+    if (longestActive >= 30) earned.add('streak_30');
+    if (_longestRun(quranDays) >= 7) earned.add('quran_week');
+    if (_longestRun(azkarDays) >= 7) earned.add('azkar_week');
+    return earned.toList();
+  }
+
+  static int _longestRun(Set<String> dateKeys) {
+    final days =
+        dateKeys
+            .map(DateTime.tryParse)
+            .whereType<DateTime>()
+            .map((d) => DateTime.utc(d.year, d.month, d.day))
+            .toList()
+          ..sort();
+    int best = 0, run = 0;
+    DateTime? prev;
+    for (final d in days) {
+      run = (prev != null && d.difference(prev).inDays == 1) ? run + 1 : 1;
+      if (run > best) best = run;
+      prev = d;
+    }
+    return best;
   }
 }
 
@@ -500,21 +637,21 @@ extension DawriCopyWith on Dawri {
     DawriTrackingMode? trackingMode,
     List<String>? selectedActivityIds,
     List<String>? memberIds,
-  }) =>
-      Dawri(
-        id: id,
-        name: name ?? this.name,
-        description: description ?? this.description,
-        trackingMode: trackingMode ?? this.trackingMode,
-        supervisorId: supervisorId,
-        memberIds: memberIds ?? this.memberIds,
-        members: members ?? this.members,
-        inviteCode: inviteCode ?? this.inviteCode,
-        selectedActivityIds:
-            selectedActivityIds ?? this.selectedActivityIds,
-        createdAt: createdAt,
-        startDate: startDate,
-        endDate: endDate,
-        isActive: isActive ?? this.isActive,
-      );
+    DateTime? startDate,
+    DateTime? endDate,
+  }) => Dawri(
+    id: id,
+    name: name ?? this.name,
+    description: description ?? this.description,
+    trackingMode: trackingMode ?? this.trackingMode,
+    supervisorId: supervisorId,
+    memberIds: memberIds ?? this.memberIds,
+    members: members ?? this.members,
+    inviteCode: inviteCode ?? this.inviteCode,
+    selectedActivityIds: selectedActivityIds ?? this.selectedActivityIds,
+    createdAt: createdAt,
+    startDate: startDate ?? this.startDate,
+    endDate: endDate ?? this.endDate,
+    isActive: isActive ?? this.isActive,
+  );
 }
