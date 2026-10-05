@@ -26,6 +26,26 @@ class DailyWorship {
     };
   }
 
+  static const String fajrPrayedKey = 'fajr_prayed';
+  static const String fajrWokeAlarmKey = 'fajr_woke_alarm';
+  static const String morningAzkarKey = 'azkar_done';
+  static const String eveningAzkarKey = 'evening_azkar_done';
+  static const String fastingKey = 'fasting';
+
+  /// Whether Fajr specifically was prayed. Legacy records without the
+  /// explicit flag count Fajr as prayed only if all five prayers were logged.
+  bool get fajrPrayed => worships[fajrPrayedKey] ?? prayerCount >= 5;
+
+  /// New aggregate prayer count after toggling Fajr only — the other
+  /// prayers already counted for the day are preserved.
+  static int prayerCountAfterFajr(DailyWorship? prev, bool fajrPrayed) {
+    final count = prev?.prayerCount ?? 0;
+    final wasPrayed = prev?.fajrPrayed ?? false;
+    if (fajrPrayed && !wasPrayed) return (count + 1).clamp(0, 5);
+    if (!fajrPrayed && wasPrayed) return (count - 1).clamp(0, 5);
+    return count;
+  }
+
   factory DailyWorship.fromMap(Map<String, dynamic> map, [String? docId]) {
     return DailyWorship(
       id: docId ?? map['id'] ?? '',

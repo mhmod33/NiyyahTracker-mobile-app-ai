@@ -19,6 +19,25 @@ TreeStage stageForStreak(int streak) {
   return TreeStage.fullTree;
 }
 
+String fajrDayKey(DateTime d) =>
+    '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+
+/// Consecutive Fajr days ending today — or yesterday if today isn't logged
+/// yet, so the tree doesn't reset before Fajr time. Crosses month boundaries.
+int fajrStreakFromDays(Set<String> prayedDayKeys, [DateTime? now]) {
+  final n = now ?? DateTime.now();
+  var day = DateTime(n.year, n.month, n.day);
+  if (!prayedDayKeys.contains(fajrDayKey(day))) {
+    day = day.subtract(const Duration(days: 1));
+  }
+  int streak = 0;
+  while (prayedDayKeys.contains(fajrDayKey(day))) {
+    streak++;
+    day = day.subtract(const Duration(days: 1));
+  }
+  return streak;
+}
+
 // Stage metadata
 const _stageLabel = {
   TreeStage.seed:      'بذرة 🌱',
@@ -29,7 +48,7 @@ const _stageLabel = {
 };
 
 const _stageNextMsg = {
-  TreeStage.seed:      'استيقظ للفجر يومين للوصول للمرحلة التالية',
+  TreeStage.seed:      'صلِّ الفجر يوماً واحداً للوصول للمرحلة التالية',
   TreeStage.sprout:    'استيقظ 3 أيام متتالية للوصول للمرحلة التالية',
   TreeStage.sapling:   'استيقظ 6 أيام متتالية للوصول للمرحلة التالية',
   TreeStage.youngTree: 'استيقظ 10 أيام متتالية للوصول للمرحلة التالية',

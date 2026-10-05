@@ -7,8 +7,6 @@ import '../../core/directional_icon.dart';
 import '../../models/badge_model.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/badge_service.dart';
-import '../../services/firebase_service.dart';
-import '../../services/wird_service.dart';
 
 TextStyle _f({
   double sz = 14,
@@ -47,8 +45,6 @@ class BadgesPage extends StatefulWidget {
 
 class _BadgesPageState extends State<BadgesPage> {
   final BadgeService _badgeService = BadgeService();
-  final FirebaseService _firebaseService = FirebaseService();
-  final WirdService _wirdService = WirdService();
 
   bool _isLoading = true;
   Map<String, UserBadge> _userBadges = {};
@@ -70,7 +66,7 @@ class _BadgesPageState extends State<BadgesPage> {
 
     try {
       // Build stats from Firestore + WirdService
-      final stats = await _buildStats(userId);
+      final stats = await _badgeService.buildStats(userId);
 
       // Evaluate badges (writes newly earned ones to Firestore)
       await _badgeService.evaluateAndUpdate(userId: userId, stats: stats);
@@ -88,112 +84,6 @@ class _BadgesPageState extends State<BadgesPage> {
     } catch (e) {
       if (mounted) setState(() => _isLoading = false);
     }
-  }
-
-  Future<BadgeStats> _buildStats(String userId) async {
-    // Fetch all worship records
-    final now = DateTime.now();
-    final allWorships = await _firebaseService.getWorshipsInRange(
-      userId,
-      DateTime(2020),
-      now,
-    );
-
-    int totalPrayers = 0;
-    int completedPrayerDays = 0;
-    int noMissDays = 0;
-    int fajrDays = 0;
-    int morningAzkar = 0;
-    int eveningAzkar = 0;
-    int fastingDays = 0;
-    int ayyamBeedDays = 0;
-    int quranPages = 0;
-
-    // Streak computation
-    final daySet = <String>{};
-    final completeDaySet = <String>{};
-
-    for (final w in allWorships) {
-      final key =
-          '${w.date.year}-${w.date.month.toString().padLeft(2, '0')}-${w.date.day.toString().padLeft(2, '0')}';
-
-      totalPrayers += w.prayerCount;
-      quranPages += w.quranPages;
-
-      if (w.prayerCount > 0) {
-        daySet.add(key);
-        noMissDays++;
-      }
-
-      if (w.prayerCount >= 5) {
-        completedPrayerDays++;
-        completeDaySet.add(key);
-      }
-
-      // Fajr: prayerCount ≥ 1 means at least fajr is done
-      if (w.prayerCount >= 1) fajrDays++;
-
-      if (w.worships['azkar_done'] == true) morningAzkar++;
-      if (w.worships['evening_azkar_done'] == true) eveningAzkar++;
-      if (w.worships['fasting'] == true) fastingDays++;
-      if (w.worships['fasting_ayyam_beed'] == true) ayyamBeedDays++;
-    }
-
-    // Compute prayer streak from sorted complete days
-    final sortedDays = completeDaySet.toList()..sort();
-    int streak = 0;
-    int maxStreak = 0;
-    DateTime? prev;
-    for (final key in sortedDays) {
-      final d = DateTime.tryParse(key);
-      if (d == null) continue;
-      if (prev == null || d.difference(prev).inDays == 1) {
-        streak++;
-      } else {
-        streak = 1;
-      }
-      if (streak > maxStreak) maxStreak = streak;
-      prev = d;
-    }
-    // Check if streak is current (includes today or yesterday)
-    int currentStreak = 0;
-    {
-      final today = DateTime(now.year, now.month, now.day);
-      var check = today;
-      for (int i = 0; i < 400; i++) {
-        final key =
-            '${check.year}-${check.month.toString().padLeft(2, '0')}-${check.day.toString().padLeft(2, '0')}';
-        if (completeDaySet.contains(key)) {
-          currentStreak++;
-          check = check.subtract(const Duration(days: 1));
-        } else {
-          break;
-        }
-      }
-    }
-
-    // Wird streak from WirdService (local + cloud)
-    await _wirdService.init();
-    _wirdService.setUserId(userId);
-    final wirdStreak = _wirdService.getCurrentStreak();
-
-    // Also count wird pages toward quran total
-    final wirdPages = _wirdService.getTotalPagesRead();
-    final totalQuranPages = quranPages + wirdPages;
-
-    return BadgeStats(
-      totalPrayers: totalPrayers,
-      completedPrayerDays: completedPrayerDays,
-      prayerStreak: currentStreak > 0 ? currentStreak : maxStreak,
-      noMissDays: noMissDays,
-      fajrDays: fajrDays,
-      morningAzkarCount: morningAzkar,
-      eveningAzkarCount: eveningAzkar,
-      fastingDays: fastingDays,
-      ayyamBeedDays: ayyamBeedDays,
-      quranPagesTotal: totalQuranPages,
-      wirdStreak: wirdStreak,
-    );
   }
 
   List<BadgeDefinition> get _filteredBadges {

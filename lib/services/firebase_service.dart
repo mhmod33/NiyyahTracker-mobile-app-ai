@@ -31,6 +31,34 @@ class FirebaseService {
     }
   }
 
+  /// Merges [flags] into the worship record of [date] (creating it if needed)
+  /// without touching any other stored field. [prayerCount] receives the
+  /// previous count and returns the new one.
+  Future<DailyWorship> updateDailyWorshipFlags(
+    String userId,
+    DateTime date, {
+    Map<String, bool> flags = const {},
+    int Function(int previous)? prayerCount,
+  }) async {
+    final existing = await getDailyWorshipByDate(userId, date);
+    final prev = existing.isNotEmpty ? existing.first : null;
+    final day = DateTime(date.year, date.month, date.day, 12);
+    final worship = DailyWorship(
+      id: (prev != null && prev.id.isNotEmpty)
+          ? prev.id
+          : '${userId}_${day.year}-${day.month.toString().padLeft(2, '0')}-${day.day.toString().padLeft(2, '0')}',
+      date: prev?.date ?? day,
+      worships: {...?prev?.worships, ...flags},
+      notes: prev?.notes ?? '',
+      prayerCount: prayerCount != null
+          ? prayerCount(prev?.prayerCount ?? 0).clamp(0, 5)
+          : (prev?.prayerCount ?? 0),
+      quranPages: prev?.quranPages ?? 0,
+    );
+    await saveDailyWorship(userId, worship);
+    return worship;
+  }
+
   Future<DailyWorship?> getDailyWorship(String userId, String worshipId) async {
     try {
       final doc = await _db
