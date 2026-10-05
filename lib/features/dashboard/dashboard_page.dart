@@ -262,74 +262,27 @@ class _DashboardPageState extends State<DashboardPage>
         .subtract(const Duration(days: 6));
 
     try {
+      // One query covers the week view and a streak that crosses months.
       final records = await _firebaseService.getWorshipsInRange(
         userId,
-        weekStart,
+        today.subtract(const Duration(days: 400)),
         today,
       );
+      final prayedKeys = <String>{
+        for (final r in records)
+          if (r.fajrPrayed) fajrDayKey(r.date),
+      };
 
-      // Build a map keyed by date string "yyyy-MM-dd"
-      final map = <String, bool>{};
-      for (final r in records) {
-        final key =
-            '${r.date.year}-${r.date.month.toString().padLeft(2, '0')}-${r.date.day.toString().padLeft(2, '0')}';
-        map[key] = r.prayerCount > 0;
-      }
-
-      final days = List.generate(7, (i) {
-        final d = weekStart.add(Duration(days: i));
-        final key =
-            '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
-        return map[key] ?? false;
-      });
-
-      // Count streak (consecutive days ending today)
-      int streak = 0;
-      for (int i = days.length - 1; i >= 0; i--) {
-        if (days[i]) {
-          streak++;
-        } else {
-          break;
-        }
-      }
-
-      // Also count further back beyond the 7-day window to get a true streak
-      // (use monthly worships if available — best-effort)
-      try {
-        final monthRecords = await _firebaseService.getMonthlyWorships(
-          userId,
-          today.year,
-          today.month,
-        );
-        // Build per-day fajr map for the month
-        final monthMap = <String, bool>{};
-        for (final r in monthRecords) {
-          final key =
-              '${r.date.year}-${r.date.month.toString().padLeft(2, '0')}-${r.date.day.toString().padLeft(2, '0')}';
-          monthMap[key] = r.prayerCount > 0;
-        }
-        // Walk backwards from today counting streak
-        int fullStreak = 0;
-        for (int offset = 0; offset <= today.day - 1; offset++) {
-          final d = today.subtract(Duration(days: offset));
-          final key =
-              '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
-          if (monthMap[key] == true) {
-            fullStreak++;
-          } else {
-            break;
-          }
-        }
-        streak = fullStreak;
-      } catch (_) {
-        // Keep 7-day streak as fallback
-      }
+      final days = List.generate(
+        7,
+        (i) => prayedKeys.contains(fajrDayKey(weekStart.add(Duration(days: i)))),
+      );
 
       if (mounted) {
         setState(() {
           _fajrWeekDays = days;
           _fajrWeekStart = weekStart;
-          _fajrStreak = streak;
+          _fajrStreak = fajrStreakFromDays(prayedKeys, today);
         });
       }
     } catch (_) {}
@@ -365,7 +318,7 @@ class _DashboardPageState extends State<DashboardPage>
       if (worships.isNotEmpty) {
         final today = worships.first;
         setState(() {
-          _fajrChecked = today.prayerCount > 0;
+          _fajrChecked = today.fajrPrayed;
           _charityChecked = today.worships['charity'] == true;
           _quranChecked = today.worships['quran_read'] == true;
           _azkarChecked = today.worships['azkar_done'] == true;
@@ -403,10 +356,13 @@ class _DashboardPageState extends State<DashboardPage>
       final data = db_model.DailyWorship(
         id: docId,
         date: DateTime.now(),
-        prayerCount: _fajrChecked ? 1 : 0,
+        prayerCount: db_model.DailyWorship.prayerCountAfterFajr(
+            worships.firstOrNull, _fajrChecked),
         quranPages: worships.isNotEmpty ? worships.first.quranPages : 0,
+        notes: worships.firstOrNull?.notes ?? '',
         worships: {
           ...?worships.firstOrNull?.worships,
+          db_model.DailyWorship.fajrPrayedKey: _fajrChecked,
           'charity': _charityChecked,
           'quran_read': _quranChecked,
           'azkar_done': _azkarChecked,

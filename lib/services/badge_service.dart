@@ -1,6 +1,10 @@
 import 'dart:developer' as developer;
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../core/hijri_utils.dart';
 import '../models/badge_model.dart';
+import '../models/worship_model.dart';
+import 'firebase_service.dart';
+import 'wird_service.dart';
 
 /// All badge definitions in the app.
 /// Mirrors the Arabic app shown in the screenshots.
@@ -388,6 +392,88 @@ class BadgeService {
 
   /// Evaluates all badge criteria against [stats] and persists any changes.
   /// Returns badges that were *newly* earned in this call.
+  /// Builds badge stats from all worship records + the wird service.
+  Future<BadgeStats> buildStats(String userId) async {
+    final now = DateTime.now();
+    final allWorships =
+        await FirebaseService().getWorshipsInRange(userId, DateTime(2020), now);
+
+    String key(DateTime d) =>
+        '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+
+    int totalPrayers = 0;
+    int completedPrayerDays = 0;
+    int noMissDays = 0;
+    int fajrDays = 0;
+    int morningAzkar = 0;
+    int eveningAzkar = 0;
+    int fastingDays = 0;
+    int ayyamBeedDays = 0;
+    int quranPages = 0;
+    final completeDaySet = <String>{};
+
+    for (final w in allWorships) {
+      totalPrayers += w.prayerCount;
+      quranPages += w.quranPages;
+      if (w.prayerCount > 0) noMissDays++;
+      if (w.prayerCount >= 5) {
+        completedPrayerDays++;
+        completeDaySet.add(key(w.date));
+      }
+      if (w.fajrPrayed) fajrDays++;
+      if (w.worships[DailyWorship.morningAzkarKey] == true) morningAzkar++;
+      if (w.worships[DailyWorship.eveningAzkarKey] == true) eveningAzkar++;
+      final fasted = w.worships[DailyWorship.fastingKey] == true;
+      if (fasted) fastingDays++;
+      if (w.worships['fasting_ayyam_beed'] == true ||
+          (fasted && HijriDate.fromGregorian(w.date).isAyyamBeed)) {
+        ayyamBeedDays++;
+      }
+    }
+
+    // Longest and current run of complete prayer days.
+    final sorted = completeDaySet
+        .map(DateTime.tryParse)
+        .whereType<DateTime>()
+        .map((d) => DateTime.utc(d.year, d.month, d.day))
+        .toList()
+      ..sort();
+    int run = 0, maxStreak = 0;
+    DateTime? prev;
+    for (final d in sorted) {
+      run = (prev != null && d.difference(prev).inDays == 1) ? run + 1 : 1;
+      if (run > maxStreak) maxStreak = run;
+      prev = d;
+    }
+    int currentStreak = 0;
+    var check = DateTime(now.year, now.month, now.day);
+    if (!completeDaySet.contains(key(check))) {
+      check = check.subtract(const Duration(days: 1));
+    }
+    while (completeDaySet.contains(key(check))) {
+      currentStreak++;
+      check = check.subtract(const Duration(days: 1));
+    }
+
+    final wird = WirdService();
+    await wird.init();
+    wird.setUserId(userId);
+
+    return BadgeStats(
+      totalPrayers: totalPrayers,
+      completedPrayerDays: completedPrayerDays,
+      prayerStreak: currentStreak > 0 ? currentStreak : maxStreak,
+      noMissDays: noMissDays,
+      fajrDays: fajrDays,
+      morningAzkarCount: morningAzkar,
+      eveningAzkarCount: eveningAzkar,
+      fastingDays: fastingDays,
+      ayyamBeedDays: ayyamBeedDays,
+      quranPagesTotal: quranPages + wird.getTotalPagesRead(),
+      wirdStreak: wird.getCurrentStreak(),
+    );
+  }
+
   Future<List<BadgeDefinition>> evaluateAndUpdate({
     required String userId,
     required BadgeStats stats,

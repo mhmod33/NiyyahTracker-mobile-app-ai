@@ -3,6 +3,10 @@ import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/app_colors.dart';
 import '../../core/directional_icon.dart';
+import 'package:provider/provider.dart';
+import '../../models/worship_model.dart';
+import '../../providers/auth_provider.dart';
+import '../../services/firebase_service.dart';
 
 TextStyle _f({double sz = 14, FontWeight fw = FontWeight.w400, Color? c, double? h}) =>
     GoogleFonts.ibmPlexSansArabic(fontSize: sz, fontWeight: fw, color: c, height: h);
@@ -184,6 +188,7 @@ class _AzkarCounterPageState extends State<AzkarCounterPage> with SingleTickerPr
   late AnimationController _pulseController;
   late Animation<double> _pulseAnim;
   late ScrollController _selectorController;
+  bool _sessionRecorded = false;
 
   @override
   void initState() {
@@ -210,6 +215,7 @@ class _AzkarCounterPageState extends State<AzkarCounterPage> with SingleTickerPr
     HapticFeedback.lightImpact();
     _pulseController.forward().then((_) => _pulseController.reverse());
     setState(() { _counts[_selectedIndex]++; });
+    _recordSessionIfComplete();
     if (_counts[_selectedIndex] >= _current.targetCount) {
       HapticFeedback.heavyImpact();
       Future.delayed(const Duration(milliseconds: 350), () {
@@ -220,6 +226,30 @@ class _AzkarCounterPageState extends State<AzkarCounterPage> with SingleTickerPr
           _selectorController.animateTo((next * 80).toDouble(), duration: const Duration(milliseconds: 300), curve: Curves.easeOut);
         } catch (_) {}
       });
+    }
+  }
+
+  /// Marks today's morning/evening azkar as done once every dhikr in the
+  /// session reached its target (used by the badges).
+  Future<void> _recordSessionIfComplete() async {
+    if (_sessionRecorded) return;
+    final flag = switch (widget.categoryKey) {
+      'أذكار الصباح' => DailyWorship.morningAzkarKey,
+      'أذكار المساء' => DailyWorship.eveningAzkarKey,
+      _ => null,
+    };
+    if (flag == null) return;
+    for (int i = 0; i < _azkar.length; i++) {
+      if (_counts[i] < _azkar[i].targetCount) return;
+    }
+    final userId = context.read<AppAuthProvider>().userId;
+    if (userId.isEmpty) return;
+    _sessionRecorded = true;
+    try {
+      await FirebaseService()
+          .updateDailyWorshipFlags(userId, DateTime.now(), flags: {flag: true});
+    } catch (_) {
+      _sessionRecorded = false;
     }
   }
 

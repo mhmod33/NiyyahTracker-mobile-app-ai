@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
-import 'package:uuid/uuid.dart' as uuid_pkg;
 import '../../core/app_colors.dart';
 import '../../models/worship_model.dart';
 import '../../providers/auth_provider.dart';
@@ -41,6 +40,10 @@ class _FajrStreakPageState extends State<FajrStreakPage> {
   List<_DayRecord> _days = [];
   bool _loading = true;
   int _streak = 0;
+  final Set<String> _prayedKeys = {};
+
+  /// How far back to look when computing the streak.
+  static const int _historyDays = 400;
 
   @override
   void initState() {
@@ -58,35 +61,31 @@ class _FajrStreakPageState extends State<FajrStreakPage> {
 
     try {
       final records = await _firebaseService.getWorshipsInRange(
-          userId, weekStart, today);
+          userId, today.subtract(const Duration(days: _historyDays)), today);
 
       // Build lookup by date key
       final byDate = <String, DailyWorship>{};
       for (final r in records) {
-        final k = _dateKey(r.date);
-        byDate[k] = r;
+        byDate[_dateKey(r.date)] = r;
       }
+      _prayedKeys
+        ..clear()
+        ..addAll(byDate.entries.where((e) => e.value.fajrPrayed).map((e) => e.key));
 
       final days = List.generate(7, (i) {
         final d = weekStart.add(Duration(days: i));
         final r = byDate[_dateKey(d)];
         return _DayRecord(
           date: d,
-          prayed: r?.prayerCount != null && r!.prayerCount > 0,
-          wokeWithAlarm: r?.worships['fajr_woke_alarm'] == true,
+          prayed: r?.fajrPrayed ?? false,
+          wokeWithAlarm: r?.worships[DailyWorship.fajrWokeAlarmKey] == true,
           docId: r?.id,
         );
       });
 
-      // Streak = consecutive days ending today with prayed == true
-      int streak = 0;
-      for (int i = days.length - 1; i >= 0; i--) {
-        if (days[i].prayed) streak++; else break;
-      }
-
       setState(() {
         _days = days;
-        _streak = streak;
+        _streak = fajrStreakFromDays(_prayedKeys, today);
         _loading = false;
       });
     } catch (_) {
@@ -101,38 +100,30 @@ class _FajrStreakPageState extends State<FajrStreakPage> {
     final userId = context.read<AppAuthProvider>().userId;
     if (userId.isEmpty) return;
 
-    final docId = day.docId ?? const uuid_pkg.Uuid().v4();
-
-    // Merge with any existing record for this date
-    List<DailyWorship> existing = [];
-    try {
-      existing = await _firebaseService.getDailyWorshipByDate(userId, day.date);
-    } catch (_) {}
-
-    final prev = existing.firstOrNull;
-    final updatedWorships = <String, bool>{
-      ...?prev?.worships,
-      'fajr_woke_alarm': day.wokeWithAlarm,
-    };
-
-    final worship = DailyWorship(
-      id: prev?.id ?? docId,
-      date: day.date,
-      prayerCount: day.prayed ? (prev?.prayerCount ?? 0).clamp(1, 5) : 0,
-      quranPages: prev?.quranPages ?? 0,
-      worships: updatedWorships,
+    // Only the Fajr fields change; other prayers of the day are preserved.
+    final prev = (await _firebaseService
+            .getDailyWorshipByDate(userId, day.date)
+            .catchError((_) => <DailyWorship>[]))
+        .firstOrNull;
+    final worship = await _firebaseService.updateDailyWorshipFlags(
+      userId,
+      day.date,
+      flags: {
+        DailyWorship.fajrPrayedKey: day.prayed,
+        DailyWorship.fajrWokeAlarmKey: day.wokeWithAlarm,
+      },
+      prayerCount: (_) => DailyWorship.prayerCountAfterFajr(prev, day.prayed),
     );
 
-    await _firebaseService.saveDailyWorship(userId, worship);
-
-    // Recompute streak
-    int streak = 0;
-    for (int i = _days.length - 1; i >= 0; i--) {
-      if (_days[i].prayed) streak++; else break;
+    if (day.prayed) {
+      _prayedKeys.add(_dateKey(day.date));
+    } else {
+      _prayedKeys.remove(_dateKey(day.date));
     }
+    if (!mounted) return;
     setState(() {
       day.docId = worship.id;
-      _streak = streak;
+      _streak = fajrStreakFromDays(_prayedKeys);
     });
   }
 

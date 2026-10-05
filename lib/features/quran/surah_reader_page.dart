@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'dart:convert';
 import 'dart:ui' as ui;
+import 'package:wakelock_plus/wakelock_plus.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -39,6 +40,8 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
   @override
   void initState() {
     super.initState();
+    // Keep the screen on while reading.
+    WakelockPlus.enable();
     int startPage = quran.getPageNumber(widget.surahNumber, widget.initialVerse);
     _currentPage = startPage - 1;
     _pageController = PageController(initialPage: _currentPage);
@@ -291,6 +294,7 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
 
   @override
   void dispose() {
+    WakelockPlus.disable();
     _pageController.dispose();
     _highlightTimer?.cancel();
     // End wird session and check for session completion

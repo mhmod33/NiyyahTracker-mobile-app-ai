@@ -77,11 +77,28 @@ service cloud.firestore {
         && request.resource.data.supervisorId == request.auth.uid
         && request.auth.uid in request.resource.data.memberIds;
 
-      // Supervisor can update settings/inviteCode.
-      // Members can update memberIds (join — arrayUnion their own uid).
+      // Supervisor can update anything except ownership.
+      // Any other signed-in user may only add or remove *their own* uid in
+      // memberIds (join by invite code / leave) and touch nothing else.
       allow update: if isSignedIn()
+        && request.resource.data.supervisorId == resource.data.supervisorId
         && (resource.data.supervisorId == request.auth.uid
-            || request.auth.uid in resource.data.memberIds);
+            || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['memberIds'])
+                && (
+                  // join
+                  (!(request.auth.uid in resource.data.memberIds)
+                    && request.resource.data.memberIds.toSet()
+                         .difference(resource.data.memberIds.toSet()) == [request.auth.uid].toSet()
+                    && resource.data.memberIds.toSet()
+                         .difference(request.resource.data.memberIds.toSet()).size() == 0
+                    && resource.data.isActive == true)
+                  // leave
+                  || ((request.auth.uid in resource.data.memberIds)
+                    && resource.data.memberIds.toSet()
+                         .difference(request.resource.data.memberIds.toSet()) == [request.auth.uid].toSet()
+                    && request.resource.data.memberIds.toSet()
+                         .difference(resource.data.memberIds.toSet()).size() == 0)
+                )));
 
       // Only supervisor can delete the dawri doc itself.
       allow delete: if isSignedIn()
@@ -93,14 +110,12 @@ service cloud.firestore {
         allow read: if isSignedIn()
           && request.auth.uid in dawriData(dawriId).memberIds;
 
-        // A user can create their own member doc; supervisor can create any.
-        allow create: if isSignedIn()
-          && (memberId == request.auth.uid
-              || dawriData(dawriId).supervisorId == request.auth.uid);
-
-        // Members update their own doc; supervisor updates any.
-        allow update: if isSignedIn()
-          && (memberId == request.auth.uid
+        // A league member can create/update only their own member doc
+        // (joinByCode adds the uid to memberIds in the same batch); the
+        // supervisor can manage any member doc.
+        allow create, update: if isSignedIn()
+          && ((memberId == request.auth.uid
+               && request.auth.uid in getAfter(/databases/$(database)/documents/dawri/$(dawriId)).data.memberIds)
               || dawriData(dawriId).supervisorId == request.auth.uid);
 
         allow delete: if isSignedIn()
