@@ -64,6 +64,17 @@
             android:name="flutterEmbedding"
             android:value="2" />
 
+        <!-- FCM: default notification channel for background/terminated messages.
+             Must match an existing high-importance channel created by flutter_local_notifications. -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_channel_id"
+            android:value="azkar_reminders" />
+
+        <!-- FCM: default notification icon for system-displayed notifications -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_icon"
+            android:resource="@mipmap/ic_launcher" />
+
         <!-- Foreground service for azan audio playback -->
         <service
             android:name="com.ryanheise.audioservice.AudioService"

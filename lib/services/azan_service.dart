@@ -183,6 +183,8 @@ class AzanService {
 
       await _createAzanChannel();
       _startAzanChecker();
+      // Preload prayer times immediately from cached/default coords and refresh in background
+      unawaited(preloadPrayerTimes());
 
       developer.log('✅ AzanService initialized', name: 'AzanService');
     } catch (e, st) {
@@ -579,7 +581,110 @@ class AzanService {
 
   bool get isPlaying => _audioPlayer.playing;
 
-  // ── Prayer Times & Scheduling ──
+  // ── Prayer Times & Scheduling (Preloaded & Cached) ──
+
+  PrayerTimes? _cachedPrayerTimes;
+  DateTime? _cachedDate;
+  Coordinates? _cachedCoords;
+
+  /// Synchronously returns cached or default prayer times immediately without blocking.
+  PrayerTimes get prayerTimesSync {
+    final now = DateTime.now();
+    if (_cachedPrayerTimes != null &&
+        _cachedDate != null &&
+        _cachedDate!.year == now.year &&
+        _cachedDate!.month == now.month &&
+        _cachedDate!.day == now.day) {
+      return _cachedPrayerTimes!;
+    }
+    final lat = _settingsBox.isOpen
+        ? (_settingsBox.get('cached_lat', defaultValue: 30.0444) as num).toDouble()
+        : 30.0444;
+    final lng = _settingsBox.isOpen
+        ? (_settingsBox.get('cached_lng', defaultValue: 31.2357) as num).toDouble()
+        : 31.2357;
+    final coords = _cachedCoords ?? Coordinates(lat, lng);
+    final params = CalculationMethod.egyptian.getParameters()..madhab = Madhab.shafi;
+    final pt = PrayerTimes(coords, DateComponents.from(now), params);
+    _cachedPrayerTimes = pt;
+    _cachedDate = now;
+    _cachedCoords = coords;
+    return pt;
+  }
+
+  /// Synchronously returns all 6 prayer times for today.
+  List<Map<String, dynamic>> getAllPrayerTimesSync() {
+    final pt = prayerTimesSync;
+    return [
+      {'name': 'الفجر', 'key': 'fajr', 'time': pt.fajr},
+      {'name': 'الشروق', 'key': 'sunrise', 'time': pt.sunrise},
+      {'name': 'الظهر', 'key': 'dhuhr', 'time': pt.dhuhr},
+      {'name': 'العصر', 'key': 'asr', 'time': pt.asr},
+      {'name': 'المغرب', 'key': 'maghrib', 'time': pt.maghrib},
+      {'name': 'العشاء', 'key': 'isha', 'time': pt.isha},
+    ];
+  }
+
+  /// Synchronously returns the next two prayers info.
+  Map<String, Map<String, dynamic>> getNextTwoPrayersInfoSync() {
+    final pt = prayerTimesSync;
+    final now = DateTime.now();
+    final prayers = [
+      {'name': 'الفجر', 'key': 'fajr', 'time': pt.fajr},
+      {'name': 'الظهر', 'key': 'dhuhr', 'time': pt.dhuhr},
+      {'name': 'العصر', 'key': 'asr', 'time': pt.asr},
+      {'name': 'المغرب', 'key': 'maghrib', 'time': pt.maghrib},
+      {'name': 'العشاء', 'key': 'isha', 'time': pt.isha},
+    ];
+    int nextIdx = -1;
+    for (int i = 0; i < prayers.length; i++) {
+      final t = prayers[i]['time'] as DateTime;
+      if (t.isAfter(now)) {
+        nextIdx = i;
+        break;
+      }
+    }
+    Map<String, dynamic> next;
+    Map<String, dynamic> after;
+    if (nextIdx == -1) {
+      next = {
+        'name': 'الفجر',
+        'key': 'fajr',
+        'time': pt.fajr.add(const Duration(days: 1)),
+      };
+      after = {
+        'name': 'الظهر',
+        'key': 'dhuhr',
+        'time': pt.dhuhr.add(const Duration(days: 1)),
+      };
+    } else {
+      next = prayers[nextIdx];
+      after = nextIdx + 1 < prayers.length
+          ? prayers[nextIdx + 1]
+          : {
+              'name': 'الفجر',
+              'key': 'fajr',
+              'time': pt.fajr.add(const Duration(days: 1)),
+            };
+    }
+    return {
+      'next': Map<String, dynamic>.from(next),
+      'after': Map<String, dynamic>.from(after),
+    };
+  }
+
+  /// Preload prayer times on app startup (populates cache from Hive immediately and refreshes GPS in background).
+  Future<PrayerTimes> preloadPrayerTimes() async {
+    // 1. Ensure immediate sync cache from saved coordinates
+    final initial = prayerTimesSync;
+    // 2. Refresh coordinates asynchronously
+    try {
+      final pt = await _getPrayerTimes();
+      return pt;
+    } catch (_) {
+      return initial;
+    }
+  }
 
   /// Get current prayer times based on user location.
   /// Public wrapper — used by dashboard and other UI components.
@@ -679,7 +784,13 @@ class AzanService {
   }
 
   Future<PrayerTimes> _getPrayerTimes() async {
-    Coordinates coords = Coordinates(30.0444, 31.2357); // Default: Cairo
+    final defaultLat = _settingsBox.isOpen
+        ? (_settingsBox.get('cached_lat', defaultValue: 30.0444) as num).toDouble()
+        : 30.0444;
+    final defaultLng = _settingsBox.isOpen
+        ? (_settingsBox.get('cached_lng', defaultValue: 31.2357) as num).toDouble()
+        : 31.2357;
+    Coordinates coords = Coordinates(defaultLat, defaultLng);
 
     try {
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
@@ -696,15 +807,20 @@ class AzanService {
           Position pos = await Geolocator.getCurrentPosition(
             locationSettings: const LocationSettings(
               accuracy: LocationAccuracy.low,
+              timeLimit: Duration(seconds: 5),
             ),
           );
 
           coords = Coordinates(pos.latitude, pos.longitude);
+          if (_settingsBox.isOpen) {
+            await _settingsBox.put('cached_lat', pos.latitude);
+            await _settingsBox.put('cached_lng', pos.longitude);
+          }
         }
       }
     } catch (e) {
       developer.log(
-        '📍 Location error, using Cairo default',
+        '📍 Location error, using cached/Cairo default',
         name: 'AzanService',
         error: e,
       );
@@ -713,7 +829,11 @@ class AzanService {
     final params = CalculationMethod.egyptian.getParameters()
       ..madhab = Madhab.shafi;
 
-    final pt = PrayerTimes(coords, DateComponents.from(DateTime.now()), params);
+    final now = DateTime.now();
+    final pt = PrayerTimes(coords, DateComponents.from(now), params);
+    _cachedPrayerTimes = pt;
+    _cachedDate = now;
+    _cachedCoords = coords;
     AzanDebugLog.write(
       'PrayerTimes coords=(${coords.latitude.toStringAsFixed(4)},${coords.longitude.toStringAsFixed(4)}) '
       'fajr=${pt.fajr} dhuhr=${pt.dhuhr} asr=${pt.asr} maghrib=${pt.maghrib} isha=${pt.isha}',

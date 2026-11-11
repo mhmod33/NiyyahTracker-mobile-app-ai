@@ -24,7 +24,13 @@ import 'reciter_library_page.dart';
 class SurahReaderPage extends StatefulWidget {
   final int surahNumber;
   final int initialVerse;
-  const SurahReaderPage({super.key, required this.surahNumber, this.initialVerse = 1});
+  final int? initialPage;
+  const SurahReaderPage({
+    super.key,
+    required this.surahNumber,
+    this.initialVerse = 1,
+    this.initialPage,
+  });
   @override
   State<SurahReaderPage> createState() => _SurahReaderPageState();
 }
@@ -42,7 +48,11 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
     super.initState();
     // Keep the screen on while reading.
     WakelockPlus.enable();
-    int startPage = quran.getPageNumber(widget.surahNumber, widget.initialVerse);
+    final int startPage = (widget.initialPage != null &&
+            widget.initialPage! >= 1 &&
+            widget.initialPage! <= 604)
+        ? widget.initialPage!
+        : quran.getPageNumber(widget.surahNumber, widget.initialVerse);
     _currentPage = startPage - 1;
     _pageController = PageController(initialPage: _currentPage);
     
@@ -60,11 +70,36 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
       });
     }
 
-    // Track Al-Kahf reading on Fridays
+    // Save reading progress immediately & track Al-Kahf on Fridays
+    _saveReadingProgress(_currentPage);
     _maybeTrackKahf(_currentPage);
 
     // Start wird session tracking
     _startWirdSession();
+  }
+
+  Future<void> _saveReadingProgress(int pageIndex) async {
+    try {
+      final pageNum = (pageIndex + 1).clamp(1, 604);
+      final pageData = quran.getPageData(pageNum).first;
+      final surahNum = pageData['surah'] as int;
+      final startVerse = pageData['start'] as int;
+      final surahName = quran.getSurahNameArabic(surahNum);
+      final juzNum = quran.getJuzNumber(surahNum, startVerse);
+
+      final box = Hive.isBoxOpen('quran_progress')
+          ? Hive.box('quran_progress')
+          : await Hive.openBox('quran_progress');
+
+      await box.put('last_read', {
+        'page': pageNum,
+        'surahNumber': surahNum,
+        'surahName': surahName,
+        'verse': startVerse,
+        'juz': juzNum,
+        'timestamp': DateTime.now().millisecondsSinceEpoch,
+      });
+    } catch (_) {}
   }
 
   Future<void> _startWirdSession() async {
@@ -393,6 +428,7 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
                 physics: const _SinglePagePhysics(),
                 onPageChanged: (i) {
                   setState(() => _currentPage = i);
+                  _saveReadingProgress(i);
                   _maybeTrackKahf(i);
                 },
                 itemBuilder: (ctx, index) => _MushafPageWidget(

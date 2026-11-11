@@ -2,10 +2,12 @@ import 'dart:developer' as developer;
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:hive/hive.dart';
+import 'azan_service.dart';
 import 'wird_service.dart';
 
 /// Handles all notifications related to the Daily Wird feature.
 /// Uses notification IDs in the range 5000–5099.
+/// Reminders are scheduled dynamically based on actual prayer times (+20 minutes after each prayer).
 class WirdNotificationService {
   static final WirdNotificationService _instance =
       WirdNotificationService._internal();
@@ -24,7 +26,6 @@ class WirdNotificationService {
   static const int _dhuhrId = 5002;
   static const int _asrId = 5003;
   static const int _ishaId = 5004;
-  static const int _endOfDayId = 5005;
 
   static const String _enabledKey = 'wird_notifications_enabled';
 
@@ -72,50 +73,65 @@ class WirdNotificationService {
     }
   }
 
-  /// Schedule all wird reminders (4 prayer-time reminders + end-of-day summary).
+  /// Schedule all wird reminders dynamically based on actual prayer times
+  /// (20 minutes after Fajr, Dhuhr, Asr, and Isha).
   Future<void> scheduleAll() async {
     if (!notificationsEnabled) return;
     await cancelAll();
 
+    // Get actual prayer times from AzanService
+    final pt = AzanService().prayerTimesSync;
+    const offset = Duration(minutes: 20);
+
+    final fajrWirdTime = pt.fajr.add(offset);
+    final dhuhrWirdTime = pt.dhuhr.add(offset);
+    final asrWirdTime = pt.asr.add(offset);
+    final ishaWirdTime = pt.isha.add(offset);
+
     await _scheduleSessionReminder(
       id: _fajrId,
       session: WirdSession.fajr,
-      hour: 5,
-      minute: 30,
-      title: 'وقت ورد الصبح',
-      body: 'ابدأ يومك بقراءة ${WirdService().getTodayRecord().pagesPerSession} صفحات من القرآن الكريم',
+      hour: fajrWirdTime.hour,
+      minute: fajrWirdTime.minute,
+      title: 'وقت ورد الصبح 📖',
+      body: 'ابدأ يومك بقراءة ${WirdService().getTodayRecord().pagesPerSession} صفحات من القرآن الكريم بعد صلاة الفجر',
     );
 
     await _scheduleSessionReminder(
       id: _dhuhrId,
       session: WirdSession.dhuhr,
-      hour: 13,
-      minute: 0,
-      title: 'وقت ورد الظهر',
-      body: 'لا تنسَ قراءة وردك بعد صلاة الظهر',
+      hour: dhuhrWirdTime.hour,
+      minute: dhuhrWirdTime.minute,
+      title: 'وقت ورد الظهر 📖',
+      body: 'لا تنسَ قراءة وردك اليومي بعد صلاة الظهر',
     );
 
     await _scheduleSessionReminder(
       id: _asrId,
       session: WirdSession.asr,
-      hour: 16,
-      minute: 0,
-      title: 'وقت ورد العصر',
+      hour: asrWirdTime.hour,
+      minute: asrWirdTime.minute,
+      title: 'وقت ورد العصر 📖',
       body: 'حان وقت قراءة وردك بعد صلاة العصر',
     );
 
     await _scheduleSessionReminder(
       id: _ishaId,
       session: WirdSession.isha,
-      hour: 21,
-      minute: 30,
-      title: 'وقت ورد العشاء',
-      body: 'أتمم وردك اليومي قبل النوم',
+      hour: ishaWirdTime.hour,
+      minute: ishaWirdTime.minute,
+      title: 'وقت ورد العشاء 📖',
+      body: 'أتمم وردك اليومي بعد صلاة العشاء',
     );
 
-    await _scheduleEndOfDaySummary();
-
-    developer.log('✅ All wird notifications scheduled', name: 'WirdNotif');
+    developer.log(
+      '✅ All dynamic wird notifications scheduled based on prayer times: '
+      'Fajr=${fajrWirdTime.hour}:${fajrWirdTime.minute}, '
+      'Dhuhr=${dhuhrWirdTime.hour}:${dhuhrWirdTime.minute}, '
+      'Asr=${asrWirdTime.hour}:${asrWirdTime.minute}, '
+      'Isha=${ishaWirdTime.hour}:${ishaWirdTime.minute}',
+      name: 'WirdNotif',
+    );
   }
 
   Future<void> _scheduleSessionReminder({
@@ -137,27 +153,10 @@ class WirdNotificationService {
         matchDateTimeComponents: DateTimeComponents.time,
       );
 
-      developer.log('📅 Scheduled wird reminder: $session at $hour:$minute',
+      developer.log('📅 Scheduled dynamic wird reminder: $session at $hour:$minute',
           name: 'WirdNotif');
     } catch (e) {
       developer.log('❌ Error scheduling $session reminder: $e',
-          name: 'WirdNotif');
-    }
-  }
-
-  Future<void> _scheduleEndOfDaySummary() async {
-    try {
-      final scheduledTime = _nextTime(23, 0);
-      await _scheduleZoned(
-        id: _endOfDayId,
-        title: 'ملخص وردك اليومي',
-        body: 'اضغط لمشاهدة تقدمك في الورد اليومي',
-        scheduledTime: scheduledTime,
-        matchDateTimeComponents: DateTimeComponents.time,
-      );
-      developer.log('📅 Scheduled end-of-day wird summary', name: 'WirdNotif');
-    } catch (e) {
-      developer.log('❌ Error scheduling end-of-day summary: $e',
           name: 'WirdNotif');
     }
   }

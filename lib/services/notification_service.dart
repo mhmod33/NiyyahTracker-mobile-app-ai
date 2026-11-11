@@ -41,6 +41,7 @@ class NotificationService {
   static const String _sleepAzkarKey = 'sleep_azkar_enabled';
   static const String _prayerTimesKey = 'prayer_times_enabled';
   static const String _azkarReminderKey = 'azkar_reminder_enabled';
+  static const String _kahfReminderKey = 'kahf_reminder_enabled';
 
   Future<void> init() async {
     developer.log(
@@ -339,22 +340,32 @@ class NotificationService {
     }
   }
 
-  bool get azkarReminderEnabled {
+  bool get azkarReminderEnabled => false;
+
+  bool get kahfReminderEnabled {
     try {
-      final value = _settingsBox.get(_azkarReminderKey, defaultValue: true);
-      developer.log(
-        'azkarReminderEnabled: $value',
-        name: 'NotificationService',
-      );
-      return value;
+      return _settingsBox.get(_kahfReminderKey, defaultValue: true) as bool;
+    } catch (_) {
+      return true;
+    }
+  }
+
+  Future<void> setKahfReminderEnabled(bool enabled) async {
+    try {
+      await _settingsBox.put(_kahfReminderKey, enabled);
+      if (enabled) {
+        await scheduleKahfFridayReminder();
+      } else {
+        await cancelKahfFridayReminder();
+      }
     } catch (e, stackTrace) {
       developer.log(
-        '❌ Error getting azkarReminderEnabled',
+        '❌ Error setting kahfReminderEnabled',
         name: 'NotificationService',
         error: e,
         stackTrace: stackTrace,
       );
-      return true;
+      rethrow;
     }
   }
 
@@ -869,31 +880,8 @@ class NotificationService {
           matchDateTimeComponents: DateTimeComponents.time,
         );
 
-        final beforeTime = prayerTime.subtract(const Duration(minutes: 15));
-        final tzBeforeTime = tz.TZDateTime.from(beforeTime, tz.local);
-
-        await _scheduleZoned(
-          id: (prayer['id'] as int) + 100,
-          title: 'تذكير بصلاة ${prayer['name']}',
-          body: 'بقي 15 دقيقة على أذان ${prayer['name']}',
-          scheduledTime: tzBeforeTime,
-          details: const NotificationDetails(
-            android: AndroidNotificationDetails(
-              _prayerChannelId,
-              'تنبيهات قبل الصلاة',
-              channelDescription: 'تنبيهات قبل أوقات الصلاة بـ 15 دقيقة',
-              importance: Importance.high,
-              priority: Priority.high,
-              icon: '@mipmap/ic_launcher',
-            ),
-            iOS: DarwinNotificationDetails(
-              presentAlert: true,
-              presentBadge: true,
-              presentSound: true,
-            ),
-          ),
-          matchDateTimeComponents: DateTimeComponents.time,
-        );
+        // Ensure any previously scheduled 15-min pre-prayer reminders are cancelled
+        await _notifications.cancel((prayer['id'] as int) + 100);
       }
 
       // Verify at least some notifications were scheduled
@@ -1650,18 +1638,76 @@ class NotificationService {
     }
   }
 
+  Future<bool> scheduleKahfFridayReminder() async {
+    if (!kahfReminderEnabled) return false;
+    try {
+      await _notifications.cancel(1050);
+      final now = tz.TZDateTime.now(tz.local);
+      var scheduled = tz.TZDateTime(
+        tz.local,
+        now.year,
+        now.month,
+        now.day,
+        9,
+        0,
+      );
+      while (scheduled.weekday != DateTime.friday || scheduled.isBefore(now)) {
+        scheduled = scheduled.add(const Duration(days: 1));
+      }
+
+      return await _scheduleZoned(
+        id: 1050,
+        title: 'تذكير بسورة الكهف 🕌',
+        body: 'نورٌ ما بين الجمعتين — لا تنسَ قراءة سورة الكهف اليوم',
+        scheduledTime: scheduled,
+        details: const NotificationDetails(
+          android: AndroidNotificationDetails(
+            _azkarChannelId,
+            'أذكار وتذكيرات',
+            channelDescription: 'تذكيرات الأذكار اليومية وسورة الكهف',
+            importance: Importance.high,
+            priority: Priority.high,
+            icon: '@mipmap/ic_launcher',
+          ),
+          iOS: DarwinNotificationDetails(
+            presentAlert: true,
+            presentBadge: true,
+            presentSound: true,
+          ),
+        ),
+        matchDateTimeComponents: DateTimeComponents.dayOfWeekAndTime,
+      );
+    } catch (e, stackTrace) {
+      developer.log(
+        '❌ Error scheduling Kahf Friday reminder',
+        name: 'NotificationService',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      return false;
+    }
+  }
+
+  Future<void> cancelKahfFridayReminder() async {
+    try {
+      await _notifications.cancel(1050);
+    } catch (_) {}
+  }
+
   Future<void> initializeAllSchedules() async {
     developer.log(
-      'Initializing all notification schedules...',
+      'Initializing essential notification schedules...',
       name: 'NotificationService',
     );
     try {
+      // Cancel general periodic dhikr reminders & sleep azkar to reduce notification clutter
+      await cancelAzkarReminders();
+      await cancelSleepAzkar();
       if (morningAzkarEnabled) await scheduleMorningAzkar();
       if (eveningAzkarEnabled) await scheduleEveningAzkar();
-      if (sleepAzkarEnabled) await scheduleSleepAzkar();
-      if (azkarReminderEnabled) await scheduleAzkarReminders();
+      if (kahfReminderEnabled) await scheduleKahfFridayReminder();
       if (prayerTimesEnabled) await schedulePrayerTimes();
-      developer.log('✅ All schedules initialized', name: 'NotificationService');
+      developer.log('✅ Essential schedules initialized', name: 'NotificationService');
     } catch (e, stackTrace) {
       developer.log(
         '❌ Error initializing schedules',

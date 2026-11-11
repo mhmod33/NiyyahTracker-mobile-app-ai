@@ -4,6 +4,7 @@ import 'dart:developer' as developer;
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import '../core/app_colors.dart';
+import 'azan_service.dart';
 import 'firebase_service.dart';
 
 /// Represents a single day's wird reading record.
@@ -71,11 +72,21 @@ class WirdSession {
   static const List<String> all = [fajr, dhuhr, asr, isha];
 
   static String get current {
-    final hour = DateTime.now().hour;
-    if (hour >= 4 && hour < 12) return fajr;
-    if (hour >= 12 && hour < 15) return dhuhr;
-    if (hour >= 15 && hour < 20) return asr;
-    return isha;
+    try {
+      final now = DateTime.now();
+      final pt = AzanService().prayerTimesSync;
+      if (now.isBefore(pt.fajr)) return isha;
+      if (now.isBefore(pt.dhuhr)) return fajr;
+      if (now.isBefore(pt.asr)) return dhuhr;
+      if (now.isBefore(pt.isha)) return asr;
+      return isha;
+    } catch (_) {
+      final hour = DateTime.now().hour;
+      if (hour >= 4 && hour < 12) return fajr;
+      if (hour >= 12 && hour < 15) return dhuhr;
+      if (hour >= 15 && hour < 20) return asr;
+      return isha;
+    }
   }
 
   static String label(String session) {

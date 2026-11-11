@@ -10,13 +10,22 @@ import '../auth/login_page.dart';
 import '../settings/notification_settings_page.dart';
 import '../admin/admin_panel_page.dart';
 
-TextStyle _f({double sz = 14, FontWeight fw = FontWeight.w400, Color? c, double? h}) =>
-    GoogleFonts.ibmPlexSansArabic(fontSize: sz, fontWeight: fw, color: c, height: h);
+TextStyle _f({
+  double sz = 14,
+  FontWeight fw = FontWeight.w400,
+  Color? c,
+  double? h,
+}) => GoogleFonts.ibmPlexSansArabic(
+  fontSize: sz,
+  fontWeight: fw,
+  color: c,
+  height: h,
+);
 
 class ProfilePage extends StatelessWidget {
   const ProfilePage({super.key});
 
-  static const String _appVersion = '1.0.8';
+  static const String _appVersion = '1.0.12';
 
   @override
   Widget build(BuildContext context) {
@@ -30,7 +39,9 @@ class ProfilePage extends StatelessWidget {
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
-        backgroundColor: isDark ? const Color(0xFF0A0A0A) : const Color(0xFFF8FAF9),
+        backgroundColor: isDark
+            ? const Color(0xFF0A0A0A)
+            : const Color(0xFFF8FAF9),
         body: CustomScrollView(
           physics: const BouncingScrollPhysics(),
           slivers: [
@@ -39,9 +50,11 @@ class ProfilePage extends StatelessWidget {
               expandedHeight: 280,
               pinned: true,
               stretch: true,
-              backgroundColor: isDark ? const Color(0xFF0D2818) : AppColors.darkGreen,
+              backgroundColor: isDark
+                  ? const Color(0xFF0D2818)
+                  : AppColors.darkGreen,
               elevation: 0,
-                  leading: Padding(
+              leading: Padding(
                 padding: const EdgeInsets.all(10.0),
                 child: GestureDetector(
                   onTap: () => Navigator.pop(context),
@@ -50,15 +63,24 @@ class ProfilePage extends StatelessWidget {
                     child: BackdropFilter(
                       filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
                       child: Container(
-                        decoration: BoxDecoration(color: Colors.white.withOpacity(0.15)),
-                        child: const DirectionalIcon(isBack: true, size: 16, color: Colors.white),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.15),
+                        ),
+                        child: const DirectionalIcon(
+                          isBack: true,
+                          size: 16,
+                          color: Colors.white,
+                        ),
                       ),
                     ),
                   ),
                 ),
               ),
               flexibleSpace: FlexibleSpaceBar(
-                stretchModes: const [StretchMode.zoomBackground, StretchMode.blurBackground],
+                stretchModes: const [
+                  StretchMode.zoomBackground,
+                  StretchMode.blurBackground,
+                ],
                 background: Stack(
                   fit: StackFit.expand,
                   children: [
@@ -68,18 +90,25 @@ class ProfilePage extends StatelessWidget {
                         gradient: LinearGradient(
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
-                          colors: isDark 
-                            ? [const Color(0xFF0D2818), const Color(0xFF051109)]
-                            : [AppColors.darkGreen, AppColors.midGreen],
+                          colors: isDark
+                              ? [
+                                  const Color(0xFF0D2818),
+                                  const Color(0xFF051109),
+                                ]
+                              : [AppColors.darkGreen, AppColors.midGreen],
                         ),
                       ),
                     ),
                     // Abstract shapes for texture
                     Positioned(
-                      top: -50, right: -50,
-                      child: CircleAvatar(radius: 100, backgroundColor: Colors.white.withOpacity(0.05)),
+                      top: -50,
+                      right: -50,
+                      child: CircleAvatar(
+                        radius: 100,
+                        backgroundColor: Colors.white.withOpacity(0.05),
+                      ),
                     ),
-                    
+
                     Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
@@ -89,33 +118,63 @@ class ProfilePage extends StatelessWidget {
                           padding: const EdgeInsets.all(4),
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
-                            border: Border.all(color: AppColors.gold.withOpacity(0.5), width: 2),
+                            border: Border.all(
+                              color: AppColors.gold.withOpacity(0.5),
+                              width: 2,
+                            ),
                           ),
                           child: Container(
-                            width: 90, height: 90,
+                            width: 90,
+                            height: 90,
                             decoration: BoxDecoration(
-                              shape: BoxShape.circle, color: Colors.white,
-                              boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 25)],
+                              shape: BoxShape.circle,
+                              color: Colors.white,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.2),
+                                  blurRadius: 25,
+                                ),
+                              ],
                             ),
                             child: Center(
                               child: Text(
                                 name.isNotEmpty ? name[0].toUpperCase() : '؟',
-                                style: _f(sz: 42, fw: FontWeight.w800, c: AppColors.darkGreen),
+                                style: _f(
+                                  sz: 42,
+                                  fw: FontWeight.w800,
+                                  c: AppColors.darkGreen,
+                                ),
                               ),
                             ),
                           ),
                         ),
                         const SizedBox(height: 16),
-                        Text(name, style: _f(sz: 22, fw: FontWeight.w800, c: Colors.white)),
+                        Text(
+                          name,
+                          style: _f(
+                            sz: 22,
+                            fw: FontWeight.w800,
+                            c: Colors.white,
+                          ),
+                        ),
                         const SizedBox(height: 4),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 4,
+                          ),
                           decoration: BoxDecoration(
                             color: Colors.white.withOpacity(0.1),
                             borderRadius: BorderRadius.circular(20),
                           ),
-                          child: Text(email.isNotEmpty ? email : phone, 
-                            style: _f(sz: 12, c: Colors.white70, fw: FontWeight.w600)),
+                          child: Text(
+                            email.isNotEmpty ? email : phone,
+                            style: _f(
+                              sz: 12,
+                              c: Colors.white70,
+                              fw: FontWeight.w600,
+                            ),
+                          ),
                         ),
                       ],
                     ),
@@ -134,15 +193,22 @@ class ProfilePage extends StatelessWidget {
                     const SizedBox(height: 20),
 
                     // ── Settings Group ──
-                    _SectionHeader(title: 'الإعدادات والتفضيلات', isDark: isDark),
+                    _SectionHeader(
+                      title: 'الإعدادات والتفضيلات',
+                      isDark: isDark,
+                    ),
                     _ProfileCard(
                       isDark: isDark,
                       children: [
                         _ModernSettingsTile(
-                          icon: isDark ? Icons.dark_mode_rounded : Icons.light_mode_rounded,
+                          icon: isDark
+                              ? Icons.dark_mode_rounded
+                              : Icons.light_mode_rounded,
                           color: Colors.amber,
                           title: 'الوضع الداكن',
-                          subtitle: themeProvider.isDarkMode ? 'مُفعّل' : 'غير مُفعّل',
+                          subtitle: themeProvider.isDarkMode
+                              ? 'مُفعّل'
+                              : 'غير مُفعّل',
                           trailing: Switch.adaptive(
                             value: themeProvider.isDarkMode,
                             onChanged: (_) => themeProvider.toggleTheme(),
@@ -155,9 +221,14 @@ class ProfilePage extends StatelessWidget {
                           color: Colors.blue,
                           title: 'تنبيهات الأذكار',
                           subtitle: 'إدارة مواعيد التذكير',
-                          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const NotificationSettingsPage())),
+                          onTap: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const NotificationSettingsPage(),
+                            ),
+                          ),
                         ),
-                                              ],
+                      ],
                     ),
 
                     const SizedBox(height: 24),
@@ -172,7 +243,7 @@ class ProfilePage extends StatelessWidget {
                           subtitle: 'الإصدار $_appVersion',
                           onTap: () {},
                         ),
-                                              ],
+                      ],
                     ),
 
                     if (authProvider.isAdmin) ...[
@@ -186,7 +257,12 @@ class ProfilePage extends StatelessWidget {
                             color: AppColors.gold,
                             title: 'لوحة التحكم',
                             subtitle: 'إدارة التطبيق والمستخدمين',
-                            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AdminPanelPage())),
+                            onTap: () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const AdminPanelPage(),
+                              ),
+                            ),
                           ),
                         ],
                       ),
@@ -195,14 +271,27 @@ class ProfilePage extends StatelessWidget {
                     const SizedBox(height: 40),
                     // Logout
                     _buildLogoutButton(context, isDark),
-                    
+
                     const SizedBox(height: 24),
                     Center(
                       child: Column(
                         children: [
-                          Text('فمن أبصر فلنفسه', style: _f(sz: 14, c: isDark ? Colors.white38 : AppColors.gray, fw: FontWeight.w600)),
+                          Text(
+                            'فمن أبصر فلنفسه',
+                            style: _f(
+                              sz: 14,
+                              c: isDark ? Colors.white38 : AppColors.gray,
+                              fw: FontWeight.w600,
+                            ),
+                          ),
                           const SizedBox(height: 4),
-                          Text('صنع بكل حب للمسلمين 🤍', style: _f(sz: 11, c: isDark ? Colors.white24 : AppColors.gray)),
+                          Text(
+                            'صنع بكل حب للمسلمين 🤍',
+                            style: _f(
+                              sz: 11,
+                              c: isDark ? Colors.white24 : AppColors.gray,
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -216,7 +305,6 @@ class ProfilePage extends StatelessWidget {
     );
   }
 
-  
   Widget _buildLogoutButton(BuildContext context, bool isDark) {
     return Container(
       width: double.infinity,
@@ -224,16 +312,26 @@ class ProfilePage extends StatelessWidget {
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
-          if (!isDark) BoxShadow(color: Colors.red.withOpacity(0.1), blurRadius: 10, offset: const Offset(0, 4)),
+          if (!isDark)
+            BoxShadow(
+              color: Colors.red.withOpacity(0.1),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
         ],
       ),
       child: ElevatedButton.icon(
         onPressed: () => _handleLogout(context),
         icon: const Icon(Icons.logout_rounded, size: 20),
-        label: Text('تسجيل الخروج', style: _f(fw: FontWeight.w800, c: Colors.white, sz: 16)),
+        label: Text(
+          'تسجيل الخروج',
+          style: _f(fw: FontWeight.w800, c: Colors.white, sz: 16),
+        ),
         style: ElevatedButton.styleFrom(
           backgroundColor: Colors.redAccent,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
           elevation: 0,
         ),
       ),
@@ -247,15 +345,34 @@ class ProfilePage extends StatelessWidget {
         textDirection: TextDirection.rtl,
         child: AlertDialog(
           backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-          title: Text('تسجيل الخروج', style: GoogleFonts.ibmPlexSansArabic(fontWeight: FontWeight.bold)),
-          content: Text('هل أنت متأكد من رغبتك في مغادرة التطبيق؟', style: GoogleFonts.ibmPlexSansArabic()),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
+          ),
+          title: Text(
+            'تسجيل الخروج',
+            style: GoogleFonts.ibmPlexSansArabic(fontWeight: FontWeight.bold),
+          ),
+          content: Text(
+            'هل أنت متأكد من رغبتك في مغادرة التطبيق؟',
+            style: GoogleFonts.ibmPlexSansArabic(),
+          ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text('إلغاء', style: _f(c: Colors.grey))),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: Text('إلغاء', style: _f(c: Colors.grey)),
+            ),
             ElevatedButton(
               onPressed: () => Navigator.pop(ctx, true),
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
-              child: const Text('نعم، خروج', style: TextStyle(color: Colors.white)),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.redAccent,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              child: const Text(
+                'نعم، خروج',
+                style: TextStyle(color: Colors.white),
+              ),
             ),
           ],
         ),
@@ -274,21 +391,29 @@ class ProfilePage extends StatelessWidget {
   }
 }
 
-
 class _SectionHeader extends StatelessWidget {
-  final String title; final bool isDark;
+  final String title;
+  final bool isDark;
   const _SectionHeader({required this.title, required this.isDark});
   @override
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12, right: 4),
-      child: Text(title, style: _f(sz: 16, fw: FontWeight.w800, c: isDark ? AppColors.gold : AppColors.darkGreen)),
+      child: Text(
+        title,
+        style: _f(
+          sz: 16,
+          fw: FontWeight.w800,
+          c: isDark ? AppColors.gold : AppColors.darkGreen,
+        ),
+      ),
     );
   }
 }
 
 class _ProfileCard extends StatelessWidget {
-  final List<Widget> children; final bool isDark;
+  final List<Widget> children;
+  final bool isDark;
   const _ProfileCard({required this.children, required this.isDark});
   @override
   Widget build(BuildContext context) {
@@ -296,7 +421,11 @@ class _ProfileCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: isDark ? const Color(0xFF1A1F1C) : Colors.white,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: isDark ? Colors.white.withOpacity(0.05) : Colors.black.withOpacity(0.05)),
+        border: Border.all(
+          color: isDark
+              ? Colors.white.withOpacity(0.05)
+              : Colors.black.withOpacity(0.05),
+        ),
       ),
       child: Column(children: children),
     );
@@ -304,20 +433,37 @@ class _ProfileCard extends StatelessWidget {
 }
 
 class _ModernSettingsTile extends StatelessWidget {
-  final IconData icon; final Color color; final String title, subtitle; final Widget? trailing; final VoidCallback? onTap;
-  const _ModernSettingsTile({required this.icon, required this.color, required this.title, required this.subtitle, this.trailing, this.onTap});
+  final IconData icon;
+  final Color color;
+  final String title, subtitle;
+  final Widget? trailing;
+  final VoidCallback? onTap;
+  const _ModernSettingsTile({
+    required this.icon,
+    required this.color,
+    required this.title,
+    required this.subtitle,
+    this.trailing,
+    this.onTap,
+  });
   @override
   Widget build(BuildContext context) {
     return ListTile(
       onTap: onTap,
       leading: Container(
-        width: 44, height: 44,
-        decoration: BoxDecoration(color: color.withOpacity(0.12), borderRadius: BorderRadius.circular(12)),
+        width: 44,
+        height: 44,
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.12),
+          borderRadius: BorderRadius.circular(12),
+        ),
         child: Icon(icon, color: color, size: 20),
       ),
       title: Text(title, style: _f(fw: FontWeight.w700, sz: 14)),
       subtitle: Text(subtitle, style: _f(sz: 11, c: AppColors.textSecondary)),
-      trailing: trailing ?? const DirectionalIcon(isBack: false, size: 12, color: AppColors.gray),
+      trailing:
+          trailing ??
+          const DirectionalIcon(isBack: false, size: 12, color: AppColors.gray),
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
     );
   }
@@ -326,5 +472,10 @@ class _ModernSettingsTile extends StatelessWidget {
 class _Divider extends StatelessWidget {
   const _Divider();
   @override
-  Widget build(BuildContext context) => Divider(height: 1, indent: 64, endIndent: 16, color: Theme.of(context).dividerColor.withOpacity(0.05));
+  Widget build(BuildContext context) => Divider(
+    height: 1,
+    indent: 64,
+    endIndent: 16,
+    color: Theme.of(context).dividerColor.withOpacity(0.05),
+  );
 }

@@ -1,5 +1,6 @@
 ﻿import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import 'package:provider/provider.dart';
 import '../../core/app_colors.dart';
 import '../../providers/auth_provider.dart';
@@ -81,9 +82,26 @@ class _DailyWirdPageState extends State<DailyWirdPage> with TickerProviderStateM
   }
 
   void _openQuranReader() {
+    int surahNumber = 1;
+    int? initialPage;
+    try {
+      if (Hive.isBoxOpen('quran_progress')) {
+        final raw = Hive.box('quran_progress').get('last_read');
+        if (raw is Map) {
+          surahNumber = (raw['surahNumber'] as int?) ?? 1;
+          initialPage = raw['page'] as int?;
+        }
+      }
+    } catch (_) {}
+
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (_) => const SurahReaderPage(surahNumber: 1)),
+      MaterialPageRoute(
+        builder: (_) => SurahReaderPage(
+          surahNumber: surahNumber,
+          initialPage: initialPage,
+        ),
+      ),
     ).then((_) => _refresh());
   }
 

@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../core/app_colors.dart';
 import '../../core/directional_icon.dart';
 import '../../services/notification_service.dart';
+import '../../services/wird_notification_service.dart';
 import '../azan/azan_settings_page.dart';
 
 TextStyle _f({double sz = 14, FontWeight fw = FontWeight.w400, Color? c, double? h}) =>
@@ -17,12 +18,13 @@ class NotificationSettingsPage extends StatefulWidget {
 
 class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
   final NotificationService _notificationService = NotificationService();
+  final WirdNotificationService _wirdNotificationService = WirdNotificationService();
   
   bool _morningAzkarEnabled = true;
   bool _eveningAzkarEnabled = true;
-  bool _sleepAzkarEnabled = true;
+  bool _kahfReminderEnabled = true;
+  bool _wirdNotificationsEnabled = true;
   bool _prayerTimesEnabled = true;
-  bool _azkarReminderEnabled = true;
   bool _isLoading = false;
 
   @override
@@ -35,9 +37,9 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
     setState(() {
       _morningAzkarEnabled = _notificationService.morningAzkarEnabled;
       _eveningAzkarEnabled = _notificationService.eveningAzkarEnabled;
-      _sleepAzkarEnabled = _notificationService.sleepAzkarEnabled;
+      _kahfReminderEnabled = _notificationService.kahfReminderEnabled;
+      _wirdNotificationsEnabled = _wirdNotificationService.notificationsEnabled;
       _prayerTimesEnabled = _notificationService.prayerTimesEnabled;
-      _azkarReminderEnabled = _notificationService.azkarReminderEnabled;
     });
   }
 
@@ -54,17 +56,17 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
           await _notificationService.setEveningAzkarEnabled(value);
           setState(() => _eveningAzkarEnabled = value);
           break;
-        case 'sleep_azkar':
-          await _notificationService.setSleepAzkarEnabled(value);
-          setState(() => _sleepAzkarEnabled = value);
+        case 'kahf_reminder':
+          await _notificationService.setKahfReminderEnabled(value);
+          setState(() => _kahfReminderEnabled = value);
+          break;
+        case 'wird_reminders':
+          await _wirdNotificationService.setNotificationsEnabled(value);
+          setState(() => _wirdNotificationsEnabled = value);
           break;
         case 'prayer_times':
           await _notificationService.setPrayerTimesEnabled(value);
           setState(() => _prayerTimesEnabled = value);
-          break;
-        case 'azkar_reminder':
-          await _notificationService.setAzkarReminderEnabled(value);
-          setState(() => _azkarReminderEnabled = value);
           break;
       }
     } catch (e) {
@@ -248,15 +250,31 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
                     padding: const EdgeInsets.fromLTRB(20, 24, 20, 8),
                     sliver: SliverList(
                       delegate: SliverChildListDelegate([
-                        // Azkar Settings
+                        // Essential Quran & Azkar Settings
                         _SettingsSection(
-                          title: 'إشعارات الأذكار',
+                          title: 'الأوراد والأذكار الأساسية',
                           icon: Icons.auto_stories_rounded,
                           isDark: isDark,
                           children: [
                             _SettingsTile(
+                              title: 'الورد القرآني اليومي',
+                              subtitle: 'تذكير تلقائي بعد أوقات الصلوات الفعلية',
+                              icon: Icons.menu_book_rounded,
+                              value: _wirdNotificationsEnabled,
+                              onChanged: (value) => _updateSetting('wird_reminders', value),
+                              isDark: isDark,
+                            ),
+                            _SettingsTile(
+                              title: 'سورة الكهف يوم الجمعة',
+                              subtitle: 'تذكير أسبوعي كل يوم جمعة صباحاً',
+                              icon: Icons.mosque_rounded,
+                              value: _kahfReminderEnabled,
+                              onChanged: (value) => _updateSetting('kahf_reminder', value),
+                              isDark: isDark,
+                            ),
+                            _SettingsTile(
                               title: 'أذكار الصباح',
-                              subtitle: 'تذكير في الساعة 5:00 صباحاً',
+                              subtitle: 'تذكير بأذكار الصباح اليومية',
                               icon: Icons.wb_twilight_rounded,
                               value: _morningAzkarEnabled,
                               onChanged: (value) => _updateSetting('morning_azkar', value),
@@ -264,26 +282,10 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
                             ),
                             _SettingsTile(
                               title: 'أذكار المساء',
-                              subtitle: 'تذكير في الساعة 6:00 مساءً',
+                              subtitle: 'تذكير بأذكار المساء اليومية',
                               icon: Icons.nights_stay_rounded,
                               value: _eveningAzkarEnabled,
                               onChanged: (value) => _updateSetting('evening_azkar', value),
-                              isDark: isDark,
-                            ),
-                            _SettingsTile(
-                              title: 'أذكار النوم',
-                              subtitle: 'تذكير في الساعة 10:00 مساءً',
-                              icon: Icons.bedtime_rounded,
-                              value: _sleepAzkarEnabled,
-                              onChanged: (value) => _updateSetting('sleep_azkar', value),
-                              isDark: isDark,
-                            ),
-                            _SettingsTile(
-                              title: 'تذكيرات دورية',
-                              subtitle: 'كل ساعتين خلال اليوم',
-                              icon: Icons.timer_rounded,
-                              value: _azkarReminderEnabled,
-                              onChanged: (value) => _updateSetting('azkar_reminder', value),
                               isDark: isDark,
                             ),
                           ],
@@ -299,7 +301,7 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
                           children: [
                             _SettingsTile(
                               title: 'أوقات الصلاة',
-                              subtitle: 'تنبيه قبل كل صلاة',
+                              subtitle: 'تنبيه عند دخول وقت كل صلاة',
                               icon: Icons.access_time_rounded,
                               value: _prayerTimesEnabled,
                               onChanged: (value) => _updateSetting('prayer_times', value),

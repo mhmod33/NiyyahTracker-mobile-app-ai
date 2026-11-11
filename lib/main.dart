@@ -57,6 +57,8 @@ void main() async {
     await Hive.initFlutter();
     await Hive.openBox('settings');
     await Hive.openBox('notification_settings');
+    await Hive.openBox('quran_progress');
+    await Hive.openBox('home_dhikr');
   } catch (e) {
     // Silently fail
   }
@@ -107,6 +109,9 @@ void main() async {
 /// notification scheduling (iterates many alarms) and similar background setup.
 Future<void> _deferredStartupWork() async {
   try {
+    await AzanService().preloadPrayerTimes();
+  } catch (_) {}
+  try {
     await NotificationService().initializeAllSchedules();
   } catch (_) {}
   try {
@@ -114,7 +119,6 @@ Future<void> _deferredStartupWork() async {
   } catch (_) {}
   try {
     await DailySummaryService().initializeNotifications();
-    await DailySummaryService().scheduleMidnightReminder();
   } catch (_) {}
   try {
     await WirdNotificationService().init();
