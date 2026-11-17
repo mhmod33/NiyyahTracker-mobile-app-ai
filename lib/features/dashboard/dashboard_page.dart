@@ -2117,16 +2117,55 @@ class _DashboardPageState extends State<DashboardPage>
       ),
     ];
 
-    return SizedBox(
-      height: 96,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 20),
-        itemCount: items.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 10),
-        itemBuilder: (context, i) =>
-            _AccountabilityChip(data: items[i], isDark: isDark),
-      ),
+    final doneCount = [
+      _fajrChecked,
+      _quranChecked,
+      _azkarChecked,
+      _istighfarChecked,
+      _charityChecked,
+    ].where((e) => e).length;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: Row(
+            children: [
+              Text(
+                '$doneCount/5',
+                style: _f(sz: 11, fw: FontWeight.w800, c: AppColors.gold),
+              ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(4),
+                  child: LinearProgressIndicator(
+                    value: doneCount / 5,
+                    minHeight: 4,
+                    backgroundColor: isDark
+                        ? Colors.white12
+                        : AppColors.paleGreen,
+                    valueColor: const AlwaysStoppedAnimation(AppColors.gold),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 8),
+        SizedBox(
+          height: 74,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            itemCount: items.length,
+            separatorBuilder: (_, __) => const SizedBox(width: 10),
+            itemBuilder: (context, i) =>
+                _AccountabilityChip(data: items[i], isDark: isDark),
+          ),
+        ),
+      ],
     );
   }
 
@@ -3679,7 +3718,7 @@ extension _ArchHeader on _DashboardPageState {
       child: ClipRRect(
         borderRadius: const BorderRadius.vertical(bottom: Radius.circular(38)),
         child: BackdropFilter(
-          filter: ui.ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+          filter: ui.ImageFilter.blur(sigmaX: 4, sigmaY: 4),
           child: Container(
             padding: EdgeInsets.only(
               top: MediaQuery.of(context).padding.top + 14,
@@ -3692,12 +3731,12 @@ extension _ArchHeader on _DashboardPageState {
                 begin: Alignment.topRight,
                 end: Alignment.bottomLeft,
                 colors: [
-                  Colors.white.withValues(alpha: 0.18),
-                  AppColors.gold.withValues(alpha: 0.08),
+                  Colors.white.withValues(alpha: 0.12),
+                  accent.withValues(alpha: 0.05),
                 ],
               ),
               border: Border.all(
-                color: Colors.white.withValues(alpha: 0.25),
+                color: Colors.white.withValues(alpha: 0.20),
                 width: 1,
               ),
             ),
@@ -4084,8 +4123,8 @@ class _AccountabilityChip extends StatelessWidget {
       onTap: data.onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 250),
-        width: 92,
-        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+        width: 78,
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
         decoration: BoxDecoration(
           color: data.checked
               ? data.color.withValues(alpha: 0.16)
@@ -4113,7 +4152,7 @@ class _AccountabilityChip extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              padding: const EdgeInsets.all(7),
+              padding: const EdgeInsets.all(5),
               decoration: BoxDecoration(
                 color: data.checked
                     ? data.color
@@ -4122,15 +4161,15 @@ class _AccountabilityChip extends StatelessWidget {
               ),
               child: Icon(
                 data.checked ? Icons.check_rounded : data.icon,
-                size: 17,
+                size: 15,
                 color: data.checked ? Colors.white : data.color,
               ),
             ),
-            const SizedBox(height: 7),
+            const SizedBox(height: 4),
             Text(
               data.label,
               style: _f(
-                sz: 11.5,
+                sz: 10.5,
                 fw: FontWeight.w800,
                 c: data.checked
                     ? data.color

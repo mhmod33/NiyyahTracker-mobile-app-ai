@@ -512,19 +512,13 @@ class _LoadingSkeletonState extends State<_LoadingSkeleton>
                   ? AppColors.gold.withValues(alpha: 0.35)
                   : Colors.white.withValues(
                       alpha: widget.isDark ? 0.10 : 0.60);
-              return ClipRRect(
-                borderRadius: BorderRadius.circular(18),
-                child: BackdropFilter(
-                  filter: ui.ImageFilter.blur(sigmaX: 6, sigmaY: 6),
-                  child: Container(
-                    width: i == 0 ? 110 : 86,
-                    decoration: BoxDecoration(
-                        color: tint,
-                        borderRadius: BorderRadius.circular(18),
-                        border:
-                            Border.all(color: border, width: 1)),
-                  ),
-                ),
+              return Container(
+                width: i == 0 ? 110 : 86,
+                decoration: BoxDecoration(
+                    color: tint,
+                    borderRadius: BorderRadius.circular(18),
+                    border:
+                        Border.all(color: border, width: 1)),
               );
             },
           ),
