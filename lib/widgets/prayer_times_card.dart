@@ -1,8 +1,10 @@
 import 'dart:async';
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../core/app_colors.dart';
 import '../core/hijri_utils.dart';
+import 'glass_card.dart';
 
 TextStyle _f({double sz = 13, FontWeight fw = FontWeight.w400, Color? c}) =>
     GoogleFonts.ibmPlexSansArabic(fontSize: sz, fontWeight: fw, color: c);
@@ -156,19 +158,22 @@ class _PrayerTimesCardState extends State<PrayerTimesCard>
   Widget build(BuildContext context) {
     final isDark = widget.isDark;
     final now = DateTime.now();
-    final cardBg = isDark ? const Color(0xFF111B14) : Colors.white;
     final subCol = isDark ? Colors.white54 : AppColors.textSecondary;
     final textCol = isDark ? Colors.white : AppColors.textPrimary;
     final divCol = isDark
         ? Colors.white.withValues(alpha: 0.06)
         : Colors.black.withValues(alpha: 0.06);
 
+    // Translucent frosted-glass fill so the backdrop blur reads through.
+    final glassBg = isDark
+        ? const Color(0xFF111B14).withValues(alpha: 0.55)
+        : Colors.white.withValues(alpha: 0.55);
+
     return GestureDetector(
       onTap: widget.onTap,
       child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 16),
         decoration: BoxDecoration(
-          color: cardBg,
           borderRadius: BorderRadius.circular(24),
           boxShadow: [
             BoxShadow(
@@ -180,79 +185,70 @@ class _PrayerTimesCardState extends State<PrayerTimesCard>
             ),
           ],
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // ── Header ──────────────────────────────────────────────────────
-            Padding(
-              padding: const EdgeInsets.fromLTRB(18, 16, 18, 0),
-              child: Row(
-                children: [
-                  GestureDetector(
-                    onTap: widget.onTap,
-                    child: Container(
-                      padding: const EdgeInsets.all(7),
-                      decoration: BoxDecoration(
-                        color: isDark
-                            ? Colors.white.withValues(alpha: 0.08)
-                            : AppColors.paleGreen,
-                        borderRadius: BorderRadius.circular(9),
-                      ),
-                      child: const Icon(Icons.refresh_rounded,
-                          size: 15, color: AppColors.darkGreen),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Text('مواقيت الصلاة',
-                      style: _f(sz: 15, fw: FontWeight.w800, c: textCol)),
-                  const SizedBox(width: 5),
-                  Text('(حسب توقيتك المحلي)',
-                      style: _f(sz: 10, c: subCol)),
-                ],
-              ),
-            ),
-
-            // ── Date row ────────────────────────────────────────────────────
-            Padding(
-              padding: const EdgeInsets.fromLTRB(18, 6, 18, 0),
-              child: Row(
-                children: [
-                  Text(_hijriDate(now), style: _f(sz: 11, c: subCol)),
-                  const Spacer(),
-                  Text(_arabicDay(now),
-                      style: _f(sz: 13, fw: FontWeight.w800,
-                          c: AppColors.darkGreen)),
-                  const SizedBox(width: 8),
-                  Text(_arabicDate(now), style: _f(sz: 11, c: subCol)),
-                ],
-              ),
-            ),
-
-            Padding(
-              padding: const EdgeInsets.fromLTRB(18, 12, 18, 0),
-              child: Divider(height: 1, color: divCol),
-            ),
-
-            const SizedBox(height: 12),
-
-            // ── Prayer chips ─────────────────────────────────────────────────
-            if (widget.loading)
-              _LoadingSkeleton(isDark: isDark)
-            else
-              _PrayerScroll(
-                prayers: widget.allPrayers,
-                nextPrayerName: widget.nextPrayerName,
-                timeLeft: _timeLeft,
-                ringProgress: _ringProgress,
-                ringAnim: _ringAnim,
-                isDark: isDark,
-                fmtTime: _fmtTime,
-                fmtCountdown: _fmtCountdown,
-                iconOf: _icon,
+        child: GlassCard(
+          borderRadius: 24,
+          blurSigma: 12,
+          isDark: isDark,
+          color: glassBg,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // ── Header ──────────────────────────────────────────────────────
+              Padding(
+                padding: const EdgeInsets.fromLTRB(18, 16, 18, 0),
+                child: Row(
+                  children: [
+                    Text('مواقيت الصلاة',
+                        style: _f(sz: 15, fw: FontWeight.w800, c: textCol)),
+                    const SizedBox(width: 5),
+                    Text('(حسب توقيتك المحلي)',
+                        style: _f(sz: 10, c: subCol)),
+                  ],
+                ),
               ),
 
-            const SizedBox(height: 14),
-          ],
+              // ── Date row ────────────────────────────────────────────────────
+              Padding(
+                padding: const EdgeInsets.fromLTRB(18, 6, 18, 0),
+                child: Row(
+                  children: [
+                    Text(_hijriDate(now), style: _f(sz: 11, c: subCol)),
+                    const Spacer(),
+                    Text(_arabicDay(now),
+                        style: _f(sz: 13, fw: FontWeight.w800,
+                            c: AppColors.darkGreen)),
+                    const SizedBox(width: 8),
+                    Text(_arabicDate(now), style: _f(sz: 11, c: subCol)),
+                  ],
+                ),
+              ),
+
+              Padding(
+                padding: const EdgeInsets.fromLTRB(18, 12, 18, 0),
+                child: Divider(height: 1, color: divCol),
+              ),
+
+              const SizedBox(height: 12),
+
+              // ── Prayer chips ─────────────────────────────────────────────────
+              if (widget.loading)
+                _LoadingSkeleton(isDark: isDark)
+              else
+                _PrayerScroll(
+                  prayers: widget.allPrayers,
+                  nextPrayerName: widget.nextPrayerName,
+                  timeLeft: _timeLeft,
+                  ringProgress: _ringProgress,
+                  ringAnim: _ringAnim,
+                  isDark: isDark,
+                  fmtTime: _fmtTime,
+                  fmtCountdown: _fmtCountdown,
+                  iconOf: _icon,
+                ),
+
+              const SizedBox(height: 14),
+            ],
+          ),
         ),
       ),
     );
@@ -495,9 +491,9 @@ class _LoadingSkeletonState extends State<_LoadingSkeleton>
     return AnimatedBuilder(
       animation: _anim,
       builder: (_, __) {
-        final c = widget.isDark
-            ? Colors.white.withValues(alpha: _anim.value * 0.15)
-            : Colors.black.withValues(alpha: _anim.value * 0.07);
+        // Pulsing alpha so the frosted chips shimmer like the real ones do.
+        final goldAlpha = 0.10 + _anim.value * 0.18;   // 0.10 → 0.28
+        final neutralAlpha = 0.05 + _anim.value * 0.10; // 0.05 → 0.15
         return SizedBox(
           height: 110,
           child: ListView.separated(
@@ -505,11 +501,32 @@ class _LoadingSkeletonState extends State<_LoadingSkeleton>
             padding: const EdgeInsets.symmetric(horizontal: 16),
             itemCount: 6,
             separatorBuilder: (_, __) => const SizedBox(width: 10),
-            itemBuilder: (_, i) => Container(
-              width: i == 0 ? 110 : 86,
-              decoration: BoxDecoration(
-                color: c, borderRadius: BorderRadius.circular(18)),
-            ),
+            itemBuilder: (_, i) {
+              final isFirst = i == 0;
+              final tint = isFirst
+                  ? AppColors.gold.withValues(alpha: goldAlpha)
+                  : (widget.isDark
+                      ? Colors.white.withValues(alpha: neutralAlpha)
+                      : Colors.white.withValues(alpha: neutralAlpha * 2));
+              final border = isFirst
+                  ? AppColors.gold.withValues(alpha: 0.35)
+                  : Colors.white.withValues(
+                      alpha: widget.isDark ? 0.10 : 0.60);
+              return ClipRRect(
+                borderRadius: BorderRadius.circular(18),
+                child: BackdropFilter(
+                  filter: ui.ImageFilter.blur(sigmaX: 6, sigmaY: 6),
+                  child: Container(
+                    width: i == 0 ? 110 : 86,
+                    decoration: BoxDecoration(
+                        color: tint,
+                        borderRadius: BorderRadius.circular(18),
+                        border:
+                            Border.all(color: border, width: 1)),
+                  ),
+                ),
+              );
+            },
           ),
         );
       },

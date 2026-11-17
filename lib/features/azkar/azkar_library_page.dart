@@ -298,7 +298,23 @@ class _AzkarLibraryPageState extends State<AzkarLibraryPage> with SingleTickerPr
         backgroundColor: bg,
         appBar: AppBar(
           title: Text('الأذكار والأدعية', style: _f(fw: FontWeight.bold, sz: 18, c: Colors.white)),
-          backgroundColor: isDark ? const Color(0xFF0D2818) : AppColors.darkGreen,
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          flexibleSpace: ClipRect(
+            child: BackdropFilter(
+              filter: ui.ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      AppColors.darkGreen.withValues(alpha: 0.78),
+                      AppColors.midGreen.withValues(alpha: 0.6),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
           foregroundColor: Colors.white,
           bottom: TabBar(
             controller: _tabController,
