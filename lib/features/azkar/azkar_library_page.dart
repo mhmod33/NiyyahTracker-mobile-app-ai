@@ -9,8 +9,17 @@ import 'package:share_plus/share_plus.dart';
 import '../../core/app_colors.dart';
 import 'azkar_counter_page.dart';
 
-TextStyle _f({double sz = 14, FontWeight fw = FontWeight.w400, Color? c, double? h}) =>
-    GoogleFonts.ibmPlexSansArabic(fontSize: sz, fontWeight: fw, color: c, height: h);
+TextStyle _f({
+  double sz = 14,
+  FontWeight fw = FontWeight.w400,
+  Color? c,
+  double? h,
+}) => GoogleFonts.ibmPlexSansArabic(
+  fontSize: sz,
+  fontWeight: fw,
+  color: c,
+  height: h,
+);
 
 class AzkarLibraryPage extends StatefulWidget {
   final String? initialCategory;
@@ -20,21 +29,62 @@ class AzkarLibraryPage extends StatefulWidget {
   State<AzkarLibraryPage> createState() => _AzkarLibraryPageState();
 }
 
-class _AzkarLibraryPageState extends State<AzkarLibraryPage> with SingleTickerProviderStateMixin {
+class _AzkarLibraryPageState extends State<AzkarLibraryPage>
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
   String _selectedCategoryKey = 'الكل';
   String _searchQuery = '';
 
   static const List<Map<String, dynamic>> _categories = [
-    {'title': 'أذكار الصباح', 'key': 'أذكار الصباح', 'icon': '☀️', 'color': 0xFFFF9800},
-    {'title': 'أذكار المساء', 'key': 'أذكار المساء', 'icon': '🌙', 'color': 0xFF3F51B5},
-    {'title': 'أذكار النوم', 'key': 'أذكار النوم', 'icon': '🛌', 'color': 0xFF673AB7},
-    {'title': 'أذكار بعد الصلاة', 'key': 'أذكار بعد الصلاة', 'icon': '📿', 'color': 0xFF4CAF50},
-    {'title': 'أذكار الطعام', 'key': 'أذكار الطعام', 'icon': '🍽️', 'color': 0xFFFF5722},
-    {'title': 'أذكار الوضوء', 'key': 'أذكار الوضوء', 'icon': '💧', 'color': 0xFF2196F3},
-    {'title': 'أذكار المسجد', 'key': 'أذكار المسجد', 'icon': '🕌', 'color': 0xFF795548},
+    {
+      'title': 'أذكار الصباح',
+      'key': 'أذكار الصباح',
+      'icon': '☀️',
+      'color': 0xFFFF9800,
+    },
+    {
+      'title': 'أذكار المساء',
+      'key': 'أذكار المساء',
+      'icon': '🌙',
+      'color': 0xFF3F51B5,
+    },
+    {
+      'title': 'أذكار النوم',
+      'key': 'أذكار النوم',
+      'icon': '🛌',
+      'color': 0xFF673AB7,
+    },
+    {
+      'title': 'أذكار بعد الصلاة',
+      'key': 'أذكار بعد الصلاة',
+      'icon': '📿',
+      'color': 0xFF4CAF50,
+    },
+    {
+      'title': 'أذكار الطعام',
+      'key': 'أذكار الطعام',
+      'icon': '🍽️',
+      'color': 0xFFFF5722,
+    },
+    {
+      'title': 'أذكار الوضوء',
+      'key': 'أذكار الوضوء',
+      'icon': '💧',
+      'color': 0xFF2196F3,
+    },
+    {
+      'title': 'أذكار المسجد',
+      'key': 'أذكار المسجد',
+      'icon': '🕌',
+      'color': 0xFF795548,
+    },
     {'title': 'تسابيح', 'key': 'تسابيح', 'icon': '📿', 'color': 0xFF9C27B0},
-    {'title': 'أدعية نبوية', 'key': 'أدعية نبوية', 'icon': '🤲', 'color': 0xFF009688},
+    {
+      'title': 'أدعية نبوية',
+      'key': 'أدعية نبوية',
+      'icon': '🤲',
+      'color': 0xFF009688,
+    },
     {'title': 'عدّاد الأذكار', 'key': 'عام', 'icon': '🔢', 'color': 0xFF607D8B},
   ];
 
@@ -65,7 +115,12 @@ class _AzkarLibraryPageState extends State<AzkarLibraryPage> with SingleTickerPr
     );
   }
 
-  void _shareDhikrAsImage(BuildContext context, String text, String cat, String reward) {
+  void _shareDhikrAsImage(
+    BuildContext context,
+    String text,
+    String cat,
+    String reward,
+  ) {
     final GlobalKey repaintKey = GlobalKey();
     showDialog(
       context: context,
@@ -73,7 +128,10 @@ class _AzkarLibraryPageState extends State<AzkarLibraryPage> with SingleTickerPr
         textDirection: TextDirection.rtl,
         child: Dialog(
           backgroundColor: Colors.transparent,
-          insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+          insetPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 24,
+          ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -83,7 +141,10 @@ class _AzkarLibraryPageState extends State<AzkarLibraryPage> with SingleTickerPr
                   borderRadius: BorderRadius.circular(28),
                   child: Container(
                     width: double.infinity,
-                    padding: const EdgeInsets.symmetric(horizontal: 26, vertical: 30),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 26,
+                      vertical: 30,
+                    ),
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         begin: Alignment.topLeft,
@@ -113,109 +174,153 @@ class _AzkarLibraryPageState extends State<AzkarLibraryPage> with SingleTickerPr
                         ),
                       ],
                     ),
-                  child: Stack(
-                    children: [
-                      Positioned(
-                        top: -8,
-                        right: -8,
-                        child: Icon(
-                          Icons.auto_awesome_rounded,
-                          color: AppColors.gold.withValues(alpha: 0.12),
-                          size: 56,
+                    child: Stack(
+                      children: [
+                        Positioned(
+                          top: -8,
+                          right: -8,
+                          child: Icon(
+                            Icons.auto_awesome_rounded,
+                            color: AppColors.gold.withValues(alpha: 0.12),
+                            size: 56,
+                          ),
                         ),
-                      ),
-                      Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: AppColors.gold.withValues(alpha: 0.15),
-                                  borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(color: AppColors.gold.withValues(alpha: 0.35)),
+                        Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 10,
+                                    vertical: 4,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.gold.withValues(
+                                      alpha: 0.15,
+                                    ),
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(
+                                      color: AppColors.gold.withValues(
+                                        alpha: 0.35,
+                                      ),
+                                    ),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Icon(
+                                        Icons.auto_awesome_rounded,
+                                        color: AppColors.gold,
+                                        size: 14,
+                                      ),
+                                      const SizedBox(width: 5),
+                                      Text(
+                                        cat,
+                                        style: _f(
+                                          sz: 12,
+                                          fw: FontWeight.w800,
+                                          c: AppColors.gold,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
+                                Row(
                                   children: [
-                                    const Icon(Icons.auto_awesome_rounded, color: AppColors.gold, size: 14),
-                                    const SizedBox(width: 5),
-                                    Text(cat, style: _f(sz: 12, fw: FontWeight.w800, c: AppColors.gold)),
+                                    Text(
+                                      'بصائر',
+                                      style: GoogleFonts.amiri(
+                                        color: AppColors.gold,
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Container(
+                                      width: 22,
+                                      height: 22,
+                                      decoration: BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        border: Border.all(
+                                          color: AppColors.gold.withValues(
+                                            alpha: 0.6,
+                                          ),
+                                          width: 1,
+                                        ),
+                                      ),
+                                      child: const Icon(
+                                        Icons.eco_rounded,
+                                        color: AppColors.gold,
+                                        size: 13,
+                                      ),
+                                    ),
                                   ],
                                 ),
+                              ],
+                            ),
+                            const SizedBox(height: 24),
+                            Text(
+                              text,
+                              textAlign: TextAlign.center,
+                              style: GoogleFonts.amiri(
+                                fontSize: 22,
+                                fontWeight: FontWeight.w700,
+                                color: const Color(0xFFFBF8F1),
+                                height: 1.85,
                               ),
-                              Row(
-                                children: [
-                                  Text(
-                                    'بصائر',
-                                    style: GoogleFonts.amiri(
-                                      color: AppColors.gold,
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.bold,
-                                    ),
+                            ),
+                            if (reward.isNotEmpty) ...[
+                              const SizedBox(height: 18),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 8,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withValues(alpha: 0.08),
+                                  borderRadius: BorderRadius.circular(14),
+                                  border: Border.all(
+                                    color: Colors.white.withValues(alpha: 0.15),
                                   ),
-                                  const SizedBox(width: 6),
-                                  Container(
-                                    width: 22,
-                                    height: 22,
-                                    decoration: BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      border: Border.all(color: AppColors.gold.withValues(alpha: 0.6), width: 1),
-                                    ),
-                                    child: const Icon(Icons.eco_rounded, color: AppColors.gold, size: 13),
+                                ),
+                                child: Text(
+                                  '✨ $reward',
+                                  textAlign: TextAlign.center,
+                                  style: _f(
+                                    sz: 12,
+                                    fw: FontWeight.w600,
+                                    c: AppColors.goldLight,
                                   ),
-                                ],
+                                ),
                               ),
                             ],
-                          ),
-                          const SizedBox(height: 24),
-                          Text(
-                            text,
-                            textAlign: TextAlign.center,
-                            style: GoogleFonts.amiri(
-                              fontSize: 22,
-                              fontWeight: FontWeight.w700,
-                              color: const Color(0xFFFBF8F1),
-                              height: 1.85,
+                            const SizedBox(height: 22),
+                            Divider(
+                              color: Colors.white.withValues(alpha: 0.15),
                             ),
-                          ),
-                          if (reward.isNotEmpty) ...[
-                            const SizedBox(height: 18),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                              decoration: BoxDecoration(
-                                color: Colors.white.withValues(alpha: 0.08),
-                                borderRadius: BorderRadius.circular(14),
-                                border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
-                              ),
-                              child: Text(
-                                '✨ $reward',
-                                textAlign: TextAlign.center,
-                                style: _f(sz: 12, fw: FontWeight.w600, c: AppColors.goldLight),
-                              ),
+                            const SizedBox(height: 8),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text(
+                                  'تطبيق بصائر للأذكار والعبادات',
+                                  style: _f(
+                                    sz: 11,
+                                    fw: FontWeight.w600,
+                                    c: Colors.white70,
+                                  ),
+                                ),
+                              ],
                             ),
                           ],
-                          const SizedBox(height: 22),
-                          Divider(color: Colors.white.withValues(alpha: 0.15)),
-                          const SizedBox(height: 8),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Text(
-                                'تطبيق بصائر للأذكار والعبادات',
-                                style: _f(sz: 11, fw: FontWeight.w600, c: Colors.white70),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ],
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
-            ),
               const SizedBox(height: 16),
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -223,14 +328,23 @@ class _AzkarLibraryPageState extends State<AzkarLibraryPage> with SingleTickerPr
                   ElevatedButton.icon(
                     onPressed: () async {
                       try {
-                        final boundary = repaintKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
+                        final boundary =
+                            repaintKey.currentContext?.findRenderObject()
+                                as RenderRepaintBoundary?;
                         if (boundary == null) return;
-                        final ui.Image image = await boundary.toImage(pixelRatio: 3.0);
-                        final ByteData? byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+                        final ui.Image image = await boundary.toImage(
+                          pixelRatio: 3.0,
+                        );
+                        final ByteData? byteData = await image.toByteData(
+                          format: ui.ImageByteFormat.png,
+                        );
                         if (byteData == null) return;
-                        final Uint8List pngBytes = byteData.buffer.asUint8List();
+                        final Uint8List pngBytes = byteData.buffer
+                            .asUint8List();
                         final tempDir = await getTemporaryDirectory();
-                        final file = File('${tempDir.path}/dhikr_${DateTime.now().millisecondsSinceEpoch}.png');
+                        final file = File(
+                          '${tempDir.path}/dhikr_${DateTime.now().millisecondsSinceEpoch}.png',
+                        );
                         await file.writeAsBytes(pngBytes);
                         if (ctx.mounted) Navigator.pop(ctx);
                         await Share.shareXFiles([XFile(file.path)], text: text);
@@ -240,18 +354,29 @@ class _AzkarLibraryPageState extends State<AzkarLibraryPage> with SingleTickerPr
                       }
                     },
                     icon: const Icon(Icons.image_rounded, size: 18),
-                    label: Text('مشاركة الذكر كصورة', style: _f(sz: 13, fw: FontWeight.w800, c: Colors.black87)),
+                    label: Text(
+                      'مشاركة الذكر كصورة',
+                      style: _f(sz: 13, fw: FontWeight.w800, c: Colors.black87),
+                    ),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.gold,
                       foregroundColor: Colors.black87,
-                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 12,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
                     ),
                   ),
                   const SizedBox(width: 10),
                   TextButton(
                     onPressed: () => Navigator.pop(ctx),
-                    child: Text('إغلاق', style: _f(sz: 13, fw: FontWeight.w700, c: Colors.white)),
+                    child: Text(
+                      'إغلاق',
+                      style: _f(sz: 13, fw: FontWeight.w700, c: Colors.white),
+                    ),
                   ),
                 ],
               ),
@@ -297,7 +422,10 @@ class _AzkarLibraryPageState extends State<AzkarLibraryPage> with SingleTickerPr
       child: Scaffold(
         backgroundColor: bg,
         appBar: AppBar(
-          title: Text('الأذكار والأدعية', style: _f(fw: FontWeight.bold, sz: 18, c: Colors.white)),
+          title: Text(
+            'الأذكار والأدعية',
+            style: _f(fw: FontWeight.bold, sz: 18, c: Colors.white),
+          ),
           backgroundColor: Colors.transparent,
           elevation: 0,
           flexibleSpace: ClipRect(
@@ -324,8 +452,14 @@ class _AzkarLibraryPageState extends State<AzkarLibraryPage> with SingleTickerPr
             unselectedLabelColor: Colors.white70,
             labelStyle: _f(sz: 14, fw: FontWeight.bold),
             tabs: const [
-              Tab(text: 'الأقسام', icon: Icon(Icons.grid_view_rounded, size: 20)),
-              Tab(text: 'بطاقات الأذكار', icon: Icon(Icons.menu_book_rounded, size: 20)),
+              Tab(
+                text: 'الأقسام',
+                icon: Icon(Icons.grid_view_rounded, size: 20),
+              ),
+              Tab(
+                text: 'بطاقات الأذكار',
+                icon: Icon(Icons.menu_book_rounded, size: 20),
+              ),
             ],
           ),
         ),
@@ -340,11 +474,19 @@ class _AzkarLibraryPageState extends State<AzkarLibraryPage> with SingleTickerPr
     );
   }
 
-  Widget _buildCategoriesGrid(BuildContext context, bool isDark, Color cardBg, Color textColor) {
+  Widget _buildCategoriesGrid(
+    BuildContext context,
+    bool isDark,
+    Color cardBg,
+    Color textColor,
+  ) {
     return GridView.builder(
       padding: const EdgeInsets.all(16),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2, crossAxisSpacing: 16, mainAxisSpacing: 16, childAspectRatio: 1.2,
+        crossAxisCount: 2,
+        crossAxisSpacing: 16,
+        mainAxisSpacing: 16,
+        childAspectRatio: 1.2,
       ),
       itemCount: _categories.length,
       itemBuilder: (context, index) {
@@ -352,33 +494,68 @@ class _AzkarLibraryPageState extends State<AzkarLibraryPage> with SingleTickerPr
         final color = Color(cat['color'] as int);
         return InkWell(
           onTap: () {
-            Navigator.push(context, MaterialPageRoute(
-              builder: (_) => AzkarCounterPage(categoryKey: cat['key'] as String),
-            ));
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) =>
+                    AzkarCounterPage(categoryKey: cat['key'] as String),
+              ),
+            );
           },
           borderRadius: BorderRadius.circular(20),
           child: Container(
             decoration: BoxDecoration(
-              color: cardBg, borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: isDark ? Colors.white.withValues(alpha: 0.06) : Colors.black.withValues(alpha: 0.04)),
-              boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.06), blurRadius: 12, offset: const Offset(0, 4))],
-            ),
-            child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-              Container(
-                width: 52, height: 52,
-                decoration: BoxDecoration(color: color.withValues(alpha: isDark ? 0.2 : 0.1), borderRadius: BorderRadius.circular(14)),
-                child: Center(child: Text(cat['icon'] as String, style: const TextStyle(fontSize: 28))),
+              color: cardBg,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: isDark
+                    ? Colors.white.withValues(alpha: 0.06)
+                    : Colors.black.withValues(alpha: 0.04),
               ),
-              const SizedBox(height: 12),
-              Text(cat['title'] as String, style: _f(fw: FontWeight.bold, sz: 15, c: textColor)),
-            ]),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.06),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  width: 52,
+                  height: 52,
+                  decoration: BoxDecoration(
+                    color: color.withValues(alpha: isDark ? 0.2 : 0.1),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Center(
+                    child: Text(
+                      cat['icon'] as String,
+                      style: const TextStyle(fontSize: 28),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  cat['title'] as String,
+                  style: _f(fw: FontWeight.bold, sz: 15, c: textColor),
+                ),
+              ],
+            ),
           ),
         );
       },
     );
   }
 
-  Widget _buildDhikrCardsList(BuildContext context, bool isDark, Color cardBg, Color textColor) {
+  Widget _buildDhikrCardsList(
+    BuildContext context,
+    bool isDark,
+    Color cardBg,
+    Color textColor,
+  ) {
     final filteredDhikrs = _getFilteredDhikrs();
 
     return Column(
@@ -395,10 +572,18 @@ class _AzkarLibraryPageState extends State<AzkarLibraryPage> with SingleTickerPr
                 decoration: InputDecoration(
                   hintText: 'ابحث في الأذكار والأدعية...',
                   hintStyle: _f(c: isDark ? Colors.white38 : AppColors.gray),
-                  prefixIcon: const Icon(Icons.search, color: AppColors.darkGreen),
+                  prefixIcon: const Icon(
+                    Icons.search,
+                    color: AppColors.darkGreen,
+                  ),
                   filled: true,
-                  fillColor: isDark ? const Color(0xFF1F2622) : const Color(0xFFF4F6F4),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  fillColor: isDark
+                      ? const Color(0xFF1F2622)
+                      : const Color(0xFFF4F6F4),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 10,
+                  ),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(16),
                     borderSide: BorderSide.none,
@@ -412,7 +597,9 @@ class _AzkarLibraryPageState extends State<AzkarLibraryPage> with SingleTickerPr
                   scrollDirection: Axis.horizontal,
                   children: [
                     _filterChip('الكل', isDark),
-                    ..._categories.map((c) => _filterChip(c['key'] as String, isDark)),
+                    ..._categories.map(
+                      (c) => _filterChip(c['key'] as String, isDark),
+                    ),
                   ],
                 ),
               ),
@@ -426,9 +613,16 @@ class _AzkarLibraryPageState extends State<AzkarLibraryPage> with SingleTickerPr
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.search_off_rounded, size: 48, color: isDark ? Colors.white24 : Colors.black26),
+                      Icon(
+                        Icons.search_off_rounded,
+                        size: 48,
+                        color: isDark ? Colors.white24 : Colors.black26,
+                      ),
                       const SizedBox(height: 12),
-                      Text('لم يتم العثور على أذكار تطابق البحث', style: _f(c: AppColors.gray, sz: 15)),
+                      Text(
+                        'لم يتم العثور على أذكار تطابق البحث',
+                        style: _f(c: AppColors.gray, sz: 15),
+                      ),
                     ],
                   ),
                 )
@@ -446,11 +640,15 @@ class _AzkarLibraryPageState extends State<AzkarLibraryPage> with SingleTickerPr
                         color: cardBg,
                         borderRadius: BorderRadius.circular(18),
                         border: Border.all(
-                          color: isDark ? Colors.white.withValues(alpha: 0.08) : Colors.black.withValues(alpha: 0.06),
+                          color: isDark
+                              ? Colors.white.withValues(alpha: 0.08)
+                              : Colors.black.withValues(alpha: 0.06),
                         ),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.04),
+                            color: Colors.black.withValues(
+                              alpha: isDark ? 0.2 : 0.04,
+                            ),
                             blurRadius: 10,
                             offset: const Offset(0, 3),
                           ),
@@ -465,26 +663,46 @@ class _AzkarLibraryPageState extends State<AzkarLibraryPage> with SingleTickerPr
                             Row(
                               children: [
                                 Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 10,
+                                    vertical: 4,
+                                  ),
                                   decoration: BoxDecoration(
-                                    color: AppColors.darkGreen.withValues(alpha: 0.12),
+                                    color: AppColors.darkGreen.withValues(
+                                      alpha: 0.12,
+                                    ),
                                     borderRadius: BorderRadius.circular(8),
                                   ),
                                   child: Text(
                                     catKey,
-                                    style: _f(sz: 11, fw: FontWeight.bold, c: AppColors.darkGreen),
+                                    style: _f(
+                                      sz: 11,
+                                      fw: FontWeight.bold,
+                                      c: AppColors.darkGreen,
+                                    ),
                                   ),
                                 ),
                                 const SizedBox(width: 8),
                                 Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 4,
+                                  ),
                                   decoration: BoxDecoration(
-                                    color: AppColors.gold.withValues(alpha: 0.15),
+                                    color: AppColors.gold.withValues(
+                                      alpha: 0.15,
+                                    ),
                                     borderRadius: BorderRadius.circular(8),
                                   ),
                                   child: Text(
                                     '${dhikr.targetCount}x',
-                                    style: _f(sz: 11, fw: FontWeight.bold, c: isDark ? AppColors.goldLight : AppColors.gold),
+                                    style: _f(
+                                      sz: 11,
+                                      fw: FontWeight.bold,
+                                      c: isDark
+                                          ? AppColors.goldLight
+                                          : AppColors.gold,
+                                    ),
                                   ),
                                 ),
                               ],
@@ -504,21 +722,37 @@ class _AzkarLibraryPageState extends State<AzkarLibraryPage> with SingleTickerPr
                             if (dhikr.reward.isNotEmpty) ...[
                               const SizedBox(height: 10),
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 8,
+                                ),
                                 decoration: BoxDecoration(
-                                  color: isDark ? Colors.white.withValues(alpha: 0.04) : const Color(0xFFF8F9F8),
+                                  color: isDark
+                                      ? Colors.white.withValues(alpha: 0.04)
+                                      : const Color(0xFFF8F9F8),
                                   borderRadius: BorderRadius.circular(10),
                                   border: Border.all(
-                                    color: isDark ? Colors.white.withValues(alpha: 0.06) : Colors.black.withValues(alpha: 0.04),
+                                    color: isDark
+                                        ? Colors.white.withValues(alpha: 0.06)
+                                        : Colors.black.withValues(alpha: 0.04),
                                   ),
                                 ),
                                 child: Row(
                                   children: [
-                                    const Text('✨ ', style: TextStyle(fontSize: 12)),
+                                    const Text(
+                                      '✨ ',
+                                      style: TextStyle(fontSize: 12),
+                                    ),
                                     Expanded(
                                       child: Text(
                                         dhikr.reward,
-                                        style: _f(sz: 12, c: isDark ? Colors.white70 : AppColors.gray, fw: FontWeight.w500),
+                                        style: _f(
+                                          sz: 12,
+                                          c: isDark
+                                              ? Colors.white70
+                                              : AppColors.gray,
+                                          fw: FontWeight.w500,
+                                        ),
                                       ),
                                     ),
                                   ],
@@ -533,15 +767,26 @@ class _AzkarLibraryPageState extends State<AzkarLibraryPage> with SingleTickerPr
                                 TextButton.icon(
                                   style: TextButton.styleFrom(
                                     foregroundColor: AppColors.darkGreen,
-                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 10,
+                                      vertical: 6,
+                                    ),
                                   ),
-                                  icon: const Icon(Icons.play_arrow_rounded, size: 18),
-                                  label: Text('فتح في العدّاد', style: _f(sz: 13, fw: FontWeight.bold)),
+                                  icon: const Icon(
+                                    Icons.play_arrow_rounded,
+                                    size: 18,
+                                  ),
+                                  label: Text(
+                                    'فتح في العدّاد',
+                                    style: _f(sz: 13, fw: FontWeight.bold),
+                                  ),
                                   onPressed: () {
                                     Navigator.push(
                                       context,
                                       MaterialPageRoute(
-                                        builder: (_) => AzkarCounterPage(categoryKey: catKey),
+                                        builder: (_) => AzkarCounterPage(
+                                          categoryKey: catKey,
+                                        ),
                                       ),
                                     );
                                   },
@@ -550,14 +795,28 @@ class _AzkarLibraryPageState extends State<AzkarLibraryPage> with SingleTickerPr
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
                                     IconButton(
-                                      icon: const Icon(Icons.copy_rounded, color: AppColors.darkGreen, size: 20),
+                                      icon: const Icon(
+                                        Icons.copy_rounded,
+                                        color: AppColors.darkGreen,
+                                        size: 20,
+                                      ),
                                       tooltip: 'نسخ الذكر',
-                                      onPressed: () => _copyDhikr(context, dhikr.text),
+                                      onPressed: () =>
+                                          _copyDhikr(context, dhikr.text),
                                     ),
                                     IconButton(
-                                      icon: const Icon(Icons.image_outlined, color: AppColors.gold, size: 20),
+                                      icon: const Icon(
+                                        Icons.image_outlined,
+                                        color: AppColors.gold,
+                                        size: 20,
+                                      ),
                                       tooltip: 'مشاركة كصورة',
-                                      onPressed: () => _shareDhikrAsImage(context, dhikr.text, catKey, dhikr.reward),
+                                      onPressed: () => _shareDhikrAsImage(
+                                        context,
+                                        dhikr.text,
+                                        catKey,
+                                        dhikr.reward,
+                                      ),
                                     ),
                                   ],
                                 ),
@@ -584,7 +843,9 @@ class _AzkarLibraryPageState extends State<AzkarLibraryPage> with SingleTickerPr
         decoration: BoxDecoration(
           color: selected
               ? AppColors.darkGreen
-              : (isDark ? Colors.white.withValues(alpha: 0.08) : Colors.grey[200]),
+              : (isDark
+                    ? Colors.white.withValues(alpha: 0.08)
+                    : Colors.grey[200]),
           borderRadius: BorderRadius.circular(20),
         ),
         child: Text(
@@ -592,7 +853,9 @@ class _AzkarLibraryPageState extends State<AzkarLibraryPage> with SingleTickerPr
           style: _f(
             sz: 12,
             fw: selected ? FontWeight.bold : FontWeight.w500,
-            c: selected ? Colors.white : (isDark ? Colors.white70 : AppColors.textPrimary),
+            c: selected
+                ? Colors.white
+                : (isDark ? Colors.white70 : AppColors.textPrimary),
           ),
         ),
       ),

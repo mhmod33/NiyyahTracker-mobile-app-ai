@@ -1,0 +1,27 @@
+﻿git : warning: in the working copy of 
+'lib/features/dashboard/dashboard_page.dart', LF will be replaced by CRLF the 
+next time Git touches it
+At line:1 char:9
++ $diff = git diff lib/features/dashboard/dashboard_page.dart 2>&1; $di ...
++         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (warning: in the... Git touches it 
+   :String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+diff --git a/lib/features/dashboard/dashboard_page.dart b/lib/features/dashboard/dashboard_page.dart
+index 4ec11ba..e3838a6 100644
+--- a/lib/features/dashboard/dashboard_page.dart
++++ b/lib/features/dashboard/dashboard_page.dart
+@@ -3627,6 +3627,12 @@ class _ModernNavBar extends StatelessWidget {
+                   MaterialPageRoute(builder: (_) => const QiblaPage()),
+                 ),
+               ),
++              _NavButton(
++                icon: Icons.mosque_rounded,
++                label: 'Ïº┘ä┘àÏ│ÏºÏ¼Ï»',
++                selected: false,
++                onTap: () => NearbyMosquesPage.show(context),
++              ),
+               _NavButton(
+                 icon: isGuest ? Icons.login_rounded : Icons.person_rounded,
+                 label: isGuest ? 'Ï¬Ï│Ï¼┘è┘ä Ïº┘äÏ»Ï«┘ê┘ä' : 'Ïº┘ä┘àÏ▓┘èÏ»',

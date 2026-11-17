@@ -24,6 +24,7 @@ import '../prayer_times/prayer_times_page.dart';
 import '../qibla/qibla_page.dart';
 import '../challenges/challenges_page.dart';
 import '../quran/quran_page.dart';
+import '../quran/reading_stops_page.dart';
 import '../azkar/azkar_library_page.dart';
 import '../azkar/azkar_counter_page.dart';
 import '../settings/notification_settings_page.dart';
@@ -2042,11 +2043,14 @@ class _DashboardPageState extends State<DashboardPage>
   String _getWorshipDisplayName(String key) {
     switch (key) {
       case 'morningRemembrance':
+      case 'morning_azkar':
         return 'أذكار الصباح';
       case 'eveningRemembrance':
+      case 'evening_azkar_done':
         return 'أذكار المساء';
       case 'quranRecitation':
       case 'quran_read':
+      case 'quran':
         return 'قراءة القرآن';
       case 'charity':
         return 'الصدقة';
@@ -2055,6 +2059,8 @@ class _DashboardPageState extends State<DashboardPage>
         return 'قيام الليل';
       case 'fasting':
         return 'الصيام';
+      case 'fasting_ayyam_beed':
+        return 'صيام الأيام البيض';
       case 'taraweeh':
         return 'التراويح';
       case 'dhikr':
@@ -2062,6 +2068,10 @@ class _DashboardPageState extends State<DashboardPage>
         return 'الأذكار';
       case 'istighfar_done':
         return 'الاستغفار';
+      case 'fajr_prayed':
+        return 'صلاة الفجر';
+      case 'fajr_woke_alarm':
+        return 'الاستيقاظ لصلاة الفجر';
       case 'prayer':
         return 'الصلوات';
       default:
@@ -2361,6 +2371,35 @@ class _DashboardPageState extends State<DashboardPage>
                     ),
                   ),
                   const Spacer(),
+                  TextButton.icon(
+                    onPressed: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const ReadingStopsPage(),
+                      ),
+                    ),
+                    icon: Icon(
+                      Icons.bookmark_rounded,
+                      size: 15,
+                      color: isDark ? AppColors.gold : const Color(0xFF8C6218),
+                    ),
+                    label: Text(
+                      'المواضع',
+                      style: _f(
+                        sz: 12,
+                        fw: FontWeight.w700,
+                        c: isDark ? AppColors.gold : const Color(0xFF8C6218),
+                      ),
+                    ),
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 6,
+                      ),
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                  ),
                   TextButton(
                     onPressed: () => _to(const QuranPage()),
                     style: TextButton.styleFrom(
@@ -3628,6 +3667,12 @@ class _ModernNavBar extends StatelessWidget {
                 ),
               ),
               _NavButton(
+                icon: Icons.mosque_rounded,
+                label: 'المساجد',
+                selected: false,
+                onTap: () => NearbyMosquesPage.show(context),
+              ),
+              _NavButton(
                 icon: isGuest ? Icons.login_rounded : Icons.person_rounded,
                 label: isGuest ? 'تسجيل الدخول' : 'المزيد',
                 selected: currentIndex == 4,
@@ -3696,287 +3741,434 @@ class _NavButton extends StatelessWidget {
 
 extension _ArchHeader on _DashboardPageState {
   Widget _buildArchHeader(bool isDark, String userName, bool isGuest) {
-    final sky = _skyColorsFor(_nextPrayerKey);
-    final accent = sky.last;
+    final fg = isDark ? Colors.white : const Color(0xFF103B27);
+    final fgDim = isDark
+        ? Colors.white.withValues(alpha: 0.72)
+        : const Color(0xFF3E6153);
+    final glassBg = isDark
+        ? Colors.white.withValues(alpha: 0.07)
+        : Colors.white.withValues(alpha: 0.62);
+    final glassBorder = isDark
+        ? Colors.white.withValues(alpha: 0.14)
+        : Colors.white.withValues(alpha: 0.85);
+    final accent = AppColors.gold;
 
     return Container(
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topRight,
           end: Alignment.bottomLeft,
-          colors: sky,
+          colors: isDark
+              ? const [Color(0xFF0C2B1F), Color(0xFF0A1C2E), Color(0xFF170B33)]
+              : const [Color(0xFFF3F9F4), Color(0xFFE7F2E9), Color(0xFFFBF2DA)],
         ),
-        borderRadius: const BorderRadius.vertical(bottom: Radius.circular(38)),
+        borderRadius: const BorderRadius.vertical(bottom: Radius.circular(36)),
         boxShadow: [
           BoxShadow(
-            color: accent.withValues(alpha: 0.30),
-            blurRadius: 26,
-            offset: const Offset(0, 12),
+            color: accent.withValues(alpha: isDark ? 0.22 : 0.16),
+            blurRadius: 30,
+            offset: const Offset(0, 14),
           ),
         ],
       ),
       child: ClipRRect(
-        borderRadius: const BorderRadius.vertical(bottom: Radius.circular(38)),
-        child: BackdropFilter(
-          filter: ui.ImageFilter.blur(sigmaX: 4, sigmaY: 4),
-          child: Container(
-            padding: EdgeInsets.only(
-              top: MediaQuery.of(context).padding.top + 14,
-              bottom: 30,
-              left: 20,
-              right: 20,
-            ),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topRight,
-                end: Alignment.bottomLeft,
-                colors: [
-                  Colors.white.withValues(alpha: 0.12),
-                  accent.withValues(alpha: 0.05),
-                ],
-              ),
-              border: Border.all(
-                color: Colors.white.withValues(alpha: 0.20),
-                width: 1,
+        borderRadius: const BorderRadius.vertical(bottom: Radius.circular(36)),
+        child: Stack(
+          children: [
+            Positioned(
+              top: -70,
+              right: -50,
+              child: Container(
+                width: 240,
+                height: 240,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: RadialGradient(
+                    colors: [
+                      accent.withValues(alpha: isDark ? 0.16 : 0.20),
+                      Colors.transparent,
+                    ],
+                  ),
+                ),
               ),
             ),
-            child: Column(
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(2.5),
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        gradient: LinearGradient(
-                          colors: [
-                            AppColors.gold,
-                            AppColors.gold.withValues(alpha: 0.35),
-                          ],
+            Positioned(
+              bottom: 60,
+              left: -60,
+              child: Container(
+                width: 220,
+                height: 220,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: RadialGradient(
+                    colors: [
+                      (isDark ? AppColors.darkGreen : AppColors.midGreen)
+                          .withValues(alpha: isDark ? 0.20 : 0.14),
+                      Colors.transparent,
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            Positioned.fill(
+              child: CustomPaint(painter: _FilmGrainPainter(isDark: isDark)),
+            ),
+            Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.white.withValues(alpha: isDark ? 0.06 : 0.35),
+                    Colors.transparent,
+                  ],
+                  stops: const [0.0, 0.45],
+                ),
+              ),
+            ),
+            Padding(
+              padding: EdgeInsets.only(
+                top: MediaQuery.of(context).padding.top + 16,
+                bottom: 26,
+                left: 20,
+                right: 20,
+              ),
+              child: Column(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 10,
+                    ),
+                    decoration: BoxDecoration(
+                      color: glassBg,
+                      borderRadius: BorderRadius.circular(22),
+                      border: Border.all(color: glassBorder),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(
+                            alpha: isDark ? 0.18 : 0.05,
+                          ),
+                          blurRadius: 18,
+                          offset: const Offset(0, 6),
                         ),
-                      ),
-                      child: CircleAvatar(
-                        radius: 24,
-                        backgroundColor: const Color(
-                          0xFF0D2818,
-                        ).withValues(alpha: 0.65),
-                        child: Text(
-                          userName.isNotEmpty ? userName[0].toUpperCase() : '؟',
-                          style: _f(
-                            sz: 19,
-                            fw: FontWeight.w800,
-                            c: Colors.white,
+                      ],
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(2),
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            gradient: LinearGradient(
+                              begin: Alignment.topRight,
+                              end: Alignment.bottomLeft,
+                              colors: [
+                                AppColors.gold,
+                                accent.withValues(alpha: 0.35),
+                              ],
+                            ),
+                          ),
+                          child: CircleAvatar(
+                            radius: 22,
+                            backgroundColor: isDark
+                                ? const Color(0xFF0D2818).withValues(alpha: 0.7)
+                                : Colors.white.withValues(alpha: 0.85),
+                            child: Text(
+                              userName.isNotEmpty
+                                  ? userName[0].toUpperCase()
+                                  : '؟',
+                              style: _f(
+                                sz: 18,
+                                fw: FontWeight.w800,
+                                c: isDark ? Colors.white : AppColors.darkGreen,
+                              ),
+                            ),
                           ),
                         ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(
-                                'السلام عليكم، ${userName.split(' ').first}',
-                                style: _f(
-                                  sz: 13,
-                                  fw: FontWeight.w600,
-                                  c: Colors.white.withValues(alpha: 0.85),
-                                ),
+                              Row(
+                                children: [
+                                  Flexible(
+                                    child: Text(
+                                      'السلام عليكم، ${userName.split(' ').first}',
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: _f(
+                                        sz: 12.5,
+                                        fw: FontWeight.w600,
+                                        c: fgDim,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 5),
+                                  const Icon(
+                                    Icons.verified_rounded,
+                                    size: 14,
+                                    color: AppColors.gold,
+                                  ),
+                                ],
                               ),
-                              const SizedBox(width: 6),
-                              const Icon(
-                                Icons.verified_rounded,
-                                size: 14,
-                                color: AppColors.gold,
+                              const SizedBox(height: 2),
+                              Text(
+                                'مرحباً بك في بصائر',
+                                style: _f(sz: 19, fw: FontWeight.w900, c: fg),
                               ),
                             ],
                           ),
-                          const SizedBox(height: 2),
-                          Text(
-                            'مرحباً بك في بصائر',
-                            style: _f(
-                              sz: 20,
-                              fw: FontWeight.w900,
-                              c: Colors.white,
+                        ),
+                        if (isGuest)
+                          GestureDetector(
+                            onTap: () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const LoginPage(),
+                              ),
                             ),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 10,
+                              ),
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: [
+                                    AppColors.gold,
+                                    accent.withValues(alpha: 0.85),
+                                  ],
+                                ),
+                                borderRadius: BorderRadius.circular(18),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: AppColors.gold.withValues(
+                                      alpha: 0.4,
+                                    ),
+                                    blurRadius: 14,
+                                    offset: const Offset(0, 5),
+                                  ),
+                                ],
+                              ),
+                              child: Text(
+                                'دخول',
+                                style: _f(
+                                  sz: 12,
+                                  fw: FontWeight.bold,
+                                  c: Colors.white,
+                                ),
+                              ),
+                            ),
+                          )
+                        else
+                          _GlassIconButton(
+                            icon: Icons.notifications_none_rounded,
+                            onTap: () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) =>
+                                    const NotificationSettingsPage(),
+                              ),
+                            ),
+                            isDark: isDark,
                           ),
-                        ],
-                      ),
+                      ],
                     ),
-                    if (isGuest)
-                      GestureDetector(
-                        onTap: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (_) => const LoginPage()),
-                        ),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 14,
-                            vertical: 9,
-                          ),
-                          decoration: BoxDecoration(
-                            color: AppColors.gold,
-                            borderRadius: BorderRadius.circular(18),
-                          ),
-                          child: Text(
-                            'دخول',
-                            style: _f(
-                              sz: 12,
-                              fw: FontWeight.bold,
-                              c: Colors.white,
-                            ),
-                          ),
-                        ),
-                      )
-                    else
-                      _IconButton(
-                        icon: Icons.notifications_none_rounded,
-                        onTap: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const NotificationSettingsPage(),
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-                const SizedBox(height: 16),
+                  ),
+                  const SizedBox(height: 16),
 
-                _buildPrayerArch(accent),
-                const SizedBox(height: 18),
-                _QuoteCarousel(date: _getArabicDate()),
-              ],
+                  _buildPrayerArch(isDark),
+                  const SizedBox(height: 16),
+                  _QuoteCarousel(date: _getArabicDate()),
+                ],
+              ),
             ),
-          ),
+          ],
         ),
       ),
     );
   }
 
-  Widget _buildPrayerArch(Color accent) {
+  Widget _buildPrayerArch(bool isDark) {
     final progress = _archProgress();
     final nextTime = _nextPrayerTime;
     final timeStr = nextTime != null
-        ? '${nextTime.hour.toString().padLeft(2, '0')}:${nextTime.minute.toString().padLeft(2, '0')}'
+        ? _fmtTime(nextTime)
         : '--:--';
     final left = nextTime != null
         ? nextTime.difference(DateTime.now())
         : Duration.zero;
     final countdown = left.isNegative
         ? 'حان الآن'
-        : 'تبقّى ${left.inHours}س ${left.inMinutes.remainder(60)}د';
+        : 'متبقي ${_fmtCountdown(left)}';
 
-    return SizedBox(
-      height: 252,
-      child: Stack(
-        alignment: Alignment.bottomCenter,
-        children: [
-          Positioned.fill(
-            child: CustomPaint(painter: _PrayerArchPainter(progress: progress)),
+    // Sky gradient colours keyed to the next prayer — same logic as prayer_times_page
+    final skyGradient = _skyColors(_nextPrayerKey, isDark);
+
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: skyGradient,
+        ),
+        borderRadius: BorderRadius.circular(28),
+        boxShadow: [
+          BoxShadow(
+            color: skyGradient.last.withValues(alpha: 0.35),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
           ),
+        ],
+      ),
+      child: Stack(
+        children: [
+          // Subtle radial glow orb in background
           Positioned(
-            top: 6,
+            right: -30,
+            bottom: 10,
             child: Container(
-              width: 52,
-              height: 52,
+              width: 180,
+              height: 180,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: Colors.white.withValues(alpha: 0.92),
-                border: Border.all(
-                  color: AppColors.gold.withValues(alpha: 0.9),
-                  width: 2,
+                gradient: RadialGradient(
+                  colors: [
+                    const Color(0xFFFFA756).withValues(alpha: 0.35),
+                    Colors.transparent,
+                  ],
                 ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.18),
-                    blurRadius: 10,
-                    offset: const Offset(0, 3),
-                  ),
-                ],
-              ),
-              child: const Icon(
-                Icons.mosque_rounded,
-                size: 26,
-                color: Color(0xFF0D2818),
               ),
             ),
           ),
           Padding(
-            padding: const EdgeInsets.only(bottom: 14),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.22),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.16),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+            child: SizedBox(
+              height: 220,
+              width: double.infinity,
+              child: Stack(
+                alignment: Alignment.center,
+                clipBehavior: Clip.none,
+                children: [
+                  // Celestial arc
+                  Positioned.fill(
+                    child: CustomPaint(
+                      painter: _DashboardArcPainter(progress: progress),
                     ),
                   ),
-                  child: Text(
-                    'الصلاة القادمة',
-                    style: _f(
-                      sz: 10.5,
-                      fw: FontWeight.w700,
-                      c: Colors.white.withValues(alpha: 0.85),
+                  // Kaaba emblem at the crest of the arc
+                  Positioned(
+                    top: 0,
+                    child: Container(
+                      width: 52,
+                      height: 52,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.18),
+                            blurRadius: 14,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: const Center(
+                        child: Icon(
+                          Icons.mosque_rounded,
+                          size: 24,
+                          color: Color(0xFF1E293B),
+                        ),
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  _nextPrayerName.isEmpty ? '—' : _nextPrayerName,
-                  style: _f(sz: 26, fw: FontWeight.w900, c: Colors.white),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  timeStr,
-                  style: _f(
-                    sz: 15,
-                    fw: FontWeight.w800,
-                    c: AppColors.goldLight,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  _spiritualTagline(_nextPrayerKey),
-                  textAlign: TextAlign.center,
-                  style: _f(
-                    sz: 11.5,
-                    fw: FontWeight.w600,
-                    c: Colors.white.withValues(alpha: 0.85),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.14),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.2),
+                  // Prayer name, time, tagline, countdown — all white on the gradient bg
+                  Positioned(
+                    top: 68,
+                    left: 16,
+                    right: 16,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          _nextPrayerName.isEmpty
+                              ? '—'
+                              : '$_nextPrayerName  $timeStr',
+                          style: _f(sz: 26, fw: FontWeight.w800, c: Colors.white),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          _spiritualTagline(_nextPrayerKey),
+                          style: _f(
+                            sz: 13,
+                            fw: FontWeight.w500,
+                            c: Colors.white.withValues(alpha: 0.90),
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 12),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withValues(alpha: 0.22),
+                            borderRadius: BorderRadius.circular(24),
+                            border: Border.all(
+                              color: Colors.white.withValues(alpha: 0.2),
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(
+                                Icons.timer_outlined,
+                                color: Color(0xFFFFD580),
+                                size: 15,
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                countdown,
+                                style: GoogleFonts.ibmPlexSansArabic(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w700,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  child: Text(
-                    countdown,
-                    style: _f(sz: 11, fw: FontWeight.w800, c: Colors.white),
-                  ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ],
       ),
     );
+  }
+
+  String _fmtTime(DateTime t) {
+    final h = t.hour > 12 ? t.hour - 12 : (t.hour == 0 ? 12 : t.hour);
+    final m = t.minute.toString().padLeft(2, '0');
+    final period = t.hour >= 12 ? 'م' : 'ص';
+    return '$h:$m $period';
+  }
+
+  String _fmtCountdown(Duration d) {
+    if (d.inSeconds <= 0) return 'حان الآن';
+    final h = d.inHours;
+    final m = d.inMinutes.remainder(60);
+    final s = d.inSeconds.remainder(60);
+    if (h > 0) return '${h}س ${m}د';
+    if (m > 0) return '${m}د ${s}ث';
+    return '${s}ث';
   }
 
   double _archProgress() {
@@ -4000,30 +4192,6 @@ extension _ArchHeader on _DashboardPageState {
     return (elapsed / total).clamp(0.05, 0.95);
   }
 
-  List<Color> _skyColorsFor(String key) {
-    switch (key) {
-      case 'fajr':
-        return const [Color(0xFF1F3B64), Color(0xFF5A5D8D), Color(0xFFD68A6C)];
-      case 'sunrise':
-        return const [Color(0xFF2E5984), Color(0xFF9C7A65), Color(0xFFE7A95B)];
-      case 'dhuhr':
-        return const [Color(0xFF28587B), Color(0xFF5386A6), Color(0xFFD9A66C)];
-      case 'asr':
-        return const [
-          Color(0xFF33597E),
-          Color(0xFF90745A),
-          Color(0xFFD77A49),
-          Color(0xFFC8995B),
-        ];
-      case 'maghrib':
-        return const [Color(0xFF282E54), Color(0xFF8C495C), Color(0xFFD97248)];
-      case 'isha':
-        return const [Color(0xFF0E1B2E), Color(0xFF1C354D), Color(0xFF3B4D5E)];
-      default:
-        return const [Color(0xFF0F4C31), Color(0xFF176B45), Color(0xFF218B5B)];
-    }
-  }
-
   String _spiritualTagline(String key) {
     switch (key) {
       case 'fajr':
@@ -4042,12 +4210,37 @@ extension _ArchHeader on _DashboardPageState {
         return 'حيّ على الصلاة، حيّ على الفلاح';
     }
   }
+
+  List<Color> _skyColors(String prayerKey, bool isDark) {
+    if (isDark) {
+      switch (prayerKey) {
+        case 'fajr':    return [const Color(0xFF0D1B4B), const Color(0xFF1A237E)];
+        case 'sunrise': return [const Color(0xFF4A148C), const Color(0xFF880E4F)];
+        case 'dhuhr':   return [const Color(0xFF01579B), const Color(0xFF006064)];
+        case 'asr':     return [const Color(0xFF1B5E20), const Color(0xFF004D40)];
+        case 'maghrib': return [const Color(0xFF4E342E), const Color(0xFF880E4F)];
+        case 'isha':    return [const Color(0xFF1A237E), const Color(0xFF0D1B2A)];
+        default:        return [const Color(0xFF1B2A20), const Color(0xFF0D1B15)];
+      }
+    } else {
+      switch (prayerKey) {
+        case 'fajr':    return [const Color(0xFF4A6FA5), const Color(0xFF7B9EBF)];
+        case 'sunrise': return [const Color(0xFFE8763A), const Color(0xFFF4A44A)];
+        case 'dhuhr':   return [const Color(0xFF2E86AB), const Color(0xFF54B8C8)];
+        case 'asr':     return [const Color(0xFF4A8B6F), const Color(0xFF6DAA8F)];
+        case 'maghrib': return [const Color(0xFFB5542A), const Color(0xFFD4784A)];
+        case 'isha':    return [const Color(0xFF2C3E6B), const Color(0xFF4A5F8A)];
+        default:        return [const Color(0xFF2C5F4A), const Color(0xFF4A8B6F)];
+      }
+    }
+  }
 }
 
 class _PrayerArchPainter extends CustomPainter {
   final double progress;
+  final bool isDark;
 
-  _PrayerArchPainter({required this.progress});
+  _PrayerArchPainter({required this.progress, required this.isDark});
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -4056,15 +4249,16 @@ class _PrayerArchPainter extends CustomPainter {
     if (radius <= 0) return;
     final rect = Rect.fromCircle(center: center, radius: radius);
 
+    final arcColor = isDark ? Colors.white : AppColors.darkGreen;
     final trackPaint = Paint()
-      ..color = Colors.white.withValues(alpha: 0.22)
+      ..color = arcColor.withValues(alpha: isDark ? 0.22 : 0.25)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2.0
       ..strokeCap = StrokeCap.round;
     canvas.drawArc(rect, math.pi, math.pi, false, trackPaint);
 
     final activePaint = Paint()
-      ..color = Colors.white.withValues(alpha: 0.9)
+      ..color = arcColor.withValues(alpha: 0.9)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2.8
       ..strokeCap = StrokeCap.round;
@@ -4083,7 +4277,7 @@ class _PrayerArchPainter extends CustomPainter {
 
     final sunFill = Paint()..color = const Color(0xFFE58C3A);
     final sunBorder = Paint()
-      ..color = Colors.white
+      ..color = isDark ? Colors.white : AppColors.darkGreen
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2.2;
     canvas.drawCircle(sunPos, 8.5, sunFill);
@@ -4092,6 +4286,58 @@ class _PrayerArchPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _PrayerArchPainter old) =>
+      old.progress != progress || old.isDark != isDark;
+}
+
+/// Arc painter for the dashboard prayer card — same style as prayer_times_page.
+/// White arc on a gradient background, with a glowing sun indicator dot.
+class _DashboardArcPainter extends CustomPainter {
+  final double progress;
+  _DashboardArcPainter({required this.progress});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height - 16);
+    final radius = math.min(size.width * 0.43, size.height - 44.0);
+    if (radius <= 0) return;
+    final rect = Rect.fromCircle(center: center, radius: radius);
+
+    final trackPaint = Paint()
+      ..color = Colors.white.withValues(alpha: 0.25)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.0
+      ..strokeCap = StrokeCap.round;
+    canvas.drawArc(rect, math.pi, math.pi, false, trackPaint);
+
+    final activePaint = Paint()
+      ..color = Colors.white.withValues(alpha: 0.85)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.6
+      ..strokeCap = StrokeCap.round;
+    canvas.drawArc(rect, math.pi, math.pi * progress, false, activePaint);
+
+    final sunAngle = math.pi + math.pi * progress;
+    final sunPos = Offset(
+      center.dx + radius * math.cos(sunAngle),
+      center.dy + radius * math.sin(sunAngle),
+    );
+
+    final glowPaint = Paint()
+      ..color = const Color(0xFFFFB347).withValues(alpha: 0.5)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8);
+    canvas.drawCircle(sunPos, 12, glowPaint);
+
+    final sunFill = Paint()..color = const Color(0xFFE58C3A);
+    final sunBorder = Paint()
+      ..color = Colors.white
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.2;
+    canvas.drawCircle(sunPos, 9, sunFill);
+    canvas.drawCircle(sunPos, 9, sunBorder);
+  }
+
+  @override
+  bool shouldRepaint(covariant _DashboardArcPainter old) =>
       old.progress != progress;
 }
 
@@ -4177,6 +4423,85 @@ class _AccountabilityChip extends StatelessWidget {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Subtle film-grain / noise overlay painted once per theme.
+class _FilmGrainPainter extends CustomPainter {
+  final bool isDark;
+  _FilmGrainPainter({required this.isDark});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()..style = PaintingStyle.fill;
+    final rng = math.Random(7);
+    final specks = (size.width * size.height / 900).round().clamp(300, 1400);
+    final alpha = isDark ? 0.05 : 0.07;
+    for (var i = 0; i < specks; i++) {
+      final x = rng.nextDouble() * size.width;
+      final y = rng.nextDouble() * size.height;
+      final w = rng.nextDouble() < 0.85 ? 1.0 : 1.6;
+      paint.color = (rng.nextBool() ? Colors.white : Colors.black).withValues(
+        alpha: alpha * rng.nextDouble() * 1.6,
+      );
+      canvas.drawRect(Rect.fromLTWH(x, y, w, w), paint);
+    }
+    // A few slightly larger soft dust motes for a filmic feel
+    for (var i = 0; i < 14; i++) {
+      final x = rng.nextDouble() * size.width;
+      final y = rng.nextDouble() * size.height;
+      paint.color = Colors.white.withValues(alpha: alpha * 0.7);
+      canvas.drawCircle(Offset(x, y), 1.2 + rng.nextDouble() * 1.4, paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _FilmGrainPainter old) => old.isDark != isDark;
+}
+
+/// Frosted-glass icon button matching the new header style.
+class _GlassIconButton extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback onTap;
+  final bool isDark;
+
+  const _GlassIconButton({
+    required this.icon,
+    required this.onTap,
+    required this.isDark,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          color: isDark
+              ? Colors.white.withValues(alpha: 0.08)
+              : Colors.white.withValues(alpha: 0.65),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: isDark
+                ? Colors.white.withValues(alpha: 0.14)
+                : AppColors.darkGreen.withValues(alpha: 0.15),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: isDark ? 0.15 : 0.06),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Icon(
+          icon,
+          color: isDark ? Colors.white : AppColors.darkGreen,
+          size: 22,
         ),
       ),
     );

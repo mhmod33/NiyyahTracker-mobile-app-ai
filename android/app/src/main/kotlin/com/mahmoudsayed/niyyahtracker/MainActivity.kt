@@ -101,6 +101,16 @@ class MainActivity : FlutterActivity() {
                 )
             }
         } catch (_: Exception) {}
+
+        // Persist alarm data so BootReceiver can reschedule after device restart
+        try {
+            val sp = getSharedPreferences("azan_alarms", Context.MODE_PRIVATE)
+            sp.edit()
+                .putLong("alarm_${alarmId}_triggerMs", triggerAtMs)
+                .putString("alarm_${alarmId}_filePath", filePath)
+                .putString("alarm_${alarmId}_prayerName", prayerName)
+                .apply()
+        } catch (_: Exception) {}
     }
 
     private fun cancelAzan(alarmId: Int) {
@@ -111,5 +121,15 @@ class MainActivity : FlutterActivity() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
         alarmManager.cancel(pendingIntent)
+
+        // Remove persisted alarm data so BootReceiver doesn't reschedule it
+        try {
+            val sp = getSharedPreferences("azan_alarms", Context.MODE_PRIVATE)
+            sp.edit()
+                .remove("alarm_${alarmId}_triggerMs")
+                .remove("alarm_${alarmId}_filePath")
+                .remove("alarm_${alarmId}_prayerName")
+                .apply()
+        } catch (_: Exception) {}
     }
 }

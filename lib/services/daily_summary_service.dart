@@ -130,19 +130,37 @@ class DailySummaryService {
   String _getWorshipDisplayName(String key) {
     switch (key) {
       case 'morningRemembrance':
+      case 'morning_azkar':
         return 'أذكار الصباح';
       case 'eveningRemembrance':
+      case 'evening_azkar_done':
         return 'أذكار المساء';
       case 'quranRecitation':
+      case 'quran_read':
+      case 'quran':
         return 'قراءة القرآن';
       case 'charity':
         return 'الصدقة';
       case 'nightPrayer':
+      case 'qiyam':
         return 'قيام الليل';
       case 'fasting':
         return 'الصيام';
+      case 'fasting_ayyam_beed':
+        return 'صيام الأيام البيض';
       case 'taraweeh':
         return 'التراويح';
+      case 'dhikr':
+      case 'azkar_done':
+        return 'الأذكار';
+      case 'istighfar_done':
+        return 'الاستغفار';
+      case 'fajr_prayed':
+        return 'صلاة الفجر';
+      case 'fajr_woke_alarm':
+        return 'الاستيقاظ لصلاة الفجر';
+      case 'prayer':
+        return 'الصلوات';
       default:
         return key;
     }

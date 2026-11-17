@@ -9,8 +9,17 @@ import '../../core/hijri_utils.dart';
 import '../../services/azan_service.dart';
 import '../azan/azan_settings_page.dart';
 
-TextStyle _f({double sz = 14, FontWeight fw = FontWeight.w400, Color? c, double? h}) =>
-    GoogleFonts.ibmPlexSansArabic(fontSize: sz, fontWeight: fw, color: c, height: h);
+TextStyle _f({
+  double sz = 14,
+  FontWeight fw = FontWeight.w400,
+  Color? c,
+  double? h,
+}) => GoogleFonts.ibmPlexSansArabic(
+  fontSize: sz,
+  fontWeight: fw,
+  color: c,
+  height: h,
+);
 
 class PrayerTimesPage extends StatefulWidget {
   const PrayerTimesPage({super.key});
@@ -18,7 +27,8 @@ class PrayerTimesPage extends StatefulWidget {
   State<PrayerTimesPage> createState() => _PrayerTimesPageState();
 }
 
-class _PrayerTimesPageState extends State<PrayerTimesPage> with SingleTickerProviderStateMixin {
+class _PrayerTimesPageState extends State<PrayerTimesPage>
+    with SingleTickerProviderStateMixin {
   PrayerTimes? _prayerTimes;
   String _nextPrayerName = 'الفجر';
   String _nextPrayerKey = 'fajr';
@@ -31,8 +41,10 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> with SingleTickerProv
   @override
   void initState() {
     super.initState();
-    _pulseCtrl = AnimationController(vsync: this, duration: const Duration(seconds: 3))
-      ..repeat(reverse: true);
+    _pulseCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 3),
+    )..repeat(reverse: true);
     // Load immediately from sync cache (zero waiting)
     _applyPrayerTimes(AzanService().prayerTimesSync);
     // Refresh with GPS in background
@@ -150,28 +162,67 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> with SingleTickerProv
   List<Color> _skyColors(String key, bool isDark) {
     switch (key) {
       case 'fajr':
-        return [const Color(0xFF1F3B64), const Color(0xFF5A5D8D), const Color(0xFFD68A6C)];
+        return [
+          const Color(0xFF1F3B64),
+          const Color(0xFF5A5D8D),
+          const Color(0xFFD68A6C),
+        ];
       case 'sunrise':
-        return [const Color(0xFF2E5984), const Color(0xFF9C7A65), const Color(0xFFE7A95B)];
+        return [
+          const Color(0xFF2E5984),
+          const Color(0xFF9C7A65),
+          const Color(0xFFE7A95B),
+        ];
       case 'dhuhr':
-        return [const Color(0xFF28587B), const Color(0xFF5386A6), const Color(0xFFD9A66C)];
+        return [
+          const Color(0xFF28587B),
+          const Color(0xFF5386A6),
+          const Color(0xFFD9A66C),
+        ];
       case 'asr':
         // Exact Nusuk-inspired warm dusk blue -> amber -> terracotta -> golden sand
-        return [const Color(0xFF33597E), const Color(0xFF90745A), const Color(0xFFD77A49), const Color(0xFFC8995B)];
+        return [
+          const Color(0xFF33597E),
+          const Color(0xFF90745A),
+          const Color(0xFFD77A49),
+          const Color(0xFFC8995B),
+        ];
       case 'maghrib':
-        return [const Color(0xFF282E54), const Color(0xFF8C495C), const Color(0xFFD97248)];
+        return [
+          const Color(0xFF282E54),
+          const Color(0xFF8C495C),
+          const Color(0xFFD97248),
+        ];
       case 'isha':
-        return [const Color(0xFF0E1B2E), const Color(0xFF1C354D), const Color(0xFF3B4D5E)];
+        return [
+          const Color(0xFF0E1B2E),
+          const Color(0xFF1C354D),
+          const Color(0xFF3B4D5E),
+        ];
       default:
-        return [const Color(0xFF33597E), const Color(0xFFD77A49), const Color(0xFFC8995B)];
+        return [
+          const Color(0xFF33597E),
+          const Color(0xFFD77A49),
+          const Color(0xFFC8995B),
+        ];
     }
   }
 
   static String _hijriStr(DateTime g) {
     final h = HijriDate.fromGregorian(g);
     const m = [
-      'محرم', 'صفر', 'ربيع الأول', 'ربيع الآخر', 'جمادى الأولى', 'جمادى الآخرة',
-      'رجب', 'شعبان', 'رمضان', 'شوال', 'ذو القعدة', 'ذو الحجة',
+      'محرم',
+      'صفر',
+      'ربيع الأول',
+      'ربيع الآخر',
+      'جمادى الأولى',
+      'جمادى الآخرة',
+      'رجب',
+      'شعبان',
+      'رمضان',
+      'شوال',
+      'ذو القعدة',
+      'ذو الحجة',
     ];
     return '${h.day} ${(h.month >= 1 && h.month <= 12) ? m[h.month - 1] : m[0]} ${h.year}هـ';
   }
@@ -184,10 +235,11 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> with SingleTickerProv
     final pt = _prayerTimes!;
 
     final elapsed = _totalDuration - _timeLeft;
-    final progress = (_totalDuration.inSeconds > 0
-            ? elapsed.inSeconds / _totalDuration.inSeconds
-            : 0.5)
-        .clamp(0.05, 0.95);
+    final progress =
+        (_totalDuration.inSeconds > 0
+                ? elapsed.inSeconds / _totalDuration.inSeconds
+                : 0.5)
+            .clamp(0.05, 0.95);
 
     final skyGradient = _skyColors(_nextPrayerKey, isDark);
 
@@ -258,7 +310,11 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> with SingleTickerProv
                                   decoration: BoxDecoration(
                                     color: Colors.white.withValues(alpha: 0.16),
                                     shape: BoxShape.circle,
-                                    border: Border.all(color: Colors.white.withValues(alpha: 0.25)),
+                                    border: Border.all(
+                                      color: Colors.white.withValues(
+                                        alpha: 0.25,
+                                      ),
+                                    ),
                                   ),
                                   child: const DirectionalIcon(
                                     isBack: true,
@@ -269,20 +325,33 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> with SingleTickerProv
                               ),
                               const Spacer(),
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 14,
+                                  vertical: 6,
+                                ),
                                 decoration: BoxDecoration(
                                   color: Colors.white.withValues(alpha: 0.16),
                                   borderRadius: BorderRadius.circular(24),
-                                  border: Border.all(color: Colors.white.withValues(alpha: 0.25)),
+                                  border: Border.all(
+                                    color: Colors.white.withValues(alpha: 0.25),
+                                  ),
                                 ),
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    const Icon(Icons.calendar_today_rounded, size: 13, color: Colors.white),
+                                    const Icon(
+                                      Icons.calendar_today_rounded,
+                                      size: 13,
+                                      color: Colors.white,
+                                    ),
                                     const SizedBox(width: 6),
                                     Text(
                                       _hijriStr(DateTime.now()),
-                                      style: _f(sz: 12, fw: FontWeight.w700, c: Colors.white),
+                                      style: _f(
+                                        sz: 12,
+                                        fw: FontWeight.w700,
+                                        c: Colors.white,
+                                      ),
                                     ),
                                   ],
                                 ),
@@ -296,11 +365,16 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> with SingleTickerProv
 
                           // Quick Action Navigation Bar (Azan Settings)
                           Container(
-                            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+                            padding: const EdgeInsets.symmetric(
+                              vertical: 12,
+                              horizontal: 8,
+                            ),
                             decoration: BoxDecoration(
                               color: Colors.white.withValues(alpha: 0.10),
                               borderRadius: BorderRadius.circular(20),
-                              border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
+                              border: Border.all(
+                                color: Colors.white.withValues(alpha: 0.15),
+                              ),
                             ),
                             child: Row(
                               mainAxisAlignment: MainAxisAlignment.center,
@@ -310,7 +384,9 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> with SingleTickerProv
                                   label: 'إعدادات صوت الأذان',
                                   onTap: () => Navigator.push(
                                     context,
-                                    MaterialPageRoute(builder: (_) => const AzanSettingsPage()),
+                                    MaterialPageRoute(
+                                      builder: (_) => const AzanSettingsPage(),
+                                    ),
                                   ),
                                 ),
                               ],
@@ -350,14 +426,19 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> with SingleTickerProv
                                           shape: BoxShape.circle,
                                           boxShadow: [
                                             BoxShadow(
-                                              color: Colors.black.withValues(alpha: 0.18),
+                                              color: Colors.black.withValues(
+                                                alpha: 0.18,
+                                              ),
                                               blurRadius: 16,
                                               offset: const Offset(0, 4),
                                             ),
                                           ],
                                         ),
                                         child: const Center(
-                                          child: _KaabaVectorIcon(size: 28, color: Color(0xFF1E293B)),
+                                          child: _KaabaVectorIcon(
+                                            size: 28,
+                                            color: Color(0xFF1E293B),
+                                          ),
                                         ),
                                       ),
                                     ),
@@ -384,30 +465,48 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> with SingleTickerProv
                                             style: _f(
                                               sz: 13,
                                               fw: FontWeight.w500,
-                                              c: Colors.white.withValues(alpha: 0.90),
+                                              c: Colors.white.withValues(
+                                                alpha: 0.90,
+                                              ),
                                             ),
                                             textAlign: TextAlign.center,
                                           ),
                                           const SizedBox(height: 14),
                                           Container(
-                                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 16,
+                                              vertical: 6,
+                                            ),
                                             decoration: BoxDecoration(
-                                              color: Colors.black.withValues(alpha: 0.22),
-                                              borderRadius: BorderRadius.circular(24),
-                                              border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
+                                              color: Colors.black.withValues(
+                                                alpha: 0.22,
+                                              ),
+                                              borderRadius:
+                                                  BorderRadius.circular(24),
+                                              border: Border.all(
+                                                color: Colors.white.withValues(
+                                                  alpha: 0.2,
+                                                ),
+                                              ),
                                             ),
                                             child: Row(
                                               mainAxisSize: MainAxisSize.min,
                                               children: [
-                                                const Icon(Icons.timer_outlined, color: Color(0xFFFFD580), size: 16),
+                                                const Icon(
+                                                  Icons.timer_outlined,
+                                                  color: Color(0xFFFFD580),
+                                                  size: 16,
+                                                ),
                                                 const SizedBox(width: 6),
                                                 Text(
                                                   'متبقي ${_fmtCountdown(_timeLeft)}',
-                                                  style: GoogleFonts.ibmPlexSansArabic(
-                                                    fontSize: 13,
-                                                    fontWeight: FontWeight.w700,
-                                                    color: Colors.white,
-                                                  ),
+                                                  style:
+                                                      GoogleFonts.ibmPlexSansArabic(
+                                                        fontSize: 13,
+                                                        fontWeight:
+                                                            FontWeight.w700,
+                                                        color: Colors.white,
+                                                      ),
                                                 ),
                                               ],
                                             ),
@@ -444,13 +543,18 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> with SingleTickerProv
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 18),
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 14,
+                    horizontal: 18,
+                  ),
                   decoration: BoxDecoration(
                     color: isDark ? const Color(0xFF151C18) : Colors.white,
                     borderRadius: BorderRadius.circular(24),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.05),
+                        color: Colors.black.withValues(
+                          alpha: isDark ? 0.25 : 0.05,
+                        ),
                         blurRadius: 16,
                         offset: const Offset(0, 4),
                       ),
@@ -460,7 +564,9 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> with SingleTickerProv
                     borderRadius: BorderRadius.circular(20),
                     onTap: () => Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (_) => const AzanSettingsPage()),
+                      MaterialPageRoute(
+                        builder: (_) => const AzanSettingsPage(),
+                      ),
                     ),
                     child: Row(
                       children: [
@@ -468,16 +574,22 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> with SingleTickerProv
                           width: 48,
                           height: 48,
                           decoration: BoxDecoration(
-                            color: isDark ? const Color(0xFF1E2822) : const Color(0xFFF7F8FA),
+                            color: isDark
+                                ? const Color(0xFF1E2822)
+                                : const Color(0xFFF7F8FA),
                             borderRadius: BorderRadius.circular(16),
                             border: Border.all(
-                              color: isDark ? Colors.white.withValues(alpha: 0.07) : Colors.black.withValues(alpha: 0.04),
+                              color: isDark
+                                  ? Colors.white.withValues(alpha: 0.07)
+                                  : Colors.black.withValues(alpha: 0.04),
                             ),
                           ),
                           child: Icon(
                             Icons.notifications_active_outlined,
                             size: 24,
-                            color: isDark ? const Color(0xFFD4A843) : const Color(0xFF1E293B),
+                            color: isDark
+                                ? const Color(0xFFD4A843)
+                                : const Color(0xFF1E293B),
                           ),
                         ),
                         const SizedBox(width: 14),
@@ -490,7 +602,9 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> with SingleTickerProv
                                 style: _f(
                                   sz: 15,
                                   fw: FontWeight.w700,
-                                  c: isDark ? Colors.white : const Color(0xFF1E293B),
+                                  c: isDark
+                                      ? Colors.white
+                                      : const Color(0xFF1E293B),
                                 ),
                               ),
                               const SizedBox(height: 2),
@@ -498,16 +612,20 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> with SingleTickerProv
                                 'اختيار المؤذن وتفعيل الأذان لكل صلاة',
                                 style: _f(
                                   sz: 12,
-                                  c: isDark ? Colors.white60 : AppColors.textSecondary,
+                                  c: isDark
+                                      ? Colors.white60
+                                      : AppColors.textSecondary,
                                 ),
                               ),
                             ],
                           ),
                         ),
                         Icon(
-                          Icons.arrow_forward_ios_rounded,
-                          size: 16,
-                          color: isDark ? Colors.white54 : AppColors.textSecondary,
+                          Icons.arrow_forward_rounded,
+                          size: 20,
+                          color: isDark
+                              ? Colors.white54
+                              : AppColors.textSecondary,
                         ),
                       ],
                     ),
@@ -522,11 +640,17 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> with SingleTickerProv
                 padding: const EdgeInsets.fromLTRB(20, 16, 20, 10),
                 child: Row(
                   children: [
-                    Text('مواقيت الصلاة اليوم', style: _f(sz: 18, fw: FontWeight.w800, c: textColor)),
+                    Text(
+                      'مواقيت الصلاة اليوم',
+                      style: _f(sz: 18, fw: FontWeight.w800, c: textColor),
+                    ),
                     const Spacer(),
                     Text(
                       'حسب توقيتك المحلي',
-                      style: _f(sz: 12, c: isDark ? Colors.white54 : AppColors.textSecondary),
+                      style: _f(
+                        sz: 12,
+                        c: isDark ? Colors.white54 : AppColors.textSecondary,
+                      ),
                     ),
                   ],
                 ),
@@ -628,7 +752,11 @@ class _HeroQuickNav extends StatelessWidget {
             const SizedBox(height: 5),
             Text(
               label,
-              style: _f(sz: 12, fw: FontWeight.w600, c: Colors.white.withValues(alpha: 0.92)),
+              style: _f(
+                sz: 12,
+                fw: FontWeight.w600,
+                c: Colors.white.withValues(alpha: 0.92),
+              ),
             ),
           ],
         ),
@@ -664,7 +792,9 @@ class _NusukActionCard extends StatelessWidget {
               color: isDark ? const Color(0xFF1E2822) : const Color(0xFFF7F8FA),
               borderRadius: BorderRadius.circular(18),
               border: Border.all(
-                color: isDark ? Colors.white.withValues(alpha: 0.07) : Colors.black.withValues(alpha: 0.04),
+                color: isDark
+                    ? Colors.white.withValues(alpha: 0.07)
+                    : Colors.black.withValues(alpha: 0.04),
               ),
             ),
             child: Icon(
@@ -730,7 +860,9 @@ class _CelestialArcPainter extends CustomPainter {
 
     // Outer soft glow on sun dot
     final glowPaint = Paint()
-      ..color = const Color(0xFFFFB347).withValues(alpha: 0.35 + 0.25 * glowValue)
+      ..color = const Color(
+        0xFFFFB347,
+      ).withValues(alpha: 0.35 + 0.25 * glowValue)
       ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8);
     canvas.drawCircle(sunPos, 12, glowPaint);
 
@@ -814,8 +946,16 @@ class _KaabaEmblemPainter extends CustomPainter {
       ..color = const Color(0xFFD4A843)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2.0;
-    canvas.drawLine(Offset(w * 0.12, h * 0.42), Offset(w * 0.5, h * 0.60), bandPaint);
-    canvas.drawLine(Offset(w * 0.5, h * 0.60), Offset(w * 0.88, h * 0.42), bandPaint);
+    canvas.drawLine(
+      Offset(w * 0.12, h * 0.42),
+      Offset(w * 0.5, h * 0.60),
+      bandPaint,
+    );
+    canvas.drawLine(
+      Offset(w * 0.5, h * 0.60),
+      Offset(w * 0.88, h * 0.42),
+      bandPaint,
+    );
   }
 
   @override
@@ -845,11 +985,17 @@ class _PrayerRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final cardBg = isCurrent
         ? (isDark
-            ? accentColor.withValues(alpha: 0.22)
-            : accentColor.withValues(alpha: 0.08))
+              ? accentColor.withValues(alpha: 0.22)
+              : accentColor.withValues(alpha: 0.08))
         : (isDark
-            ? Color.alphaBlend(accentColor.withValues(alpha: 0.08), const Color(0xFF151C18))
-            : Color.alphaBlend(accentColor.withValues(alpha: 0.05), Colors.white));
+              ? Color.alphaBlend(
+                  accentColor.withValues(alpha: 0.08),
+                  const Color(0xFF151C18),
+                )
+              : Color.alphaBlend(
+                  accentColor.withValues(alpha: 0.05),
+                  Colors.white,
+                ));
     final textCol = isDark ? Colors.white : AppColors.textPrimary;
     final subCol = isDark ? Colors.white70 : AppColors.textSecondary;
 
@@ -859,30 +1005,13 @@ class _PrayerRow extends StatelessWidget {
       decoration: BoxDecoration(
         color: cardBg,
         borderRadius: BorderRadius.circular(20),
-        border: Border(
-          // Distinct left border indicator with prayer's accent color
-          left: BorderSide(
-            color: accentColor,
-            width: isCurrent ? 5.0 : 4.0,
-          ),
-          top: BorderSide(
-            color: isCurrent
-                ? accentColor.withValues(alpha: 0.6)
-                : (isDark ? Colors.white.withValues(alpha: 0.06) : Colors.black.withValues(alpha: 0.04)),
-            width: isCurrent ? 1.5 : 1,
-          ),
-          right: BorderSide(
-            color: isCurrent
-                ? accentColor.withValues(alpha: 0.6)
-                : (isDark ? Colors.white.withValues(alpha: 0.06) : Colors.black.withValues(alpha: 0.04)),
-            width: isCurrent ? 1.5 : 1,
-          ),
-          bottom: BorderSide(
-            color: isCurrent
-                ? accentColor.withValues(alpha: 0.6)
-                : (isDark ? Colors.white.withValues(alpha: 0.06) : Colors.black.withValues(alpha: 0.04)),
-            width: isCurrent ? 1.5 : 1,
-          ),
+        border: Border.all(
+          color: isCurrent
+              ? accentColor.withValues(alpha: 0.6)
+              : (isDark
+                    ? Colors.white.withValues(alpha: 0.06)
+                    : Colors.black.withValues(alpha: 0.04)),
+          width: isCurrent ? 1.5 : 1,
         ),
         boxShadow: isCurrent
             ? [
@@ -894,9 +1023,23 @@ class _PrayerRow extends StatelessWidget {
               ]
             : null,
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 15),
-      child: Row(
-        children: [
+      padding: EdgeInsets.zero,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(20),
+        child: IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Left accent stripe
+              Container(
+                width: isCurrent ? 5.0 : 4.0,
+                color: accentColor,
+              ),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 15),
+                  child: Row(
+                    children: [
           Container(
             width: 44,
             height: 44,
@@ -939,13 +1082,22 @@ class _PrayerRow extends StatelessWidget {
               style: GoogleFonts.ibmPlexSansArabic(
                 fontSize: 15,
                 fontWeight: FontWeight.w700,
-                color: isDark && (accentColor == const Color(0xFF0D1B4B) || accentColor == const Color(0xFF1A237E))
+                color:
+                    isDark &&
+                        (accentColor == const Color(0xFF0D1B4B) ||
+                            accentColor == const Color(0xFF1A237E))
                     ? Colors.white
                     : accentColor,
               ),
             ),
           ),
         ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

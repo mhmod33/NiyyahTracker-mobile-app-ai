@@ -840,12 +840,8 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
             ),
           ),
           Text(
-            'Juz $j',
-            style: GoogleFonts.inter(color: subtextColor, fontSize: 12),
-          ),
-          Text(
-            'Hizb $h',
-            style: GoogleFonts.inter(color: subtextColor, fontSize: 12),
+            'J$j · H$h',
+            style: GoogleFonts.inter(color: subtextColor, fontSize: 11),
           ),
           // Audio button
           GestureDetector(
@@ -862,14 +858,18 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
               decoration: BoxDecoration(
                 color: isPlayingThisSurah
                     ? AppColors.darkGreen
-                    : AppColors.darkGreen.withValues(alpha: 0.12),
+                    : (isDark
+                          ? Colors.white.withValues(alpha: 0.08)
+                          : AppColors.paleGreen),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Icon(
                 isPlayingThisSurah
                     ? Icons.graphic_eq_rounded
                     : Icons.headphones_rounded,
-                color: isPlayingThisSurah ? Colors.white : AppColors.darkGreen,
+                color: isPlayingThisSurah
+                    ? Colors.white
+                    : (isDark ? Colors.white70 : AppColors.darkGreen),
                 size: 18,
               ),
             ),
@@ -880,30 +880,18 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
               decoration: BoxDecoration(
-                color: AppColors.lightGreen.withValues(alpha: 0.18),
+                color: isDark
+                    ? AppColors.darkGreen.withValues(alpha: 0.25)
+                    : AppColors.paleGreen,
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(
-                  color: AppColors.darkGreen.withValues(alpha: 0.25),
+                  color: AppColors.darkGreen.withValues(alpha: 0.2),
                 ),
               ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(
-                    Icons.check_circle_outline_rounded,
-                    color: AppColors.darkGreen,
-                    size: 16,
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    'احسب الصفحة',
-                    style: GoogleFonts.ibmPlexSansArabic(
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.darkGreen,
-                    ),
-                  ),
-                ],
+              child: const Icon(
+                Icons.check_circle_outline_rounded,
+                color: AppColors.darkGreen,
+                size: 18,
               ),
             ),
           ),
@@ -1265,8 +1253,8 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          // Right chevron — next page (RTL reading flow)
-          _navBtn(Icons.chevron_right_rounded, canNext, isDark, () {
+          // Right button — next page (in RTL Mushaf, next = higher surah/later content on the right)
+          _navBtn(Icons.arrow_forward_rounded, canNext, isDark, () {
             _pageController.animateToPage(
               _currentPage + 1,
               duration: const Duration(milliseconds: 250),
@@ -1314,8 +1302,8 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
               ),
             ),
           ),
-          // Left chevron — previous page (RTL reading flow)
-          _navBtn(Icons.chevron_left_rounded, canPrev, isDark, () {
+          // Left button — previous page
+          _navBtn(Icons.arrow_back_rounded, canPrev, isDark, () {
             _pageController.animateToPage(
               _currentPage - 1,
               duration: const Duration(milliseconds: 250),
@@ -1372,7 +1360,7 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
                       IconButton(
                         tooltip: 'السورة السابقة',
                         icon: const Icon(
-                          Icons.skip_previous_rounded,
+                          Icons.skip_next_rounded,
                           color: AppColors.darkGreen,
                           size: 28,
                         ),
@@ -1413,7 +1401,7 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
                       IconButton(
                         tooltip: 'السورة التالية',
                         icon: const Icon(
-                          Icons.skip_next_rounded,
+                          Icons.skip_previous_rounded,
                           color: AppColors.darkGreen,
                           size: 28,
                         ),

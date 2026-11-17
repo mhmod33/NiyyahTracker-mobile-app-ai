@@ -7,10 +7,20 @@ import '../../core/app_colors.dart';
 import '../../core/directional_icon.dart';
 import '../wird/daily_wird_page.dart';
 import 'reciter_library_page.dart';
+import 'reading_stops_page.dart';
 import 'surah_reader_page.dart';
 
-TextStyle _f({double sz = 14, FontWeight fw = FontWeight.w400, Color? c, double? h}) =>
-    GoogleFonts.ibmPlexSansArabic(fontSize: sz, fontWeight: fw, color: c, height: h);
+TextStyle _f({
+  double sz = 14,
+  FontWeight fw = FontWeight.w400,
+  Color? c,
+  double? h,
+}) => GoogleFonts.ibmPlexSansArabic(
+  fontSize: sz,
+  fontWeight: fw,
+  color: c,
+  height: h,
+);
 
 String _toArabicNumerals(int number) {
   const ar = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'];
@@ -62,8 +72,8 @@ class _QuranPageState extends State<QuranPage> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     // App default colors: clean ivory/off-white background in light mode, deep charcoal-green in dark
-    final pageBg = isDark ? const Color(0xFF0C1713) : const Color(0xFFF8FAF9);
-    final headerBtnBg = isDark ? const Color(0xFF1A2C25) : Colors.white;
+    final pageBg = isDark ? const Color(0xFF0B120D) : AppColors.background;
+    final headerBtnBg = isDark ? const Color(0xFF16241D) : Colors.white;
     final titleColor = isDark ? Colors.white : AppColors.darkGreen;
 
     return Directionality(
@@ -119,7 +129,7 @@ class _QuranPageState extends State<QuranPage> {
                         height: 42,
                         decoration: BoxDecoration(
                           color: _selectedSegment == 2
-                              ? const Color(0xFF7B9B91)
+                              ? AppColors.darkGreen
                               : headerBtnBg,
                           borderRadius: BorderRadius.circular(14),
                           boxShadow: [
@@ -136,7 +146,9 @@ class _QuranPageState extends State<QuranPage> {
                                 ? Icons.bookmark_rounded
                                 : Icons.bookmarks_outlined,
                             size: 20,
-                            color: _selectedSegment == 2 ? Colors.white : titleColor,
+                            color: _selectedSegment == 2
+                                ? Colors.white
+                                : titleColor,
                           ),
                         ),
                       ),
@@ -151,7 +163,9 @@ class _QuranPageState extends State<QuranPage> {
                 child: Container(
                   height: 50,
                   decoration: BoxDecoration(
-                    color: isDark ? const Color(0xFF162620) : const Color(0xFFF7FBF9),
+                    color: isDark
+                        ? const Color(0xFF16241D)
+                        : AppColors.surfaceLight,
                     borderRadius: BorderRadius.circular(26),
                     boxShadow: [
                       BoxShadow(
@@ -166,17 +180,17 @@ class _QuranPageState extends State<QuranPage> {
                     style: _f(
                       sz: 14,
                       fw: FontWeight.w600,
-                      c: isDark ? Colors.white : const Color(0xFF28433A),
+                      c: isDark ? Colors.white : AppColors.darkGreen,
                     ),
                     decoration: InputDecoration(
                       hintText: 'ابحث عن سورة أو آية',
                       hintStyle: _f(
                         sz: 13,
-                        c: isDark ? Colors.white38 : const Color(0xFF93ABA3),
+                        c: isDark ? Colors.white38 : AppColors.gray,
                       ),
                       prefixIcon: Icon(
                         Icons.search_rounded,
-                        color: isDark ? Colors.white54 : const Color(0xFF7B9B91),
+                        color: isDark ? Colors.white54 : AppColors.darkGreen,
                         size: 22,
                       ),
                       suffixIcon: _searchQuery.isNotEmpty
@@ -188,7 +202,7 @@ class _QuranPageState extends State<QuranPage> {
                               onTap: () => _showAdvancedVerseSearch(context),
                               child: Icon(
                                 Icons.auto_awesome_rounded,
-                                color: isDark ? Colors.white38 : const Color(0xFF8BA89E),
+                                color: isDark ? Colors.white38 : AppColors.gray,
                                 size: 20,
                               ),
                             ),
@@ -213,7 +227,9 @@ class _QuranPageState extends State<QuranPage> {
                         isDark: isDark,
                         onTap: () => Navigator.push(
                           context,
-                          MaterialPageRoute(builder: (_) => const DailyWirdPage()),
+                          MaterialPageRoute(
+                            builder: (_) => const DailyWirdPage(),
+                          ),
                         ),
                       ),
                     ),
@@ -239,7 +255,9 @@ class _QuranPageState extends State<QuranPage> {
                   height: 44,
                   padding: const EdgeInsets.all(4),
                   decoration: BoxDecoration(
-                    color: isDark ? const Color(0xFF162620) : const Color(0xFFF7FBF9),
+                    color: isDark
+                        ? const Color(0xFF16241D)
+                        : AppColors.surfaceLight,
                     borderRadius: BorderRadius.circular(24),
                   ),
                   child: Row(
@@ -272,8 +290,8 @@ class _QuranPageState extends State<QuranPage> {
                 child: _selectedSegment == 0
                     ? _buildSurahGrid(isDark)
                     : _selectedSegment == 1
-                        ? _buildJuzGrid(isDark)
-                        : _buildBookmarksList(isDark),
+                    ? _buildJuzGrid(isDark)
+                    : _buildBookmarksList(isDark),
               ),
             ],
           ),
@@ -292,7 +310,8 @@ class _QuranPageState extends State<QuranPage> {
         if (raw == null || raw is! Map) return const SizedBox.shrink();
         final page = (raw['page'] as num?)?.toInt() ?? 1;
         final surahNum = (raw['surahNumber'] as num?)?.toInt() ?? 1;
-        final surahName = (raw['surahName'] as String?) ?? quran.getSurahNameArabic(surahNum);
+        final surahName =
+            (raw['surahName'] as String?) ?? quran.getSurahNameArabic(surahNum);
 
         return Padding(
           padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
@@ -300,21 +319,23 @@ class _QuranPageState extends State<QuranPage> {
             onTap: () => Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (_) => SurahReaderPage(
-                  surahNumber: surahNum,
-                  initialPage: page,
-                ),
+                builder: (_) =>
+                    SurahReaderPage(surahNumber: surahNum, initialPage: page),
               ),
             ),
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
               decoration: BoxDecoration(
-                color: isDark ? const Color(0xFF1D352C) : const Color(0xFF7B9B91),
+                color: isDark ? const Color(0xFF1D352C) : AppColors.darkGreen,
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.bookmark_added_rounded, color: Colors.white, size: 20),
+                  const Icon(
+                    Icons.bookmark_added_rounded,
+                    color: Colors.white,
+                    size: 20,
+                  ),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
@@ -323,7 +344,10 @@ class _QuranPageState extends State<QuranPage> {
                     ),
                   ),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: Colors.white.withValues(alpha: 0.22),
                       borderRadius: BorderRadius.circular(12),
@@ -368,15 +392,24 @@ class _QuranPageState extends State<QuranPage> {
                 children: [
                   Container(
                     margin: const EdgeInsets.fromLTRB(16, 4, 16, 12),
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 10,
+                    ),
                     decoration: BoxDecoration(
                       color: AppColors.gold.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: AppColors.gold.withValues(alpha: 0.3)),
+                      border: Border.all(
+                        color: AppColors.gold.withValues(alpha: 0.3),
+                      ),
                     ),
                     child: Row(
                       children: [
-                        const Icon(Icons.auto_stories_rounded, size: 16, color: AppColors.gold),
+                        const Icon(
+                          Icons.auto_stories_rounded,
+                          size: 16,
+                          color: AppColors.gold,
+                        ),
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
@@ -384,7 +417,7 @@ class _QuranPageState extends State<QuranPage> {
                             style: _f(
                               sz: 12,
                               fw: FontWeight.w700,
-                              c: isDark ? AppColors.gold : const Color(0xFF8A6417),
+                              c: isDark ? AppColors.gold : AppColors.gold,
                             ),
                           ),
                         ),
@@ -393,7 +426,10 @@ class _QuranPageState extends State<QuranPage> {
                   ),
                   Expanded(
                     child: ListView.builder(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 2,
+                      ),
                       itemCount: verseResults.length,
                       itemBuilder: (ctx, i) {
                         final item = verseResults[i];
@@ -406,22 +442,31 @@ class _QuranPageState extends State<QuranPage> {
                         return Container(
                           margin: const EdgeInsets.only(bottom: 10),
                           decoration: BoxDecoration(
-                            color: isDark ? const Color(0xFF16241D) : Colors.white,
+                            color: isDark
+                                ? const Color(0xFF16241D)
+                                : Colors.white,
                             borderRadius: BorderRadius.circular(16),
                             border: Border.all(
-                              color: isDark ? Colors.white12 : AppColors.paleGreen,
+                              color: isDark
+                                  ? Colors.white12
+                                  : AppColors.paleGreen,
                               width: 1.2,
                             ),
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.04),
+                                color: Colors.black.withValues(
+                                  alpha: isDark ? 0.2 : 0.04,
+                                ),
                                 blurRadius: 8,
                                 offset: const Offset(0, 2),
                               ),
                             ],
                           ),
                           child: ListTile(
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 14,
+                              vertical: 6,
+                            ),
                             leading: Container(
                               width: 36,
                               height: 36,
@@ -432,7 +477,11 @@ class _QuranPageState extends State<QuranPage> {
                               child: Center(
                                 child: Text(
                                   '$v',
-                                  style: _f(sz: 12, fw: FontWeight.bold, c: AppColors.gold),
+                                  style: _f(
+                                    sz: 12,
+                                    fw: FontWeight.bold,
+                                    c: AppColors.gold,
+                                  ),
                                 ),
                               ),
                             ),
@@ -443,17 +492,31 @@ class _QuranPageState extends State<QuranPage> {
                                   style: _f(
                                     sz: 14,
                                     fw: FontWeight.bold,
-                                    c: isDark ? Colors.white : AppColors.darkGreen,
+                                    c: isDark
+                                        ? Colors.white
+                                        : AppColors.darkGreen,
                                   ),
                                 ),
                                 const SizedBox(width: 8),
                                 Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 6,
+                                    vertical: 2,
+                                  ),
                                   decoration: BoxDecoration(
-                                    color: AppColors.darkGreen.withValues(alpha: 0.1),
+                                    color: AppColors.darkGreen.withValues(
+                                      alpha: 0.1,
+                                    ),
                                     borderRadius: BorderRadius.circular(6),
                                   ),
-                                  child: Text('ص $page', style: _f(sz: 10.5, fw: FontWeight.w600, c: AppColors.darkGreen)),
+                                  child: Text(
+                                    'ص $page',
+                                    style: _f(
+                                      sz: 10.5,
+                                      fw: FontWeight.w600,
+                                      c: AppColors.darkGreen,
+                                    ),
+                                  ),
                                 ),
                               ],
                             ),
@@ -470,7 +533,11 @@ class _QuranPageState extends State<QuranPage> {
                                 ),
                               ),
                             ),
-                            trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: AppColors.gold),
+                            trailing: const Icon(
+                              Icons.arrow_forward_rounded,
+                              size: 18,
+                              color: AppColors.gold,
+                            ),
                             onTap: () {
                               Navigator.push(
                                 context,
@@ -500,7 +567,9 @@ class _QuranPageState extends State<QuranPage> {
                 Icon(
                   Icons.search_off_rounded,
                   size: 48,
-                  color: isDark ? Colors.white30 : AppColors.midGreen.withValues(alpha: 0.5),
+                  color: isDark
+                      ? Colors.white30
+                      : AppColors.midGreen.withValues(alpha: 0.5),
                 ),
                 const SizedBox(height: 10),
                 Text(
@@ -513,9 +582,18 @@ class _QuranPageState extends State<QuranPage> {
                 ),
                 const SizedBox(height: 8),
                 TextButton.icon(
-                  onPressed: () => _showAdvancedVerseSearch(context, initialQuery: _searchQuery),
-                  icon: const Icon(Icons.manage_search_rounded, color: AppColors.darkGreen),
-                  label: Text('البحث المتقدم في آيات القرآن عن "$_searchQuery"', style: _f(fw: FontWeight.w700, c: AppColors.darkGreen)),
+                  onPressed: () => _showAdvancedVerseSearch(
+                    context,
+                    initialQuery: _searchQuery,
+                  ),
+                  icon: const Icon(
+                    Icons.manage_search_rounded,
+                    color: AppColors.darkGreen,
+                  ),
+                  label: Text(
+                    'البحث المتقدم في آيات القرآن عن "$_searchQuery"',
+                    style: _f(fw: FontWeight.w700, c: AppColors.darkGreen),
+                  ),
                 ),
               ],
             ),
@@ -535,7 +613,9 @@ class _QuranPageState extends State<QuranPage> {
           itemBuilder: (ctx, i) {
             final n = surahNumbers[i];
             final isBookmarked = sBox?.containsKey('$n') ?? false;
-            final place = quran.getPlaceOfRevelation(n) == 'Makkah' ? 'مكية' : 'مدنية';
+            final place = quran.getPlaceOfRevelation(n) == 'Makkah'
+                ? 'مكية'
+                : 'مدنية';
             final versesAr = _toArabicNumerals(quran.getVerseCount(n));
 
             return _SurahGridCard(
@@ -547,7 +627,9 @@ class _QuranPageState extends State<QuranPage> {
               bookmarked: isBookmarked,
               onTap: () => Navigator.push(
                 ctx,
-                MaterialPageRoute(builder: (_) => SurahReaderPage(surahNumber: n)),
+                MaterialPageRoute(
+                  builder: (_) => SurahReaderPage(surahNumber: n),
+                ),
               ),
               onLongPress: sBox == null
                   ? null
@@ -558,7 +640,10 @@ class _QuranPageState extends State<QuranPage> {
                         if (ctx.mounted) {
                           ScaffoldMessenger.of(ctx).showSnackBar(
                             SnackBar(
-                              content: Text('تم إزالة السورة من المحفوظات', style: _f(c: Colors.white)),
+                              content: Text(
+                                'تم إزالة السورة من المحفوظات',
+                                style: _f(c: Colors.white),
+                              ),
                               backgroundColor: AppColors.darkGreen,
                               duration: const Duration(seconds: 2),
                             ),
@@ -573,7 +658,10 @@ class _QuranPageState extends State<QuranPage> {
                         if (ctx.mounted) {
                           ScaffoldMessenger.of(ctx).showSnackBar(
                             SnackBar(
-                              content: Text('تم حفظ السورة في المحفوظات', style: _f(c: Colors.white)),
+                              content: Text(
+                                'تم حفظ السورة في المحفوظات',
+                                style: _f(c: Colors.white),
+                              ),
                               backgroundColor: AppColors.darkGreen,
                               duration: const Duration(seconds: 2),
                             ),
@@ -592,14 +680,68 @@ class _QuranPageState extends State<QuranPage> {
   // ── 2-Column Juz Grid ──
   Widget _buildJuzGrid(bool isDark) {
     const startPages = [
-      1, 22, 42, 62, 82, 102, 122, 142, 162, 182,
-      202, 222, 242, 262, 282, 302, 322, 342, 362, 382,
-      402, 422, 442, 462, 482, 502, 522, 542, 562, 582,
+      1,
+      22,
+      42,
+      62,
+      82,
+      102,
+      122,
+      142,
+      162,
+      182,
+      202,
+      222,
+      242,
+      262,
+      282,
+      302,
+      322,
+      342,
+      362,
+      382,
+      402,
+      422,
+      442,
+      462,
+      482,
+      502,
+      522,
+      542,
+      562,
+      582,
     ];
     const startSurahs = [
-      1, 2, 2, 3, 4, 4, 5, 6, 7, 8,
-      9, 11, 12, 15, 17, 18, 21, 23, 25, 27,
-      29, 33, 36, 39, 41, 46, 51, 58, 67, 78,
+      1,
+      2,
+      2,
+      3,
+      4,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      11,
+      12,
+      15,
+      17,
+      18,
+      21,
+      23,
+      25,
+      27,
+      29,
+      33,
+      36,
+      39,
+      41,
+      46,
+      51,
+      58,
+      67,
+      78,
     ];
 
     return GridView.builder(
@@ -626,10 +768,8 @@ class _QuranPageState extends State<QuranPage> {
           onTap: () => Navigator.push(
             ctx,
             MaterialPageRoute(
-              builder: (_) => SurahReaderPage(
-                surahNumber: surah,
-                initialPage: page,
-              ),
+              builder: (_) =>
+                  SurahReaderPage(surahNumber: surah, initialPage: page),
             ),
           ),
         );
@@ -655,26 +795,35 @@ class _QuranPageState extends State<QuranPage> {
               onTap: isDone
                   ? null
                   : () => Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => const SurahReaderPage(surahNumber: 18)),
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const SurahReaderPage(surahNumber: 18),
                       ),
+                    ),
               child: Container(
                 margin: const EdgeInsets.fromLTRB(16, 0, 16, 10),
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 10,
+                ),
                 decoration: BoxDecoration(
-                  color: isDark ? const Color(0xFF162620) : const Color(0xFFF3F8F6),
+                  color: isDark
+                      ? const Color(0xFF16241D)
+                      : AppColors.surfaceLight,
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(
                     color: isDone
                         ? AppColors.darkGreen.withValues(alpha: 0.35)
-                        : const Color(0xFFD4A017).withValues(alpha: 0.45),
+                        : AppColors.gold.withValues(alpha: 0.45),
                   ),
                 ),
                 child: Row(
                   children: [
                     Icon(
-                      isDone ? Icons.check_circle_rounded : Icons.auto_stories_rounded,
-                      color: isDone ? AppColors.darkGreen : const Color(0xFFD4A017),
+                      isDone
+                          ? Icons.check_circle_rounded
+                          : Icons.auto_stories_rounded,
+                      color: isDone ? AppColors.darkGreen : AppColors.gold,
                       size: 22,
                     ),
                     const SizedBox(width: 10),
@@ -686,20 +835,27 @@ class _QuranPageState extends State<QuranPage> {
                         style: _f(
                           sz: 12,
                           fw: FontWeight.w700,
-                          c: isDark ? Colors.white : const Color(0xFF28433A),
+                          c: isDark ? Colors.white : AppColors.darkGreen,
                         ),
                       ),
                     ),
                     if (!isDone)
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 4,
+                        ),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF7B9B91),
+                          color: AppColors.darkGreen,
                           borderRadius: BorderRadius.circular(14),
                         ),
                         child: Text(
                           'اقرأ',
-                          style: _f(sz: 11, fw: FontWeight.w800, c: Colors.white),
+                          style: _f(
+                            sz: 11,
+                            fw: FontWeight.w800,
+                            c: Colors.white,
+                          ),
                         ),
                       ),
                   ],
@@ -722,7 +878,9 @@ class _QuranPageState extends State<QuranPage> {
       ]),
       builder: (context, snapshot) {
         if (!snapshot.hasData) {
-          return const Center(child: CircularProgressIndicator(color: AppColors.darkGreen));
+          return const Center(
+            child: CircularProgressIndicator(color: AppColors.darkGreen),
+          );
         }
         final boxes = snapshot.data as List<dynamic>;
         final verseBox = boxes[0] as Box;
@@ -742,7 +900,27 @@ class _QuranPageState extends State<QuranPage> {
                     final verseItems = vBox.values.toList().cast<Map>();
                     final pageItems = pBox.values.toList().cast<Map>();
 
-                    if (surahItems.isEmpty && verseItems.isEmpty && pageItems.isEmpty) {
+                    // Partial-reading stops recorded by the mushaf reader —
+                    // each contiguous run of pages inside a surah is kept so
+                    // unfinished surahs aren't lost when reading another one.
+                    List<Map> stopItems = const [];
+                    if (Hive.isBoxOpen('quran_progress')) {
+                      final rawStops = Hive.box(
+                        'quran_progress',
+                      ).get('reading_stops');
+                      if (rawStops is List) {
+                        stopItems = rawStops
+                            .whereType<Map>()
+                            .toList()
+                            .reversed
+                            .toList();
+                      }
+                    }
+
+                    if (surahItems.isEmpty &&
+                        verseItems.isEmpty &&
+                        pageItems.isEmpty &&
+                        stopItems.isEmpty) {
                       return Center(
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
@@ -750,7 +928,9 @@ class _QuranPageState extends State<QuranPage> {
                             Icon(
                               Icons.bookmark_border_rounded,
                               size: 56,
-                              color: isDark ? Colors.white24 : AppColors.darkGreen.withValues(alpha: 0.3),
+                              color: isDark
+                                  ? Colors.white24
+                                  : AppColors.darkGreen.withValues(alpha: 0.3),
                             ),
                             const SizedBox(height: 12),
                             Text(
@@ -758,7 +938,9 @@ class _QuranPageState extends State<QuranPage> {
                               style: _f(
                                 sz: 16,
                                 fw: FontWeight.w700,
-                                c: isDark ? Colors.white54 : AppColors.darkGreen,
+                                c: isDark
+                                    ? Colors.white54
+                                    : AppColors.darkGreen,
                               ),
                             ),
                             const SizedBox(height: 6),
@@ -766,7 +948,9 @@ class _QuranPageState extends State<QuranPage> {
                               'يمكنك حفظ السور، الصفحات والآيات والرجوع إليها هنا',
                               style: _f(
                                 sz: 12,
-                                c: isDark ? Colors.white38 : AppColors.textSecondary,
+                                c: isDark
+                                    ? Colors.white38
+                                    : AppColors.textSecondary,
                               ),
                             ),
                           ],
@@ -777,6 +961,119 @@ class _QuranPageState extends State<QuranPage> {
                     return ListView(
                       padding: const EdgeInsets.all(16),
                       children: [
+                        if (stopItems.isNotEmpty) ...[
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'مواضع توقفت عندها',
+                                style: _f(
+                                  sz: 15,
+                                  fw: FontWeight.w800,
+                                  c: isDark
+                                      ? Colors.white
+                                      : AppColors.darkGreen,
+                                ),
+                              ),
+                              GestureDetector(
+                                onTap: () => Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => const ReadingStopsPage(),
+                                  ),
+                                ),
+                                child: Text(
+                                  'عرض الكل',
+                                  style: _f(
+                                    sz: 12,
+                                    fw: FontWeight.w700,
+                                    c: AppColors.gold,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 10),
+                          ...stopItems.map((item) {
+                            final surahNum =
+                                (item['surahNumber'] as num?)?.toInt() ?? 1;
+                            final surahName =
+                                (item['surahName'] as String?) ??
+                                quran.getSurahNameArabic(surahNum);
+                            final startPage =
+                                (item['startPage'] as num?)?.toInt() ?? 1;
+                            final endPage =
+                                (item['endPage'] as num?)?.toInt() ?? startPage;
+                            final pageLabel = startPage == endPage
+                                ? 'صفحة ${_toArabicNumerals(endPage)}'
+                                : 'صفحات ${_toArabicNumerals(startPage)} – ${_toArabicNumerals(endPage)}';
+                            return Container(
+                              margin: const EdgeInsets.only(bottom: 10),
+                              decoration: BoxDecoration(
+                                color: isDark
+                                    ? const Color(0xFF16241D)
+                                    : Colors.white,
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(
+                                  color: isDark
+                                      ? Colors.white12
+                                      : AppColors.paleGreen,
+                                  width: 1.2,
+                                ),
+                              ),
+                              child: ListTile(
+                                leading: Container(
+                                  width: 40,
+                                  height: 40,
+                                  decoration: BoxDecoration(
+                                    color: AppColors.gold.withValues(
+                                      alpha: 0.15,
+                                    ),
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: const Icon(
+                                    Icons.bookmark_added_rounded,
+                                    color: AppColors.gold,
+                                    size: 20,
+                                  ),
+                                ),
+                                title: Text(
+                                  'سورة $surahName • $pageLabel',
+                                  style: _f(
+                                    sz: 14,
+                                    fw: FontWeight.w800,
+                                    c: isDark
+                                        ? Colors.white
+                                        : AppColors.darkGreen,
+                                  ),
+                                ),
+                                subtitle: Text(
+                                  'قراءة جزئية محفوظة — تابع من هنا',
+                                  style: _f(
+                                    sz: 12,
+                                    c: isDark
+                                        ? Colors.white54
+                                        : AppColors.textSecondary,
+                                  ),
+                                ),
+                                trailing: const Icon(
+                                  Icons.arrow_forward_rounded,
+                                  color: AppColors.gray,
+                                ),
+                                onTap: () => Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => SurahReaderPage(
+                                      surahNumber: surahNum,
+                                      initialPage: endPage,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            );
+                          }),
+                          const SizedBox(height: 16),
+                        ],
                         if (pageItems.isNotEmpty) ...[
                           Text(
                             'الصفحات المحفوظة',
@@ -790,15 +1087,21 @@ class _QuranPageState extends State<QuranPage> {
                           ...pageItems.map((item) {
                             final pageNum = (item['page'] as int?) ?? 1;
                             final surahNum = (item['surah'] as int?) ?? 1;
-                            final surahName = (item['surahName'] as String?) ?? quran.getSurahNameArabic(surahNum);
+                            final surahName =
+                                (item['surahName'] as String?) ??
+                                quran.getSurahNameArabic(surahNum);
                             final juzNum = (item['juz'] as int?) ?? 1;
                             return Container(
                               margin: const EdgeInsets.only(bottom: 10),
                               decoration: BoxDecoration(
-                                color: isDark ? const Color(0xFF16241D) : Colors.white,
+                                color: isDark
+                                    ? const Color(0xFF16241D)
+                                    : Colors.white,
                                 borderRadius: BorderRadius.circular(16),
                                 border: Border.all(
-                                  color: isDark ? Colors.white12 : AppColors.paleGreen,
+                                  color: isDark
+                                      ? Colors.white12
+                                      : AppColors.paleGreen,
                                   width: 1.2,
                                 ),
                               ),
@@ -807,13 +1110,19 @@ class _QuranPageState extends State<QuranPage> {
                                   width: 40,
                                   height: 40,
                                   decoration: BoxDecoration(
-                                    color: AppColors.gold.withValues(alpha: 0.15),
+                                    color: AppColors.gold.withValues(
+                                      alpha: 0.15,
+                                    ),
                                     borderRadius: BorderRadius.circular(10),
                                   ),
                                   child: Center(
                                     child: Text(
                                       '$pageNum',
-                                      style: _f(sz: 12, fw: FontWeight.bold, c: AppColors.gold),
+                                      style: _f(
+                                        sz: 12,
+                                        fw: FontWeight.bold,
+                                        c: AppColors.gold,
+                                      ),
                                     ),
                                   ),
                                 ),
@@ -822,18 +1131,26 @@ class _QuranPageState extends State<QuranPage> {
                                   style: _f(
                                     sz: 14,
                                     fw: FontWeight.w800,
-                                    c: isDark ? Colors.white : AppColors.darkGreen,
+                                    c: isDark
+                                        ? Colors.white
+                                        : AppColors.darkGreen,
                                   ),
                                 ),
                                 subtitle: Text(
                                   'الجزء ${_toArabicNumerals(juzNum)}',
                                   style: _f(
                                     sz: 12,
-                                    c: isDark ? Colors.white54 : AppColors.textSecondary,
+                                    c: isDark
+                                        ? Colors.white54
+                                        : AppColors.textSecondary,
                                   ),
                                 ),
                                 trailing: IconButton(
-                                  icon: const Icon(Icons.delete_outline_rounded, color: Colors.redAccent, size: 20),
+                                  icon: const Icon(
+                                    Icons.delete_outline_rounded,
+                                    color: Colors.redAccent,
+                                    size: 20,
+                                  ),
                                   onPressed: () => pBox.delete('page_$pageNum'),
                                 ),
                                 onTap: () => Navigator.push(
@@ -863,27 +1180,36 @@ class _QuranPageState extends State<QuranPage> {
                           GridView.builder(
                             shrinkWrap: true,
                             physics: const NeverScrollableScrollPhysics(),
-                            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                              crossAxisCount: 2,
-                              mainAxisSpacing: 12,
-                              crossAxisSpacing: 12,
-                              childAspectRatio: 1.72,
-                            ),
+                            gridDelegate:
+                                const SliverGridDelegateWithFixedCrossAxisCount(
+                                  crossAxisCount: 2,
+                                  mainAxisSpacing: 12,
+                                  crossAxisSpacing: 12,
+                                  childAspectRatio: 1.72,
+                                ),
                             itemCount: surahItems.length,
                             itemBuilder: (ctx, idx) {
                               final item = surahItems[idx];
                               final s = item['surah'] as int;
-                              final place = quran.getPlaceOfRevelation(s) == 'Makkah' ? 'مكية' : 'مدنية';
+                              final place =
+                                  quran.getPlaceOfRevelation(s) == 'Makkah'
+                                  ? 'مكية'
+                                  : 'مدنية';
                               return _SurahGridCard(
                                 surahNumber: s,
                                 arabicNumber: _toArabicNumerals(s),
-                                nameArabic: 'سُورَةُ ${quran.getSurahNameArabic(s)}',
-                                subtitle: '$place  •  آياتها: ${_toArabicNumerals(quran.getVerseCount(s))}',
+                                nameArabic:
+                                    'سُورَةُ ${quran.getSurahNameArabic(s)}',
+                                subtitle:
+                                    '$place  •  آياتها: ${_toArabicNumerals(quran.getVerseCount(s))}',
                                 isDark: isDark,
                                 bookmarked: true,
                                 onTap: () => Navigator.push(
                                   context,
-                                  MaterialPageRoute(builder: (_) => SurahReaderPage(surahNumber: s)),
+                                  MaterialPageRoute(
+                                    builder: (_) =>
+                                        SurahReaderPage(surahNumber: s),
+                                  ),
                                 ),
                                 onLongPress: () => sBox.delete('$s'),
                               );
@@ -908,10 +1234,14 @@ class _QuranPageState extends State<QuranPage> {
                             return Container(
                               margin: const EdgeInsets.only(bottom: 10),
                               decoration: BoxDecoration(
-                                color: isDark ? const Color(0xFF16241D) : Colors.white,
+                                color: isDark
+                                    ? const Color(0xFF16241D)
+                                    : Colors.white,
                                 borderRadius: BorderRadius.circular(16),
                                 border: Border.all(
-                                  color: isDark ? Colors.white12 : AppColors.paleGreen,
+                                  color: isDark
+                                      ? Colors.white12
+                                      : AppColors.paleGreen,
                                   width: 1.2,
                                 ),
                               ),
@@ -921,7 +1251,9 @@ class _QuranPageState extends State<QuranPage> {
                                   style: _f(
                                     sz: 14,
                                     fw: FontWeight.w800,
-                                    c: isDark ? Colors.white : AppColors.darkGreen,
+                                    c: isDark
+                                        ? Colors.white
+                                        : AppColors.darkGreen,
                                   ),
                                 ),
                                 subtitle: Text(
@@ -934,7 +1266,11 @@ class _QuranPageState extends State<QuranPage> {
                                   ),
                                 ),
                                 trailing: IconButton(
-                                  icon: const Icon(Icons.delete_outline_rounded, color: Colors.redAccent, size: 20),
+                                  icon: const Icon(
+                                    Icons.delete_outline_rounded,
+                                    color: Colors.redAccent,
+                                    size: 20,
+                                  ),
                                   onPressed: () => vBox.delete('$s-$v'),
                                 ),
                                 onTap: () => Navigator.push(
@@ -984,7 +1320,10 @@ class _QuranPageState extends State<QuranPage> {
     return res;
   }
 
-  void _showAdvancedVerseSearch(BuildContext context, {String initialQuery = ''}) {
+  void _showAdvancedVerseSearch(
+    BuildContext context, {
+    String initialQuery = '',
+  }) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -1010,10 +1349,10 @@ class _TopBannerActionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cardColor = isDark ? const Color(0xFF162620) : const Color(0xFFF3F8F6);
-    final badgeBg = isDark ? const Color(0xFF213830) : const Color(0xFFDCEBE5);
-    final iconColor = isDark ? const Color(0xFF88B3A6) : const Color(0xFF6B8E83);
-    final textColor = isDark ? Colors.white : const Color(0xFF28433A);
+    final cardColor = isDark ? const Color(0xFF16241D) : AppColors.surfaceLight;
+    final badgeBg = isDark ? const Color(0xFF1D352C) : AppColors.paleGreen;
+    final iconColor = isDark ? AppColors.lightGreen : AppColors.gray;
+    final textColor = isDark ? Colors.white : AppColors.darkGreen;
 
     return GestureDetector(
       onTap: onTap,
@@ -1094,7 +1433,7 @@ class _SegmentPillTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final activeColor = isDark ? const Color(0xFF2A4A3E) : const Color(0xFF7B9B91);
+    final activeColor = isDark ? const Color(0xFF1D352C) : AppColors.darkGreen;
     return Expanded(
       child: GestureDetector(
         onTap: onTap,
@@ -1112,7 +1451,7 @@ class _SegmentPillTab extends StatelessWidget {
               fw: selected ? FontWeight.w800 : FontWeight.w600,
               c: selected
                   ? Colors.white
-                  : (isDark ? Colors.white60 : const Color(0xFF7B9B91)),
+                  : (isDark ? Colors.white60 : AppColors.darkGreen),
             ),
           ),
         ),
@@ -1147,10 +1486,10 @@ class _SurahGridCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cardBg = isDark ? const Color(0xFF162620) : const Color(0xFFF3F8F6);
-    final badgeBg = isDark ? const Color(0xFF223C33) : const Color(0xFFC7E2D9);
-    final titleColor = isDark ? Colors.white : const Color(0xFF28433A);
-    final subColor = isDark ? Colors.white60 : const Color(0xFF6B857C);
+    final cardBg = isDark ? const Color(0xFF16241D) : AppColors.surfaceLight;
+    final badgeBg = isDark ? const Color(0xFF1D352C) : AppColors.paleGreen;
+    final titleColor = isDark ? Colors.white : AppColors.darkGreen;
+    final subColor = isDark ? Colors.white60 : AppColors.textSecondary;
 
     return GestureDetector(
       onTap: onTap,
@@ -1160,7 +1499,7 @@ class _SurahGridCard extends StatelessWidget {
           color: cardBg,
           borderRadius: BorderRadius.circular(22),
           border: bookmarked
-              ? Border.all(color: const Color(0xFF7B9B91), width: 1.5)
+              ? Border.all(color: AppColors.darkGreen, width: 1.5)
               : null,
           boxShadow: [
             BoxShadow(
@@ -1179,7 +1518,7 @@ class _SurahGridCard extends StatelessWidget {
                 child: Icon(
                   Icons.bookmark_rounded,
                   size: 15,
-                  color: Color(0xFF7B9B91),
+                  color: AppColors.darkGreen,
                 ),
               ),
             Row(
@@ -1200,11 +1539,7 @@ class _SurahGridCard extends StatelessWidget {
                   alignment: Alignment.center,
                   child: Text(
                     arabicNumber,
-                    style: _f(
-                      sz: 15,
-                      fw: FontWeight.w800,
-                      c: titleColor,
-                    ),
+                    style: _f(sz: 15, fw: FontWeight.w800, c: titleColor),
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -1234,11 +1569,7 @@ class _SurahGridCard extends StatelessWidget {
                           fit: BoxFit.scaleDown,
                           child: Text(
                             subtitle,
-                            style: _f(
-                              sz: 11,
-                              fw: FontWeight.w600,
-                              c: subColor,
-                            ),
+                            style: _f(sz: 11, fw: FontWeight.w600, c: subColor),
                             textAlign: TextAlign.center,
                           ),
                         ),
@@ -1310,8 +1641,8 @@ class _QuranSearchSheetState extends State<_QuranSearchSheet> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final sheetBg = isDark ? const Color(0xFF101E19) : const Color(0xFFF3F8F6);
-    final textCol = isDark ? Colors.white : const Color(0xFF28433A);
+    final sheetBg = isDark ? const Color(0xFF14261E) : AppColors.surfaceLight;
+    final textCol = isDark ? Colors.white : AppColors.darkGreen;
 
     return Directionality(
       textDirection: TextDirection.rtl,
@@ -1341,7 +1672,10 @@ class _QuranSearchSheetState extends State<_QuranSearchSheet> {
               decoration: InputDecoration(
                 hintText: 'ابحث عن كلمة أو آية في المصحف...',
                 hintStyle: _f(sz: 13, c: textCol.withValues(alpha: 0.45)),
-                prefixIcon: const Icon(Icons.search_rounded, color: Color(0xFF7B9B91)),
+                prefixIcon: const Icon(
+                  Icons.search_rounded,
+                  color: AppColors.darkGreen,
+                ),
                 filled: true,
                 fillColor: isDark ? Colors.white10 : Colors.white,
                 border: OutlineInputBorder(
@@ -1378,14 +1712,21 @@ class _QuranSearchSheetState extends State<_QuranSearchSheet> {
                           ),
                           subtitle: Text(
                             'سورة ${quran.getSurahNameArabic(s)} • آية ${_toArabicNumerals(v)}',
-                            style: _f(sz: 12, c: const Color(0xFF7B9B91), fw: FontWeight.w700),
+                            style: _f(
+                              sz: 12,
+                              c: AppColors.darkGreen,
+                              fw: FontWeight.w700,
+                            ),
                           ),
                           onTap: () {
                             Navigator.pop(context);
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (_) => SurahReaderPage(surahNumber: s, initialVerse: v),
+                                builder: (_) => SurahReaderPage(
+                                  surahNumber: s,
+                                  initialVerse: v,
+                                ),
                               ),
                             );
                           },

@@ -9,12 +9,15 @@ class DirectionalIcon extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final dir = Directionality.of(context);
+    // Use keyboard_arrow icons — Flutter does NOT mirror these in RTL,
+    // so we get pixel-exact control over direction without double-flipping.
     final IconData icon;
     if (dir == TextDirection.rtl) {
-      icon = isBack ? Icons.arrow_forward_ios_rounded : Icons.arrow_back_ios_new;
+      // In RTL layout: back = right (→), forward = left (←)
+      icon = isBack ? Icons.keyboard_arrow_right_rounded : Icons.keyboard_arrow_left_rounded;
     } else {
-      icon = isBack ? Icons.arrow_back_ios_new : Icons.arrow_forward_ios_rounded;
+      icon = isBack ? Icons.keyboard_arrow_left_rounded : Icons.keyboard_arrow_right_rounded;
     }
-    return Icon(icon, size: size, color: color);
+    return Icon(icon, size: size + 4, color: color);
   }
 }

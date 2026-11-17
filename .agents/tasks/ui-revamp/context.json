@@ -1,0 +1,30 @@
+{
+  "project_type": "Flutter app (single package, not a monorepo). Basair / NiyyahTracker — an Arabic-first Islamic worship tracker.",
+  "language": "Dart (Flutter). UI text is Arabic; strings are inline Arabic literals (no ARB/l10n files for the changed areas).",
+  "build_system": "Flutter 3.47.5 (stable). `flutter` is on PATH. No codegen. Packages already in pubspec: share_plus (^10.1.4), path_provider (^2.1.5), google_fonts (^6.2.1), provider (^6.1.2), hive/hive_flutter, screenshot (^3.0.0, available but the codebase uses RepaintBoundary+toImage directly), quran (^1.1.2). Do NOT add new packages — everything needed is already a dependency. Run `flutter pub get` is not required unless pubspec changes (it won't).",
+  "test_framework": "flutter_test. ONLY test file is test/widget_test.dart — it is BROKEN BOILERPLATE: it pumpWidget(BasairApp) then expects find.text('0') (counter). This app renders no such counter, so `flutter test` FAILS out of the box. It is OUT OF SCOPE and must NOT be used as a gate or 'fixed'.",
+  "build_command": "flutter analyze  (static analysis is the project's real correctness gate)",
+  "test_command": "(none usable — see test_framework). Do not run `flutter test`.",
+  "verification_instructions": "From the repo root e:/NiyyahTracker-mobile-app-ai run `flutter analyze`. The required outcome is ZERO errors. Warnings about unused imports/variables must be cleaned up by the coder (remove the now-unused import/decl) so analyze stays clean. There is no unit-test gate. Visual/behavioral checks are manual and noted per feature; the analyzer is the automated gate.",
+  "snapshot_or_generated_files": null,
+  "environment_constraints": "Windows host, PowerShell. `flutter` is available on PATH (run `flutter --version` to confirm). The repo is a local worktree; never push. Paths with backslashes are fine on PowerShell but the Dart code uses forward-slash asset paths. The app is RTL (Directionality.rtl wraps every page) — keep RTL for all new widgets.",
+  "contribution_requirements": "No AGENTS.md / CONTRIBUTING.md present. Conventions inferred from code: use GoogleFonts.ibmPlexSansArabic for UI text (a top-level `_f(...)` helper exists in each page — reuse the page's own `_f` where present), use AppColors constants (lib/core/app_colors.dart) instead of hardcoding hex when a constant fits, support dark/light via `Theme.of(context).brightness == Brightness.dark`, wrap new pages in Directionality(textDirection: TextDirection.rtl). For glass effects use dart:ui ImageFilter.blur + BackdropFilter + semi-transparent containers.",
+  "key_patterns": "Glass: dashboard's `_ModernNavBar` already uses `ClipRRect`+`BackdropFilter(ImageFilter.blur(sigma 10))`+translucent container — follow it. Image share: wrap content in `RepaintBoundary(key: GlobalKey)` then `key.currentContext!.findRenderObject() as RenderRepaintBoundary` → `toImage(pixelRatio: 3)` → `toByteData(png)` → write to `getTemporaryDirectory()` → `Share.shareXFiles([XFile(path)], text: …)`. See `_QuoteCarousel._shareQuoteAsImage` (dashboard) and `_shareVersesAsImage` (surah_reader) for the exact pattern. Auth: `AppAuthProvider` (provider) has `isAuthenticated => _user != null` and NO isGuest flag — 'guest' = not-authenticated user who reached the dashboard via login_page's 'تخطي - الدخول كضيف'. Worship keys live in the `worships` Map of `DailyWorship` (lib/models/worship_model.dart): fajrPrayedKey='fajr_prayed', fajrWokeAlarmKey='fajr_woke_alarm', morningAzkarKey='azkar_done', eveningAzkarKey='evening_azkar_done'.",
+  "relevant_files": [
+    "lib/features/dashboard/dashboard_page.dart (touched by FEAT-003: tasks 1,4-header,5,7-cards,10,11,6-trigger,12)",
+    "lib/features/quran/surah_reader_page.dart (FEAT-001: footer reverse _buildFooter, header overflow _buildHeader, glassy _shareVersesAsImage + _sharePartialAsImage)",
+    "lib/core/directional_icon.dart (FEAT-001: fix RTL branch bug)",
+    "lib/widgets/prayer_times_card.dart (FEAT-002: glass card + blurred golden _LoadingSkeleton)",
+    "lib/features/azkar/azkar_library_page.dart (FEAT-002: glassy AppBar)",
+    "lib/widgets/glass_card.dart (FEAT-002 NEW: reusable GlassCard)",
+    "lib/widgets/ramadan_countdown_widget.dart (FEAT-003 NEW: Ramadan countdown + share)",
+    "lib/services/azkar_reminder_service.dart (FEAT-003: gate checkAndShowReminder behind _userEnteredApp flag)",
+    "lib/main.dart (FEAT-003: remove global 2500ms reminder trigger; keep resume trigger)",
+    "lib/services/daily_summary_service.dart (FEAT-003: add Arabic labels to _getWorshipDisplayName)",
+    "lib/core/app_colors.dart (reference: AppColors.darkGreen/gold/midGreen/lightGreen/paleGreen)",
+    "lib/providers/auth_provider.dart (reference: isAuthenticated, userId)",
+    "lib/features/map/nearby_mosques_page.dart (reference: NearbyMosquesPage.show(context) opens a modal sheet)",
+    "lib/models/worship_model.dart (reference: fajrPrayedKey/fajrWokeAlarmKey constants)"
+  ],
+  "directory_structure": "lib/core (app_colors, app_models, directional_icon, hijri_utils), lib/widgets (shared widgets: prayer_times_card, mini_player, fajr_tree_widget, closest_badge_widget, + new glass_card & ramadan_countdown_widget), lib/features/<feature>_page.dart (one folder per feature: dashboard, quran, azkar, map/nearby_mosques, worship, auth/login_page, splash), lib/services (azkar_reminder_service, daily_summary_service, firebase_service, azan_service), lib/models (worship_model: DailyWorship + WorshipType string constants), lib/providers (auth_provider). Each page wraps itself in Directionality(rtl) and defines a local `_f(...)` GoogleFonts helper."
+}

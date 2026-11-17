@@ -86,6 +86,18 @@
             android:name=".AzanAlarmReceiver"
             android:exported="false" />
 
+        <!-- Reschedules native azan AlarmManager alarms after device reboot -->
+        <receiver
+            android:name=".AzanBootReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+                <action android:name="android.intent.action.QUICKBOOT_POWERON" />
+                <action android:name="com.htc.intent.action.QUICKBOOT_POWERON" />
+            </intent-filter>
+        </receiver>
+
         <!-- Native Azan player foreground service -->
         <service
             android:name=".AzanPlayerService"

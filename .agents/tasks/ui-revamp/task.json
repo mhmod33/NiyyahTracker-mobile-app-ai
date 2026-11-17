@@ -1,0 +1,7 @@
+{
+  "task_id": "task-ui-revamp",
+  "task_description": "Implement 12 UI/UX changes for the Basair (NiyyahTracker) Flutter app: remove the daily-dhikr home section, reverse Quran reader arrows + fix DirectionalIcon RTL bug, fix آل عمران header overflow, apply glassmorphism to the home header / shared images / cards / prayer-times / azkar header, move محاسبة اليوم to a FAB, gate morning/evening azkar reminder to post-login(guest-or-user), blurred golden prayer loading placeholders, a luxury Ramadan-2027 countdown card with share, add المساجد to the bottom nav, and fix English worship keys (fajr_prayed/fajr_woke_alarm) showing in the daily summary.",
+  "status": "pending",
+  "feature_order": ["FEAT-001", "FEAT-002", "FEAT-003"],
+  "blocked_reason": null
+}
