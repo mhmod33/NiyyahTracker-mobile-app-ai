@@ -7,6 +7,12 @@ class AppColors {
   static const Color lightGreen = Color(0xFF6FCF97);
   static const Color paleGreen = Color(0xFFE8F8EF);
 
+  // ── Dashboard emerald gradients ──
+  static const Color dashboardGreenTop = Color(0xFF103723);
+  static const Color dashboardGreenBottom = Color(0xFF155B3C);
+  static const Color dashboardMintTop = Color(0xFFF2F9F4);
+  static const Color dashboardMintBottom = Color(0xFFDCEFE3);
+
   // ── Backgrounds (white / near-white) ──
   static const Color background = Color(0xFFFAFDFB);
   static const Color cardBg = Color(0xFFFFFFFF);

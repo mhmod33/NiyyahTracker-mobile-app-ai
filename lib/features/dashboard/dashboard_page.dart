@@ -2231,249 +2231,184 @@ class _DashboardPageState extends State<DashboardPage>
         final double progress = (page / 604.0).clamp(0.0, 1.0);
         final int percent = (progress * 100).round();
 
+        final scheme = Theme.of(context).colorScheme;
+        final primary = scheme.primary;
+        final titleColor = scheme.onSurface;
+        final muted = scheme.onSurface.withValues(alpha: isDark ? 0.64 : 0.58);
+        final line = scheme.outline.withValues(alpha: isDark ? 0.28 : 0.16);
+        final track = primary.withValues(alpha: isDark ? 0.16 : 0.12);
+        final cardGradient = LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: isDark
+              ? [AppColors.dashboardGreenTop, AppColors.dashboardGreenBottom]
+              : [AppColors.dashboardMintTop, AppColors.dashboardMintBottom],
+        );
+
+        Future<void> openReader() async {
+          await Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => SurahReaderPage(
+                surahNumber: surahNumber,
+                initialPage: page,
+              ),
+            ),
+          );
+          if (mounted) _loadWirdData();
+        }
+
         return Container(
-          padding: const EdgeInsets.all(18),
           decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topRight,
-              end: Alignment.bottomLeft,
-              colors: isDark
-                  ? [const Color(0xFF152A21), const Color(0xFF0E1D16)]
-                  : [const Color(0xFFE7F3EE), const Color(0xFFD6EAE3)],
-            ),
-            borderRadius: BorderRadius.circular(24),
-            border: Border.all(
-              color: isDark
-                  ? AppColors.gold.withValues(alpha: 0.32)
-                  : const Color(0xFF1B5E3A).withValues(alpha: 0.18),
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.05),
-                blurRadius: 16,
-                offset: const Offset(0, 6),
-              ),
-            ],
+            gradient: cardGradient,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: line),
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    width: 48,
-                    height: 48,
-                    decoration: BoxDecoration(
-                      color: isDark
-                          ? AppColors.gold.withValues(alpha: 0.16)
-                          : const Color(0xFF145A3A),
-                      borderRadius: BorderRadius.circular(16),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(14, 14, 14, 12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  children: [
+                    Text(
+                      hasSaved ? 'آخر موضع' : 'ابدأ ختمتك',
+                      style: _f(sz: 12, fw: FontWeight.w700, c: primary),
                     ),
-                    child: Icon(
-                      Icons.bookmark_added_rounded,
-                      color: isDark ? AppColors.gold : Colors.white,
-                      size: 24,
+                    const Spacer(),
+                    Text(
+                      'الجزء $juz',
+                      style: _f(sz: 12, fw: FontWeight.w600, c: muted),
                     ),
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Flexible(
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 3,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: AppColors.gold.withValues(alpha: 0.2),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Text(
-                                  hasSaved
-                                      ? 'آخر موضع قراءة محفوظ'
-                                      : 'ابدأ ختمتك اليوم',
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: _f(
-                                    sz: 10.5,
-                                    fw: FontWeight.w800,
-                                    c: isDark
-                                        ? AppColors.gold
-                                        : const Color(0xFF8C6218),
-                                  ),
-                                ),
-                              ),
+                    const SizedBox(width: 8),
+                    Text(
+                      '$percent%',
+                      style: _f(sz: 12, fw: FontWeight.w800, c: primary),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: track,
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: Icon(
+                        Icons.menu_book_rounded,
+                        color: primary,
+                        size: 22,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'سورة $surahName',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: GoogleFonts.amiri(
+                              fontSize: 22,
+                              fontWeight: FontWeight.w700,
+                              height: 1.15,
+                              color: titleColor,
                             ),
-                            const SizedBox(width: 8),
-                            Text(
-                              'الجزء $juz',
-                              maxLines: 1,
-                              style: _f(
-                                sz: 11,
-                                fw: FontWeight.w700,
-                                c: isDark
-                                    ? Colors.white60
-                                    : const Color(0xFF4A6B5D),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'سورة $surahName',
-                          style: GoogleFonts.amiri(
-                            fontSize: 22,
-                            fontWeight: FontWeight.w700,
-                            color: isDark
-                                ? Colors.white
-                                : const Color(0xFF103B27),
                           ),
-                        ),
-                        Text(
-                          hasSaved
-                              ? 'توقفت عند صفحة $page من 604 • الآية $verse'
-                              : 'افتح المصحف الشريف وسيتم حفظ مكان توقفك تلقائياً',
-                          style: _f(
-                            sz: 12,
-                            fw: FontWeight.w600,
-                            c: isDark
-                                ? Colors.white70
-                                : const Color(0xFF3E6153),
+                          const SizedBox(height: 2),
+                          Text(
+                            hasSaved
+                                ? 'صفحة $page من 604  ·  الآية $verse'
+                                : 'افتح المصحف وسيُحفظ مكان توقفك',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: _f(sz: 12, fw: FontWeight.w500, c: muted),
                           ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  TextButton.icon(
-                    onPressed: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const ReadingStopsPage(),
+                        ],
                       ),
                     ),
-                    icon: Icon(
-                      Icons.bookmark_rounded,
-                      size: 15,
-                      color: isDark ? AppColors.gold : const Color(0xFF8C6218),
-                    ),
-                    label: Text(
-                      'المواضع',
-                      style: _f(
-                        sz: 12,
-                        fw: FontWeight.w700,
-                        c: isDark ? AppColors.gold : const Color(0xFF8C6218),
-                      ),
-                    ),
-                    style: TextButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 6,
-                      ),
-                      minimumSize: Size.zero,
-                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 14),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(8),
-                child: LinearProgressIndicator(
-                  value: progress,
-                  minHeight: 7,
-                  backgroundColor: isDark
-                      ? Colors.white.withValues(alpha: 0.08)
-                      : Colors.white.withValues(alpha: 0.7),
-                  valueColor: AlwaysStoppedAnimation<Color>(
-                    isDark ? AppColors.gold : const Color(0xFF145A3A),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: LinearProgressIndicator(
+                    value: progress,
+                    minHeight: 5,
+                    backgroundColor: track,
+                    valueColor: AlwaysStoppedAnimation(primary),
                   ),
                 ),
-              ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  TextButton(
-                    onPressed: () => _to(const QuranPage()),
-                    style: TextButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 8,
-                      ),
-                      minimumSize: Size.zero,
-                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    ),
-                    child: Text(
-                      'الفهرس',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: _f(
-                        sz: 12,
-                        fw: FontWeight.w700,
-                        c: isDark ? Colors.white70 : const Color(0xFF145A3A),
-                      ),
+                const SizedBox(height: 12),
+                FilledButton.icon(
+                  onPressed: openReader,
+                  icon: const Icon(Icons.play_arrow_rounded, size: 18),
+                  label: Text(
+                    hasSaved ? 'متابعة القراءة' : 'ابدأ القراءة',
+                    style: _f(
+                      sz: 14,
+                      fw: FontWeight.w700,
+                      c: scheme.onPrimary,
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Material(
-                      color: const Color(0xFF145A3A),
-                      borderRadius: BorderRadius.circular(14),
-                      child: InkWell(
-                        borderRadius: BorderRadius.circular(14),
-                        onTap: () async {
-                          await Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => SurahReaderPage(
-                                surahNumber: surahNumber,
-                                initialPage: page,
-                              ),
-                            ),
-                          );
-                          if (mounted) {
-                            _loadWirdData();
-                          }
-                        },
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 10,
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              const Icon(
-                                Icons.play_arrow_rounded,
-                                size: 18,
-                                color: Colors.white,
-                              ),
-                              const SizedBox(width: 4),
-                              Flexible(
-                                child: Text(
-                                  hasSaved ? 'متابعة القراءة' : 'ابدأ القراءة',
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: _f(
-                                    sz: 12.5,
-                                    fw: FontWeight.w800,
-                                    c: Colors.white,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: primary,
+                    foregroundColor: scheme.onPrimary,
+                    minimumSize: const Size.fromHeight(44),
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextButton.icon(
+                        onPressed: () => _to(const QuranPage()),
+                        icon: Icon(Icons.list_alt_rounded, size: 16, color: muted),
+                        label: Text(
+                          'الفهرس',
+                          style: _f(sz: 12.5, fw: FontWeight.w700, c: muted),
+                        ),
+                        style: TextButton.styleFrom(
+                          minimumSize: const Size.fromHeight(36),
+                          padding: EdgeInsets.zero,
                         ),
                       ),
                     ),
-                  ),
-                ],
-              ),
-            ],
+                    Container(width: 1, height: 14, color: line),
+                    Expanded(
+                      child: TextButton.icon(
+                        onPressed: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const ReadingStopsPage(),
+                          ),
+                        ),
+                        icon: Icon(
+                          Icons.bookmark_rounded,
+                          size: 16,
+                          color: muted,
+                        ),
+                        label: Text(
+                          'المواضع',
+                          style: _f(sz: 12.5, fw: FontWeight.w700, c: muted),
+                        ),
+                        style: TextButton.styleFrom(
+                          minimumSize: const Size.fromHeight(36),
+                          padding: EdgeInsets.zero,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         );
       },
@@ -3452,61 +3387,62 @@ class _QuoteCarouselState extends State<_QuoteCarousel> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final scheme = Theme.of(context).colorScheme;
+    final title = scheme.onSurface;
+    final muted = scheme.onSurface.withValues(alpha: isDark ? 0.64 : 0.58);
+    final accent = scheme.primary;
+    final iconBg = accent.withValues(alpha: isDark ? 0.16 : 0.08);
+    final cardGradient = LinearGradient(
+      begin: Alignment.topCenter,
+      end: Alignment.bottomCenter,
+      colors: isDark
+          ? [AppColors.dashboardGreenTop, AppColors.dashboardGreenBottom]
+          : [AppColors.dashboardMintTop, AppColors.dashboardMintBottom],
+    );
+
     return Container(
-      padding: const EdgeInsets.fromLTRB(18, 14, 18, 12),
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topRight,
-          end: Alignment.bottomLeft,
-          colors: [
-            Colors.white.withValues(alpha: 0.18),
-            Colors.white.withValues(alpha: 0.06),
-          ],
+        gradient: cardGradient,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: scheme.outline.withValues(alpha: isDark ? 0.24 : 0.14),
         ),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.24)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.08),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              const Icon(
-                Icons.auto_awesome_rounded,
-                color: AppColors.gold,
-                size: 18,
-              ),
+              Icon(Icons.auto_awesome_rounded, color: accent, size: 16),
               const SizedBox(width: 6),
               Text(
                 'نورٌ وبصيرة',
-                style: _f(sz: 12.5, fw: FontWeight.w800, c: AppColors.gold),
+                style: _f(sz: 12.5, fw: FontWeight.w700, c: accent),
               ),
               const Spacer(),
-              // Copy Text Button
               _QuoteActionIcon(
                 icon: Icons.copy_rounded,
                 tooltip: 'نسخ النص',
+                color: muted,
+                background: iconBg,
                 onTap: _copyQuoteText,
               ),
               const SizedBox(width: 6),
-              // Share as Text Button
               _QuoteActionIcon(
                 icon: Icons.share_rounded,
                 tooltip: 'مشاركة كنص',
+                color: muted,
+                background: iconBg,
                 onTap: _shareQuoteText,
               ),
               const SizedBox(width: 6),
-              // Share as Image Button
               _QuoteActionIcon(
                 icon: Icons.image_outlined,
                 tooltip: 'مشاركة كصورة',
+                color: muted,
+                background: iconBg,
                 onTap: _shareQuoteAsImage,
               ),
             ],
@@ -3524,41 +3460,16 @@ class _QuoteCarouselState extends State<_QuoteCarousel> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Icon(
-                          Icons.format_quote_rounded,
-                          color: Colors.white54,
-                          size: 18,
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            q['text']!,
-                            style: _f(
-                              sz: 15,
-                              fw: FontWeight.w700,
-                              c: Colors.white,
-                              h: 1.45,
-                            ),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
+                    Text(
+                      q['text']!,
+                      style: _f(sz: 15, fw: FontWeight.w700, c: title, h: 1.45),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 4),
-                    Padding(
-                      padding: const EdgeInsets.only(right: 26),
-                      child: Text(
-                        '— ${q['source']!}',
-                        style: _f(
-                          sz: 11,
-                          fw: FontWeight.w600,
-                          c: AppColors.gold,
-                        ),
-                      ),
+                    Text(
+                      q['source']!,
+                      style: _f(sz: 11, fw: FontWeight.w600, c: muted),
                     ),
                   ],
                 );
@@ -3578,8 +3489,8 @@ class _QuoteCarouselState extends State<_QuoteCarousel> {
                     height: 6,
                     decoration: BoxDecoration(
                       color: active
-                          ? AppColors.gold
-                          : Colors.white.withValues(alpha: 0.3),
+                          ? accent
+                          : muted.withValues(alpha: 0.35),
                       borderRadius: BorderRadius.circular(3),
                     ),
                   );
@@ -3588,24 +3499,9 @@ class _QuoteCarouselState extends State<_QuoteCarousel> {
               const Spacer(),
               GestureDetector(
                 onTap: _shareQuoteAsImage,
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(
-                      Icons.photo_camera_back_rounded,
-                      size: 13,
-                      color: AppColors.gold,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      'مشاركة كبطاقة مصورة',
-                      style: _f(
-                        sz: 10.5,
-                        fw: FontWeight.w700,
-                        c: AppColors.gold,
-                      ),
-                    ),
-                  ],
+                child: Text(
+                  'مشاركة كبطاقة',
+                  style: _f(sz: 11, fw: FontWeight.w700, c: accent),
                 ),
               ),
             ],
@@ -3620,11 +3516,15 @@ class _QuoteActionIcon extends StatelessWidget {
   final IconData icon;
   final String tooltip;
   final VoidCallback onTap;
+  final Color color;
+  final Color background;
 
   const _QuoteActionIcon({
     required this.icon,
     required this.tooltip,
     required this.onTap,
+    required this.color,
+    required this.background,
   });
 
   @override
@@ -3637,10 +3537,10 @@ class _QuoteActionIcon extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.all(6),
           decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.14),
+            color: background,
             borderRadius: BorderRadius.circular(10),
           ),
-          child: Icon(icon, size: 15, color: Colors.white),
+          child: Icon(icon, size: 15, color: color),
         ),
       ),
     );
@@ -3910,88 +3810,45 @@ class _NavButton extends StatelessWidget {
 
 extension _ArchHeader on _DashboardPageState {
   Widget _buildArchHeader(bool isDark, String userName, bool isGuest) {
-    final fg = isDark ? Colors.white : const Color(0xFF103B27);
-    final fgDim = isDark
-        ? Colors.white.withValues(alpha: 0.72)
-        : const Color(0xFF3E6153);
+    final scheme = Theme.of(context).colorScheme;
+    final fg = scheme.onSurface;
+    final fgDim = scheme.onSurface.withValues(alpha: isDark ? 0.68 : 0.62);
+    final headerColors = isDark
+        ? [
+            AppColors.dashboardGreenTop,
+            AppColors.dashboardGreenBottom,
+          ]
+        : [
+            AppColors.dashboardMintTop,
+            AppColors.dashboardMintBottom,
+          ];
     final glassBg = isDark
-        ? Colors.white.withValues(alpha: 0.07)
-        : Colors.white.withValues(alpha: 0.62);
-    final glassBorder = isDark
-        ? Colors.white.withValues(alpha: 0.14)
-        : Colors.white.withValues(alpha: 0.85);
-    final accent = AppColors.gold;
+        ? scheme.surface.withValues(alpha: 0.48)
+        : Color.lerp(Colors.white, AppColors.midGreen, 0.04)!;
+    final glassBorder = scheme.outline.withValues(alpha: isDark ? 0.28 : 0.14);
 
     return Container(
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          begin: Alignment.topRight,
-          end: Alignment.bottomLeft,
-          colors: isDark
-              ? const [Color(0xFF0C2B1F), Color(0xFF0A1C2E), Color(0xFF170B33)]
-              : const [Color(0xFFF3F9F4), Color(0xFFE7F2E9), Color(0xFFFBF2DA)],
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: headerColors,
         ),
-        borderRadius: const BorderRadius.vertical(bottom: Radius.circular(36)),
-        boxShadow: [
-          BoxShadow(
-            color: accent.withValues(alpha: isDark ? 0.22 : 0.16),
-            blurRadius: 30,
-            offset: const Offset(0, 14),
-          ),
-        ],
+        borderRadius: const BorderRadius.vertical(bottom: Radius.circular(32)),
       ),
       child: ClipRRect(
-        borderRadius: const BorderRadius.vertical(bottom: Radius.circular(36)),
+        borderRadius: const BorderRadius.vertical(bottom: Radius.circular(32)),
         child: Stack(
           children: [
-            Positioned(
-              top: -70,
-              right: -50,
-              child: Container(
-                width: 240,
-                height: 240,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: RadialGradient(
-                    colors: [
-                      accent.withValues(alpha: isDark ? 0.16 : 0.20),
-                      Colors.transparent,
-                    ],
-                  ),
-                ),
-              ),
-            ),
-            Positioned(
-              bottom: 60,
-              left: -60,
-              child: Container(
-                width: 220,
-                height: 220,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: RadialGradient(
-                    colors: [
-                      (isDark ? AppColors.darkGreen : AppColors.midGreen)
-                          .withValues(alpha: isDark ? 0.20 : 0.14),
-                      Colors.transparent,
-                    ],
-                  ),
-                ),
-              ),
-            ),
-            Positioned.fill(
-              child: CustomPaint(painter: _FilmGrainPainter(isDark: isDark)),
-            ),
             Container(
               decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
+                gradient: RadialGradient(
+                  center: const Alignment(0.9, -0.8),
+                  radius: 1.15,
                   colors: [
-                    Colors.white.withValues(alpha: isDark ? 0.06 : 0.35),
+                    scheme.secondary.withValues(alpha: isDark ? 0.12 : 0.13),
                     Colors.transparent,
                   ],
-                  stops: const [0.0, 0.45],
                 ),
               ),
             ),
@@ -4026,32 +3883,21 @@ extension _ArchHeader on _DashboardPageState {
                     child: Row(
                       children: [
                         Container(
-                          padding: const EdgeInsets.all(2),
+                          width: 46,
+                          height: 46,
                           decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            gradient: LinearGradient(
-                              begin: Alignment.topRight,
-                              end: Alignment.bottomLeft,
-                              colors: [
-                                AppColors.gold,
-                                accent.withValues(alpha: 0.35),
-                              ],
+                            color: scheme.primary.withValues(
+                              alpha: isDark ? 0.22 : 0.12,
                             ),
+                            shape: BoxShape.circle,
                           ),
-                          child: CircleAvatar(
-                            radius: 22,
-                            backgroundColor: isDark
-                                ? const Color(0xFF0D2818).withValues(alpha: 0.7)
-                                : Colors.white.withValues(alpha: 0.85),
-                            child: Text(
-                              userName.isNotEmpty
-                                  ? userName[0].toUpperCase()
-                                  : '؟',
-                              style: _f(
-                                sz: 18,
-                                fw: FontWeight.w800,
-                                c: isDark ? Colors.white : AppColors.darkGreen,
-                              ),
+                          alignment: Alignment.center,
+                          child: Text(
+                            userName.isNotEmpty ? userName[0].toUpperCase() : '؟',
+                            style: _f(
+                              sz: 18,
+                              fw: FontWeight.w800,
+                              c: scheme.primary,
                             ),
                           ),
                         ),
@@ -4075,10 +3921,10 @@ extension _ArchHeader on _DashboardPageState {
                                     ),
                                   ),
                                   const SizedBox(width: 5),
-                                  const Icon(
+                                  Icon(
                                     Icons.verified_rounded,
                                     size: 14,
-                                    color: AppColors.gold,
+                                    color: scheme.primary,
                                   ),
                                 ],
                               ),
@@ -4104,22 +3950,8 @@ extension _ArchHeader on _DashboardPageState {
                                 vertical: 10,
                               ),
                               decoration: BoxDecoration(
-                                gradient: LinearGradient(
-                                  colors: [
-                                    AppColors.gold,
-                                    accent.withValues(alpha: 0.85),
-                                  ],
-                                ),
-                                borderRadius: BorderRadius.circular(18),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: AppColors.gold.withValues(
-                                      alpha: 0.4,
-                                    ),
-                                    blurRadius: 14,
-                                    offset: const Offset(0, 5),
-                                  ),
-                                ],
+                                color: scheme.primary,
+                                borderRadius: BorderRadius.circular(14),
                               ),
                               child: Text(
                                 'دخول',
@@ -4161,6 +3993,7 @@ extension _ArchHeader on _DashboardPageState {
   }
 
   Widget _buildPrayerArch(bool isDark) {
+    final scheme = Theme.of(context).colorScheme;
     final progress = _archProgress();
     final nextTime = _nextPrayerTime;
     final timeDigits = nextTime != null ? _fmtDigits(nextTime) : '--:--';
@@ -4171,119 +4004,87 @@ extension _ArchHeader on _DashboardPageState {
     final countdown = left.isNegative
         ? 'حان الآن'
         : 'متبقي ${_fmtCountdown(left)}';
-    final accent = _dialAccent(_nextPrayerKey);
-    const ivory = Color(0xFFF7F1E4);
-    const champagne = Color(0xFFE4C98A);
-    const bronze = Color(0xFFC6A15B);
+    final accent = scheme.primary;
+    final title = scheme.onSurface;
+    final muted = scheme.onSurface.withValues(alpha: isDark ? 0.64 : 0.58);
+    final cardGradient = LinearGradient(
+      begin: Alignment.topCenter,
+      end: Alignment.bottomCenter,
+      colors: isDark
+          ? [AppColors.dashboardGreenTop, AppColors.dashboardGreenBottom]
+          : [AppColors.dashboardMintTop, AppColors.dashboardMintBottom],
+    );
+    final dialGradient = RadialGradient(
+      center: const Alignment(0, -0.35),
+      radius: 0.95,
+      colors: isDark
+          ? [
+              AppColors.midGreen,
+              AppColors.dashboardGreenBottom,
+              AppColors.dashboardGreenTop,
+            ]
+          : [
+              AppColors.dashboardMintTop,
+              AppColors.dashboardMintBottom,
+              scheme.surface,
+            ],
+    );
+    final hairline = Color.lerp(
+      scheme.outline,
+      scheme.secondary,
+      isDark ? 0.20 : 0.10,
+    )!.withValues(alpha: isDark ? 0.32 : 0.20);
 
     return GestureDetector(
       onTap: () => _to(const PrayerTimesPage()),
       child: Container(
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(32),
-          gradient: const LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              Color(0xFF1A3328),
-              Color(0xFF0C1A14),
-              Color(0xFF070E0B),
-            ],
-          ),
-          border: Border.all(color: champagne.withValues(alpha: 0.55), width: 1.1),
+          borderRadius: BorderRadius.circular(24),
+          gradient: cardGradient,
+          border: Border.all(color: hairline),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: isDark ? 0.48 : 0.22),
-              blurRadius: 28,
-              offset: const Offset(0, 16),
-            ),
-            BoxShadow(
-              color: accent.withValues(alpha: 0.18),
-              blurRadius: 24,
-              offset: const Offset(0, 4),
+              color: Colors.black.withValues(alpha: isDark ? 0.28 : 0.05),
+              blurRadius: 18,
+              offset: const Offset(0, 8),
             ),
           ],
         ),
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(32),
+          borderRadius: BorderRadius.circular(24),
           child: Stack(
             children: [
               Positioned(
-                top: -80,
-                right: -50,
+                top: -72,
+                left: -44,
                 child: Container(
-                  width: 220,
-                  height: 220,
+                  width: 184,
+                  height: 184,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     gradient: RadialGradient(
                       colors: [
-                        accent.withValues(alpha: 0.22),
+                        scheme.secondary.withValues(
+                          alpha: isDark ? 0.14 : 0.12,
+                        ),
                         Colors.transparent,
                       ],
-                    ),
-                  ),
-                ),
-              ),
-              Positioned(
-                bottom: -90,
-                left: -40,
-                child: Container(
-                  width: 200,
-                  height: 200,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: RadialGradient(
-                      colors: [
-                        bronze.withValues(alpha: 0.16),
-                        Colors.transparent,
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-              Positioned(
-                top: 0,
-                left: 0,
-                right: 0,
-                height: 90,
-                child: IgnorePointer(
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          Colors.white.withValues(alpha: 0.07),
-                          Colors.transparent,
-                        ],
-                      ),
                     ),
                   ),
                 ),
               ),
               Padding(
-                padding: const EdgeInsets.fromLTRB(20, 18, 20, 16),
+                padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
                 child: Column(
                   children: [
                     Row(
                       children: [
-                        Container(
-                          width: 5,
-                          height: 5,
-                          decoration: const BoxDecoration(
-                            color: champagne,
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
                         Text(
                           'الصلاة القادمة',
                           style: GoogleFonts.ibmPlexSansArabic(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                            letterSpacing: 1.6,
-                            color: champagne,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: accent,
                           ),
                         ),
                         const SizedBox(width: 10),
@@ -4296,36 +4097,26 @@ extension _ArchHeader on _DashboardPageState {
                             style: GoogleFonts.ibmPlexSansArabic(
                               fontSize: 11,
                               fontWeight: FontWeight.w500,
-                              color: ivory.withValues(alpha: 0.55),
+                              color: muted,
                             ),
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 14),
                     Container(
-                      width: 220,
-                      height: 220,
+                      width: 208,
+                      height: 208,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        gradient: const RadialGradient(
-                          center: Alignment(0, -0.4),
-                          radius: 0.95,
-                          colors: [
-                            Color(0xFF1C3830),
-                            Color(0xFF0E1E18),
-                            Color(0xFF08110D),
-                          ],
-                        ),
+                        gradient: dialGradient,
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.45),
-                            blurRadius: 18,
-                            offset: const Offset(0, 10),
-                          ),
-                          BoxShadow(
-                            color: accent.withValues(alpha: 0.16),
-                            blurRadius: 22,
+                            color: Colors.black.withValues(
+                              alpha: isDark ? 0.28 : 0.06,
+                            ),
+                            blurRadius: 16,
+                            offset: const Offset(0, 8),
                           ),
                         ],
                       ),
@@ -4342,39 +4133,29 @@ extension _ArchHeader on _DashboardPageState {
                             ),
                           ),
                           Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 36),
+                            padding: const EdgeInsets.symmetric(horizontal: 34),
                             child: Column(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                ShaderMask(
-                                  shaderCallback: (rect) => const LinearGradient(
-                                    begin: Alignment.topCenter,
-                                    end: Alignment.bottomCenter,
-                                    colors: [
-                                      Color(0xFFFFF8EA),
-                                      Color(0xFFE8D5A3),
-                                      Color(0xFFC6A15B),
-                                    ],
-                                  ).createShader(rect),
-                                  child: Text(
-                                    _nextPrayerName.isEmpty
-                                        ? '—'
-                                        : _nextPrayerName,
-                                    style: GoogleFonts.amiri(
-                                      fontSize: 32,
-                                      fontWeight: FontWeight.w700,
-                                      color: Colors.white,
-                                      height: 1.05,
-                                    ),
-                                    textAlign: TextAlign.center,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
+                                Text(
+                                  _nextPrayerName.isEmpty
+                                      ? '—'
+                                      : _nextPrayerName,
+                                  style: GoogleFonts.amiri(
+                                    fontSize: 32,
+                                    fontWeight: FontWeight.w700,
+                                    color: title,
+                                    height: 1.05,
                                   ),
+                                  textAlign: TextAlign.center,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
                                 const SizedBox(height: 2),
                                 Row(
                                   mainAxisSize: MainAxisSize.min,
-                                  crossAxisAlignment: CrossAxisAlignment.baseline,
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.baseline,
                                   textBaseline: TextBaseline.alphabetic,
                                   children: [
                                     Text(
@@ -4382,8 +4163,8 @@ extension _ArchHeader on _DashboardPageState {
                                       style: GoogleFonts.cormorantGaramond(
                                         fontSize: 28,
                                         fontWeight: FontWeight.w600,
-                                        letterSpacing: 1.6,
-                                        color: ivory.withValues(alpha: 0.96),
+                                        letterSpacing: 1.2,
+                                        color: title,
                                         height: 1,
                                       ),
                                     ),
@@ -4393,8 +4174,8 @@ extension _ArchHeader on _DashboardPageState {
                                         timePeriod,
                                         style: GoogleFonts.ibmPlexSansArabic(
                                           fontSize: 13,
-                                          fontWeight: FontWeight.w600,
-                                          color: champagne.withValues(alpha: 0.9),
+                                          fontWeight: FontWeight.w700,
+                                          color: accent,
                                         ),
                                       ),
                                     ],
@@ -4409,9 +4190,6 @@ extension _ArchHeader on _DashboardPageState {
                                   decoration: BoxDecoration(
                                     color: accent.withValues(alpha: 0.12),
                                     borderRadius: BorderRadius.circular(20),
-                                    border: Border.all(
-                                      color: accent.withValues(alpha: 0.5),
-                                    ),
                                   ),
                                   child: Text(
                                     countdown,
@@ -4419,9 +4197,8 @@ extension _ArchHeader on _DashboardPageState {
                                     overflow: TextOverflow.ellipsis,
                                     style: GoogleFonts.ibmPlexSansArabic(
                                       fontSize: 11,
-                                      fontWeight: FontWeight.w600,
-                                      letterSpacing: 0.2,
-                                      color: ivory,
+                                      fontWeight: FontWeight.w700,
+                                      color: accent,
                                     ),
                                   ),
                                 ),
@@ -4431,14 +4208,14 @@ extension _ArchHeader on _DashboardPageState {
                         ],
                       ),
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 14),
                     Text(
                       _spiritualTagline(_nextPrayerKey),
                       style: GoogleFonts.ibmPlexSansArabic(
                         fontSize: 13,
-                        fontWeight: FontWeight.w400,
-                        height: 1.55,
-                        color: ivory.withValues(alpha: 0.72),
+                        fontWeight: FontWeight.w500,
+                        height: 1.5,
+                        color: muted,
                       ),
                       textAlign: TextAlign.center,
                       maxLines: 2,
@@ -4449,11 +4226,8 @@ extension _ArchHeader on _DashboardPageState {
                       width: double.infinity,
                       padding: const EdgeInsets.symmetric(vertical: 11),
                       decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(16),
-                        color: Colors.white.withValues(alpha: 0.04),
-                        border: Border.all(
-                          color: champagne.withValues(alpha: 0.38),
-                        ),
+                        borderRadius: BorderRadius.circular(14),
+                        color: accent.withValues(alpha: isDark ? 0.14 : 0.08),
                       ),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
@@ -4462,13 +4236,10 @@ extension _ArchHeader on _DashboardPageState {
                             'مواقيت الصلاة',
                             style: GoogleFonts.ibmPlexSansArabic(
                               fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                              letterSpacing: 0.4,
-                              color: champagne,
+                              fontWeight: FontWeight.w700,
+                              color: accent,
                             ),
                           ),
-                          const SizedBox(width: 6),
-                          
                         ],
                       ),
                     ),
@@ -4480,25 +4251,6 @@ extension _ArchHeader on _DashboardPageState {
         ),
       ),
     );
-  }
-
-  Color _dialAccent(String prayerKey) {
-    switch (prayerKey) {
-      case 'fajr':
-        return const Color(0xFFC5D4FF);
-      case 'sunrise':
-        return const Color(0xFFF0C98A);
-      case 'dhuhr':
-        return const Color(0xFFF6E7C1);
-      case 'asr':
-        return const Color(0xFFE4B48A);
-      case 'maghrib':
-        return const Color(0xFFE7A090);
-      case 'isha':
-        return const Color(0xFFCDB8E8);
-      default:
-        return const Color(0xFFE4C98A);
-    }
   }
 
   String _fmtDigits(DateTime t) {
@@ -4579,20 +4331,15 @@ class _DialRingPainter extends CustomPainter {
     final radius = math.min(size.width, size.height) / 2;
     if (radius <= 0) return;
 
-    // ── Champagne bezel ──
-    final bezelRect = Rect.fromCircle(center: center, radius: radius - 3);
+    // ── Theme bezel ──
     final bezelPaint = Paint()
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 2.4
-      ..shader = const LinearGradient(
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-        colors: [Color(0xFFFFF6E4), Color(0xFFE4C98A), Color(0xFFA68445)],
-      ).createShader(bezelRect);
+      ..strokeWidth = 2.2
+      ..color = accent.withValues(alpha: isDark ? 0.55 : 0.38);
     canvas.drawCircle(center, radius - 3, bezelPaint);
 
     final hairline = Paint()
-      ..color = const Color(0xFFE4C98A).withValues(alpha: 0.28)
+      ..color = accent.withValues(alpha: isDark ? 0.22 : 0.16)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 0.8;
     canvas.drawCircle(center, radius - 9, hairline);
@@ -4606,8 +4353,8 @@ class _DialRingPainter extends CustomPainter {
       final outer = radius - 13;
       tickPaint
         ..color = major
-            ? const Color(0xFFE4C98A).withValues(alpha: 0.85)
-            : Colors.white.withValues(alpha: 0.16)
+            ? accent.withValues(alpha: isDark ? 0.8 : 0.55)
+            : accent.withValues(alpha: isDark ? 0.28 : 0.2)
         ..strokeWidth = major ? 1.7 : 0.7;
       canvas.drawLine(
         Offset(
@@ -4623,7 +4370,7 @@ class _DialRingPainter extends CustomPainter {
     }
 
     final sepPaint = Paint()
-      ..color = const Color(0xFFE4C98A).withValues(alpha: 0.18)
+      ..color = accent.withValues(alpha: isDark ? 0.2 : 0.14)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 0.7;
     canvas.drawCircle(center, radius - 48, sepPaint);
@@ -4631,7 +4378,7 @@ class _DialRingPainter extends CustomPainter {
     // ── Track + progress arc ──
     final trackRadius = radius - 38;
     final trackPaint = Paint()
-      ..color = Colors.white.withValues(alpha: isDark ? 0.10 : 0.14)
+      ..color = accent.withValues(alpha: isDark ? 0.16 : 0.12)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 4
       ..strokeCap = StrokeCap.round;
@@ -4822,9 +4569,9 @@ class _GlassIconButton extends StatelessWidget {
               : Colors.white.withValues(alpha: 0.65),
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
-            color: isDark
-                ? Colors.white.withValues(alpha: 0.14)
-                : AppColors.darkGreen.withValues(alpha: 0.15),
+            color: Theme.of(context).colorScheme.outline.withValues(
+              alpha: isDark ? 0.35 : 0.2,
+            ),
           ),
           boxShadow: [
             BoxShadow(
@@ -4836,7 +4583,7 @@ class _GlassIconButton extends StatelessWidget {
         ),
         child: Icon(
           icon,
-          color: isDark ? Colors.white : AppColors.darkGreen,
+          color: Theme.of(context).colorScheme.primary,
           size: 22,
         ),
       ),
