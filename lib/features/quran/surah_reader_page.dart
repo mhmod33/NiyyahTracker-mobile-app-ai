@@ -17,7 +17,9 @@ import '../../core/app_colors.dart';
 import '../../core/directional_icon.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/quran_audio_service.dart';
+import '../../services/qcf_mushaf_service.dart';
 import '../../services/wird_service.dart';
+import '../../widgets/qcf_mushaf_page.dart';
 import '../../services/wird_notification_service.dart';
 import 'reciter_library_page.dart';
 
@@ -2632,6 +2634,24 @@ class _MushafPageWidgetState extends State<_MushafPageWidget>
   @override
   bool get wantKeepAlive => true;
 
+  @override
+  void initState() {
+    super.initState();
+    _ensureQcfFont();
+  }
+
+  @override
+  void didUpdateWidget(covariant _MushafPageWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.pageNumber != widget.pageNumber) _ensureQcfFont();
+  }
+
+  void _ensureQcfFont() {
+    QcfMushafService.instance.ensureFont(pageNumber).then((ok) {
+      if (ok && mounted) setState(() {});
+    });
+  }
+
   int get pageNumber => widget.pageNumber;
   int? get highlightSurah => widget.highlightSurah;
   int? get highlightVerse => widget.highlightVerse;
@@ -2665,6 +2685,30 @@ class _MushafPageWidgetState extends State<_MushafPageWidget>
   @override
   Widget build(BuildContext context) {
     super.build(context); // required for AutomaticKeepAliveClientMixin
+
+    // Authentic 1421H page-glyph mushaf once its font is downloaded.
+    // Falls back to the classic text layout while the font is loading
+    // or if the download fails.
+    if (QcfMushafService.instance.isFontReady(pageNumber)) {
+      return Padding(
+        padding: const EdgeInsets.all(8),
+        child: _DecoratedMushafFrame(
+          isDark: isDark,
+          child: QcfMushafPage(
+            pageNumber: pageNumber,
+            highlightSurah: highlightSurah,
+            highlightVerse: highlightVerse,
+            isDark: isDark,
+            selectedVerses: widget.selectedVerses,
+            selectedSurah: widget.selectedSurah,
+            verticalScroll: widget.verticalScroll,
+            onVerseTap: widget.onVerseTap,
+            onVerseLongPress: widget.onVerseLongPress,
+          ),
+        ),
+      );
+    }
+
     final pageData = quran.getPageData(pageNumber);
 
     return Padding(

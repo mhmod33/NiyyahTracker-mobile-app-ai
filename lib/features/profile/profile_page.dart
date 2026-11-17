@@ -25,7 +25,7 @@ TextStyle _f({
 class ProfilePage extends StatelessWidget {
   const ProfilePage({super.key});
 
-  static const String _appVersion = '2.0.0';
+  static const String _appVersion = '2.0.1';
 
   @override
   Widget build(BuildContext context) {
