@@ -61,10 +61,10 @@ class _QuranPageState extends State<QuranPage> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    // Soft sage-mint background matching the attached reference image
-    final pageBg = isDark ? const Color(0xFF0C1713) : const Color(0xFFD6EAE3);
-    final headerBtnBg = isDark ? const Color(0xFF1A2C25) : const Color(0xFFF3F8F6);
-    final titleColor = isDark ? Colors.white : const Color(0xFF28433A);
+    // App default colors: clean ivory/off-white background in light mode, deep charcoal-green in dark
+    final pageBg = isDark ? const Color(0xFF0C1713) : const Color(0xFFF8FAF9);
+    final headerBtnBg = isDark ? const Color(0xFF1A2C25) : Colors.white;
+    final titleColor = isDark ? Colors.white : AppColors.darkGreen;
 
     return Directionality(
       textDirection: TextDirection.rtl,
@@ -360,6 +360,139 @@ class _QuranPageState extends State<QuranPage> {
         final sBox = snapshot.data;
 
         if (surahNumbers.isEmpty) {
+          if (_searchQuery.isNotEmpty) {
+            final verseResults = _searchVersesQuick(_searchQuery);
+            if (verseResults.isNotEmpty) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    margin: const EdgeInsets.fromLTRB(16, 4, 16, 12),
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: AppColors.gold.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: AppColors.gold.withValues(alpha: 0.3)),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.auto_stories_rounded, size: 16, color: AppColors.gold),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'لم توجد سورة باسم "$_searchQuery" — تم البحث التلقائي في الآيات (${verseResults.length} نتيجة):',
+                            style: _f(
+                              sz: 12,
+                              fw: FontWeight.w700,
+                              c: isDark ? AppColors.gold : const Color(0xFF8A6417),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Expanded(
+                    child: ListView.builder(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+                      itemCount: verseResults.length,
+                      itemBuilder: (ctx, i) {
+                        final item = verseResults[i];
+                        final s = item['s'] as int;
+                        final v = item['v'] as int;
+                        final surahName = quran.getSurahNameArabic(s);
+                        final verseText = item['text'] as String;
+                        final page = quran.getPageNumber(s, v);
+
+                        return Container(
+                          margin: const EdgeInsets.only(bottom: 10),
+                          decoration: BoxDecoration(
+                            color: isDark ? const Color(0xFF16241D) : Colors.white,
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: isDark ? Colors.white12 : AppColors.paleGreen,
+                              width: 1.2,
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.04),
+                                blurRadius: 8,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: ListTile(
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                            leading: Container(
+                              width: 36,
+                              height: 36,
+                              decoration: BoxDecoration(
+                                color: AppColors.gold.withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Center(
+                                child: Text(
+                                  '$v',
+                                  style: _f(sz: 12, fw: FontWeight.bold, c: AppColors.gold),
+                                ),
+                              ),
+                            ),
+                            title: Row(
+                              children: [
+                                Text(
+                                  'سورة $surahName',
+                                  style: _f(
+                                    sz: 14,
+                                    fw: FontWeight.bold,
+                                    c: isDark ? Colors.white : AppColors.darkGreen,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.darkGreen.withValues(alpha: 0.1),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Text('ص $page', style: _f(sz: 10.5, fw: FontWeight.w600, c: AppColors.darkGreen)),
+                                ),
+                              ],
+                            ),
+                            subtitle: Padding(
+                              padding: const EdgeInsets.only(top: 6),
+                              child: Text(
+                                verseText,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontFamily: 'KFGQPC Uthmanic Script Hafs',
+                                  fontSize: 16,
+                                  height: 1.6,
+                                ),
+                              ),
+                            ),
+                            trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: AppColors.gold),
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => SurahReaderPage(
+                                    surahNumber: s,
+                                    initialVerse: v,
+                                    initialPage: page,
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              );
+            }
+          }
+
           return Center(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -367,7 +500,7 @@ class _QuranPageState extends State<QuranPage> {
                 Icon(
                   Icons.search_off_rounded,
                   size: 48,
-                  color: isDark ? Colors.white30 : const Color(0xFF7B9B91),
+                  color: isDark ? Colors.white30 : AppColors.midGreen.withValues(alpha: 0.5),
                 ),
                 const SizedBox(height: 10),
                 Text(
@@ -375,14 +508,14 @@ class _QuranPageState extends State<QuranPage> {
                   style: _f(
                     sz: 15,
                     fw: FontWeight.w700,
-                    c: isDark ? Colors.white60 : const Color(0xFF4F6F65),
+                    c: isDark ? Colors.white60 : AppColors.darkGreen,
                   ),
                 ),
                 const SizedBox(height: 8),
                 TextButton.icon(
                   onPressed: () => _showAdvancedVerseSearch(context, initialQuery: _searchQuery),
-                  icon: const Icon(Icons.manage_search_rounded),
-                  label: Text('البحث في آيات القرآن عن "$_searchQuery"', style: _f(fw: FontWeight.w700)),
+                  icon: const Icon(Icons.manage_search_rounded, color: AppColors.darkGreen),
+                  label: Text('البحث المتقدم في آيات القرآن عن "$_searchQuery"', style: _f(fw: FontWeight.w700, c: AppColors.darkGreen)),
                 ),
               ],
             ),
@@ -585,6 +718,7 @@ class _QuranPageState extends State<QuranPage> {
       future: Future.wait([
         Hive.openBox('quran_bookmarks'),
         Hive.openBox('surah_bookmarks'),
+        Hive.openBox('quran_page_bookmarks'),
       ]),
       builder: (context, snapshot) {
         if (!snapshot.hasData) {
@@ -593,6 +727,7 @@ class _QuranPageState extends State<QuranPage> {
         final boxes = snapshot.data as List<dynamic>;
         final verseBox = boxes[0] as Box;
         final surahBox = boxes[1] as Box;
+        final pageBox = boxes[2] as Box;
 
         return ValueListenableBuilder<Box>(
           valueListenable: verseBox.listenable(),
@@ -600,138 +735,225 @@ class _QuranPageState extends State<QuranPage> {
             return ValueListenableBuilder<Box>(
               valueListenable: surahBox.listenable(),
               builder: (context, sBox, _) {
-                final surahItems = sBox.values.toList().cast<Map>();
-                final verseItems = vBox.values.toList().cast<Map>();
+                return ValueListenableBuilder<Box>(
+                  valueListenable: pageBox.listenable(),
+                  builder: (context, pBox, _) {
+                    final surahItems = sBox.values.toList().cast<Map>();
+                    final verseItems = vBox.values.toList().cast<Map>();
+                    final pageItems = pBox.values.toList().cast<Map>();
 
-                if (surahItems.isEmpty && verseItems.isEmpty) {
-                  return Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.bookmark_border_rounded,
-                          size: 56,
-                          color: isDark ? Colors.white24 : const Color(0xFF7B9B91),
-                        ),
-                        const SizedBox(height: 12),
-                        Text(
-                          'لا توجد محفوظات حالياً',
-                          style: _f(
-                            sz: 16,
-                            fw: FontWeight.w700,
-                            c: isDark ? Colors.white54 : const Color(0xFF4F6F65),
-                          ),
-                        ),
-                        const SizedBox(height: 6),
-                        Text(
-                          'اضغط مطولاً على أي سورة لحفظها في المفضلة',
-                          style: _f(
-                            sz: 12,
-                            c: isDark ? Colors.white38 : const Color(0xFF7B9B91),
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                }
-
-                return ListView(
-                  padding: const EdgeInsets.all(16),
-                  children: [
-                    if (surahItems.isNotEmpty) ...[
-                      Text(
-                        'السور المحفوظة',
-                        style: _f(
-                          sz: 15,
-                          fw: FontWeight.w800,
-                          c: isDark ? Colors.white : const Color(0xFF28433A),
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      GridView.builder(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 2,
-                          mainAxisSpacing: 12,
-                          crossAxisSpacing: 12,
-                          childAspectRatio: 1.72,
-                        ),
-                        itemCount: surahItems.length,
-                        itemBuilder: (ctx, idx) {
-                          final item = surahItems[idx];
-                          final s = item['surah'] as int;
-                          final place = quran.getPlaceOfRevelation(s) == 'Makkah' ? 'مكية' : 'مدنية';
-                          return _SurahGridCard(
-                            surahNumber: s,
-                            arabicNumber: _toArabicNumerals(s),
-                            nameArabic: 'سُورَةُ ${quran.getSurahNameArabic(s)}',
-                            subtitle: '$place  •  آياتها: ${_toArabicNumerals(quran.getVerseCount(s))}',
-                            isDark: isDark,
-                            bookmarked: true,
-                            onTap: () => Navigator.push(
-                              context,
-                              MaterialPageRoute(builder: (_) => SurahReaderPage(surahNumber: s)),
+                    if (surahItems.isEmpty && verseItems.isEmpty && pageItems.isEmpty) {
+                      return Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.bookmark_border_rounded,
+                              size: 56,
+                              color: isDark ? Colors.white24 : AppColors.darkGreen.withValues(alpha: 0.3),
                             ),
-                            onLongPress: () => sBox.delete('$s'),
-                          );
-                        },
-                      ),
-                      const SizedBox(height: 20),
-                    ],
-                    if (verseItems.isNotEmpty) ...[
-                      Text(
-                        'الآيات المحفوظة',
-                        style: _f(
-                          sz: 15,
-                          fw: FontWeight.w800,
-                          c: isDark ? Colors.white : const Color(0xFF28433A),
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      ...verseItems.map((item) {
-                        final s = item['surah'] as int;
-                        final v = item['verse'] as int;
-                        final sName = item['surahName'] as String;
-                        return Container(
-                          margin: const EdgeInsets.only(bottom: 10),
-                          decoration: BoxDecoration(
-                            color: isDark ? const Color(0xFF162620) : const Color(0xFFF3F8F6),
-                            borderRadius: BorderRadius.circular(18),
-                          ),
-                          child: ListTile(
-                            title: Text(
-                              'سورة $sName • آية ${_toArabicNumerals(v)}',
+                            const SizedBox(height: 12),
+                            Text(
+                              'لا توجد محفوظات حالياً',
                               style: _f(
-                                sz: 15,
-                                fw: FontWeight.w800,
-                                c: isDark ? Colors.white : const Color(0xFF28433A),
+                                sz: 16,
+                                fw: FontWeight.w700,
+                                c: isDark ? Colors.white54 : AppColors.darkGreen,
                               ),
                             ),
-                            subtitle: Text(
-                              quran.getVerse(s, v),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                fontFamily: 'KFGQPC Uthmanic Script Hafs',
-                                fontSize: 14,
+                            const SizedBox(height: 6),
+                            Text(
+                              'يمكنك حفظ السور، الصفحات والآيات والرجوع إليها هنا',
+                              style: _f(
+                                sz: 12,
+                                c: isDark ? Colors.white38 : AppColors.textSecondary,
                               ),
                             ),
-                            trailing: IconButton(
-                              icon: const Icon(Icons.delete_outline_rounded, size: 20),
-                              onPressed: () => vBox.delete('$s-$v'),
-                            ),
-                            onTap: () => Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => SurahReaderPage(surahNumber: s, initialVerse: v),
-                              ),
+                          ],
+                        ),
+                      );
+                    }
+
+                    return ListView(
+                      padding: const EdgeInsets.all(16),
+                      children: [
+                        if (pageItems.isNotEmpty) ...[
+                          Text(
+                            'الصفحات المحفوظة',
+                            style: _f(
+                              sz: 15,
+                              fw: FontWeight.w800,
+                              c: isDark ? Colors.white : AppColors.darkGreen,
                             ),
                           ),
-                        );
-                      }),
-                    ],
-                  ],
+                          const SizedBox(height: 10),
+                          ...pageItems.map((item) {
+                            final pageNum = (item['page'] as int?) ?? 1;
+                            final surahNum = (item['surah'] as int?) ?? 1;
+                            final surahName = (item['surahName'] as String?) ?? quran.getSurahNameArabic(surahNum);
+                            final juzNum = (item['juz'] as int?) ?? 1;
+                            return Container(
+                              margin: const EdgeInsets.only(bottom: 10),
+                              decoration: BoxDecoration(
+                                color: isDark ? const Color(0xFF16241D) : Colors.white,
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(
+                                  color: isDark ? Colors.white12 : AppColors.paleGreen,
+                                  width: 1.2,
+                                ),
+                              ),
+                              child: ListTile(
+                                leading: Container(
+                                  width: 40,
+                                  height: 40,
+                                  decoration: BoxDecoration(
+                                    color: AppColors.gold.withValues(alpha: 0.15),
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: Center(
+                                    child: Text(
+                                      '$pageNum',
+                                      style: _f(sz: 12, fw: FontWeight.bold, c: AppColors.gold),
+                                    ),
+                                  ),
+                                ),
+                                title: Text(
+                                  'صفحة ${_toArabicNumerals(pageNum)} • سورة $surahName',
+                                  style: _f(
+                                    sz: 14,
+                                    fw: FontWeight.w800,
+                                    c: isDark ? Colors.white : AppColors.darkGreen,
+                                  ),
+                                ),
+                                subtitle: Text(
+                                  'الجزء ${_toArabicNumerals(juzNum)}',
+                                  style: _f(
+                                    sz: 12,
+                                    c: isDark ? Colors.white54 : AppColors.textSecondary,
+                                  ),
+                                ),
+                                trailing: IconButton(
+                                  icon: const Icon(Icons.delete_outline_rounded, color: Colors.redAccent, size: 20),
+                                  onPressed: () => pBox.delete('page_$pageNum'),
+                                ),
+                                onTap: () => Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => SurahReaderPage(
+                                      surahNumber: surahNum,
+                                      initialPage: pageNum,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            );
+                          }),
+                          const SizedBox(height: 16),
+                        ],
+                        if (surahItems.isNotEmpty) ...[
+                          Text(
+                            'السور المحفوظة',
+                            style: _f(
+                              sz: 15,
+                              fw: FontWeight.w800,
+                              c: isDark ? Colors.white : AppColors.darkGreen,
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          GridView.builder(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: 2,
+                              mainAxisSpacing: 12,
+                              crossAxisSpacing: 12,
+                              childAspectRatio: 1.72,
+                            ),
+                            itemCount: surahItems.length,
+                            itemBuilder: (ctx, idx) {
+                              final item = surahItems[idx];
+                              final s = item['surah'] as int;
+                              final place = quran.getPlaceOfRevelation(s) == 'Makkah' ? 'مكية' : 'مدنية';
+                              return _SurahGridCard(
+                                surahNumber: s,
+                                arabicNumber: _toArabicNumerals(s),
+                                nameArabic: 'سُورَةُ ${quran.getSurahNameArabic(s)}',
+                                subtitle: '$place  •  آياتها: ${_toArabicNumerals(quran.getVerseCount(s))}',
+                                isDark: isDark,
+                                bookmarked: true,
+                                onTap: () => Navigator.push(
+                                  context,
+                                  MaterialPageRoute(builder: (_) => SurahReaderPage(surahNumber: s)),
+                                ),
+                                onLongPress: () => sBox.delete('$s'),
+                              );
+                            },
+                          ),
+                          const SizedBox(height: 20),
+                        ],
+                        if (verseItems.isNotEmpty) ...[
+                          Text(
+                            'الآيات المحفوظة',
+                            style: _f(
+                              sz: 15,
+                              fw: FontWeight.w800,
+                              c: isDark ? Colors.white : AppColors.darkGreen,
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          ...verseItems.map((item) {
+                            final s = item['surah'] as int;
+                            final v = item['verse'] as int;
+                            final sName = item['surahName'] as String;
+                            return Container(
+                              margin: const EdgeInsets.only(bottom: 10),
+                              decoration: BoxDecoration(
+                                color: isDark ? const Color(0xFF16241D) : Colors.white,
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(
+                                  color: isDark ? Colors.white12 : AppColors.paleGreen,
+                                  width: 1.2,
+                                ),
+                              ),
+                              child: ListTile(
+                                title: Text(
+                                  'سورة $sName • آية ${_toArabicNumerals(v)}',
+                                  style: _f(
+                                    sz: 14,
+                                    fw: FontWeight.w800,
+                                    c: isDark ? Colors.white : AppColors.darkGreen,
+                                  ),
+                                ),
+                                subtitle: Text(
+                                  quran.getVerse(s, v),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    fontFamily: 'KFGQPC Uthmanic Script Hafs',
+                                    fontSize: 14,
+                                  ),
+                                ),
+                                trailing: IconButton(
+                                  icon: const Icon(Icons.delete_outline_rounded, color: Colors.redAccent, size: 20),
+                                  onPressed: () => vBox.delete('$s-$v'),
+                                ),
+                                onTap: () => Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => SurahReaderPage(
+                                      surahNumber: s,
+                                      initialVerse: v,
+                                      initialPage: quran.getPageNumber(s, v),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            );
+                          }),
+                        ],
+                      ],
+                    );
+                  },
                 );
               },
             );
@@ -739,6 +961,27 @@ class _QuranPageState extends State<QuranPage> {
         );
       },
     );
+  }
+
+  List<Map<String, dynamic>> _searchVersesQuick(String q) {
+    if (q.trim().isEmpty) return [];
+    final normalizedQ = _removeDiacritics(q.toLowerCase().trim());
+    final List<Map<String, dynamic>> res = [];
+    for (int s = 1; s <= 114; s++) {
+      try {
+        final vc = quran.getVerseCount(s);
+        for (int v = 1; v <= vc; v++) {
+          final verse = quran.getVerse(s, v);
+          if (_removeDiacritics(verse.toLowerCase()).contains(normalizedQ)) {
+            res.add({'s': s, 'v': v, 'text': verse});
+            if (res.length >= 40) return res;
+          }
+        }
+      } catch (_) {
+        continue;
+      }
+    }
+    return res;
   }
 
   void _showAdvancedVerseSearch(BuildContext context, {String initialQuery = ''}) {

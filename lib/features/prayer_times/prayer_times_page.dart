@@ -7,7 +7,6 @@ import '../../core/app_colors.dart';
 import '../../core/directional_icon.dart';
 import '../../core/hijri_utils.dart';
 import '../../services/azan_service.dart';
-import '../qibla/qibla_page.dart';
 import '../azan/azan_settings_page.dart';
 
 TextStyle _f({double sz = 14, FontWeight fw = FontWeight.w400, Color? c, double? h}) =>
@@ -289,24 +288,13 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> with SingleTickerProv
                                 ),
                               ),
                               const Spacer(),
-                              GestureDetector(
-                                onTap: _refreshPrayerTimes,
-                                child: Container(
-                                  padding: const EdgeInsets.all(10),
-                                  decoration: BoxDecoration(
-                                    color: Colors.white.withValues(alpha: 0.16),
-                                    shape: BoxShape.circle,
-                                    border: Border.all(color: Colors.white.withValues(alpha: 0.25)),
-                                  ),
-                                  child: const Icon(Icons.my_location_rounded, size: 18, color: Colors.white),
-                                ),
-                              ),
+                              const SizedBox(width: 40),
                             ],
                           ),
 
                           const SizedBox(height: 18),
 
-                          // Quick Action Navigation Bar (Qibla, Azan, Prayer Info)
+                          // Quick Action Navigation Bar (Azan Settings)
                           Container(
                             padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
                             decoration: BoxDecoration(
@@ -315,30 +303,15 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> with SingleTickerProv
                               border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
                             ),
                             child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                              mainAxisAlignment: MainAxisAlignment.center,
                               children: [
                                 _HeroQuickNav(
-                                  icon: Icons.explore_outlined,
-                                  label: 'اتجاه القبلة',
-                                  onTap: () => Navigator.push(
-                                    context,
-                                    MaterialPageRoute(builder: (_) => const QiblaPage()),
-                                  ),
-                                ),
-                                Container(width: 1, height: 28, color: Colors.white.withValues(alpha: 0.15)),
-                                _HeroQuickNav(
                                   icon: Icons.volume_up_outlined,
-                                  label: 'إعدادات الأذان',
+                                  label: 'إعدادات صوت الأذان',
                                   onTap: () => Navigator.push(
                                     context,
                                     MaterialPageRoute(builder: (_) => const AzanSettingsPage()),
                                   ),
-                                ),
-                                Container(width: 1, height: 28, color: Colors.white.withValues(alpha: 0.15)),
-                                _HeroQuickNav(
-                                  icon: Icons.mosque_outlined,
-                                  label: 'مواقيت اليوم',
-                                  onTap: _refreshPrayerTimes,
                                 ),
                               ],
                             ),
@@ -466,12 +439,12 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> with SingleTickerProv
               ),
             ),
 
-            // ── Horizontal Iconic Strip (Nusuk-style white rounded icon cards) ──
+            // ── Horizontal Iconic Strip (Azan settings card) ──
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+                  padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 18),
                   decoration: BoxDecoration(
                     color: isDark ? const Color(0xFF151C18) : Colors.white,
                     borderRadius: BorderRadius.circular(24),
@@ -483,34 +456,61 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> with SingleTickerProv
                       ),
                     ],
                   ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: [
-                      _NusukActionCard(
-                        icon: Icons.explore_rounded,
-                        label: 'بوصلة القبلة',
-                        isDark: isDark,
-                        onTap: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (_) => const QiblaPage()),
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(20),
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const AzanSettingsPage()),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 48,
+                          height: 48,
+                          decoration: BoxDecoration(
+                            color: isDark ? const Color(0xFF1E2822) : const Color(0xFFF7F8FA),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: isDark ? Colors.white.withValues(alpha: 0.07) : Colors.black.withValues(alpha: 0.04),
+                            ),
+                          ),
+                          child: Icon(
+                            Icons.notifications_active_outlined,
+                            size: 24,
+                            color: isDark ? const Color(0xFFD4A843) : const Color(0xFF1E293B),
+                          ),
                         ),
-                      ),
-                      _NusukActionCard(
-                        icon: Icons.notifications_active_outlined,
-                        label: 'صوت الأذان',
-                        isDark: isDark,
-                        onTap: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (_) => const AzanSettingsPage()),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'تخصيص صوت الأذان',
+                                style: _f(
+                                  sz: 15,
+                                  fw: FontWeight.w700,
+                                  c: isDark ? Colors.white : const Color(0xFF1E293B),
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                'اختيار المؤذن وتفعيل الأذان لكل صلاة',
+                                style: _f(
+                                  sz: 12,
+                                  c: isDark ? Colors.white60 : AppColors.textSecondary,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                      _NusukActionCard(
-                        icon: Icons.my_location_rounded,
-                        label: 'تحديث الموقع',
-                        isDark: isDark,
-                        onTap: _refreshPrayerTimes,
-                      ),
-                    ],
+                        Icon(
+                          Icons.arrow_forward_ios_rounded,
+                          size: 16,
+                          color: isDark ? Colors.white54 : AppColors.textSecondary,
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -545,6 +545,7 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> with SingleTickerProv
                     isCurrent: _nextPrayerName == 'الفجر',
                     isDark: isDark,
                     fmt: _fmtTime,
+                    accentColor: const Color(0xFF1A237E), // deep blue / indigo
                   ),
                   _PrayerRow(
                     name: 'الشروق',
@@ -553,6 +554,7 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> with SingleTickerProv
                     isCurrent: _nextPrayerName == 'الشروق',
                     isDark: isDark,
                     fmt: _fmtTime,
+                    accentColor: const Color(0xFFFB8C00), // warm amber/gold
                   ),
                   _PrayerRow(
                     name: 'الظهر',
@@ -561,6 +563,7 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> with SingleTickerProv
                     isCurrent: _nextPrayerName == 'الظهر',
                     isDark: isDark,
                     fmt: _fmtTime,
+                    accentColor: const Color(0xFFF9A825), // amber/gold
                   ),
                   _PrayerRow(
                     name: 'العصر',
@@ -569,6 +572,7 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> with SingleTickerProv
                     isCurrent: _nextPrayerName == 'العصر',
                     isDark: isDark,
                     fmt: _fmtTime,
+                    accentColor: const Color(0xFFE65100), // orange
                   ),
                   _PrayerRow(
                     name: 'المغرب',
@@ -577,6 +581,7 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> with SingleTickerProv
                     isCurrent: _nextPrayerName == 'المغرب',
                     isDark: isDark,
                     fmt: _fmtTime,
+                    accentColor: const Color(0xFF6A1B9A), // deep purple
                   ),
                   _PrayerRow(
                     name: 'العشاء',
@@ -585,6 +590,7 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> with SingleTickerProv
                     isCurrent: _nextPrayerName == 'العشاء',
                     isDark: isDark,
                     fmt: _fmtTime,
+                    accentColor: const Color(0xFF0D1B4B), // dark navy
                   ),
                   const SizedBox(height: 36),
                 ]),
@@ -823,6 +829,8 @@ class _PrayerRow extends StatelessWidget {
   final bool isCurrent;
   final bool isDark;
   final String Function(DateTime) fmt;
+  final Color accentColor;
+
   const _PrayerRow({
     required this.name,
     required this.time,
@@ -830,52 +838,73 @@ class _PrayerRow extends StatelessWidget {
     required this.isCurrent,
     required this.isDark,
     required this.fmt,
+    required this.accentColor,
   });
 
   @override
   Widget build(BuildContext context) {
-    const gold = Color(0xFFD9883D);
     final cardBg = isCurrent
-        ? (isDark ? const Color(0xFF282015) : const Color(0xFFFFF8F0))
-        : (isDark ? const Color(0xFF151C18) : Colors.white);
+        ? (isDark
+            ? accentColor.withValues(alpha: 0.22)
+            : accentColor.withValues(alpha: 0.08))
+        : (isDark
+            ? Color.alphaBlend(accentColor.withValues(alpha: 0.08), const Color(0xFF151C18))
+            : Color.alphaBlend(accentColor.withValues(alpha: 0.05), Colors.white));
     final textCol = isDark ? Colors.white : AppColors.textPrimary;
-    final subCol = isDark ? Colors.white54 : AppColors.textSecondary;
+    final subCol = isDark ? Colors.white70 : AppColors.textSecondary;
 
     return AnimatedContainer(
       duration: const Duration(milliseconds: 300),
       margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 15),
       decoration: BoxDecoration(
         color: cardBg,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: isCurrent
-              ? gold.withValues(alpha: 0.55)
-              : (isDark ? Colors.white.withValues(alpha: 0.06) : Colors.black.withValues(alpha: 0.04)),
-          width: isCurrent ? 1.6 : 1,
+        border: Border(
+          // Distinct left border indicator with prayer's accent color
+          left: BorderSide(
+            color: accentColor,
+            width: isCurrent ? 5.0 : 4.0,
+          ),
+          top: BorderSide(
+            color: isCurrent
+                ? accentColor.withValues(alpha: 0.6)
+                : (isDark ? Colors.white.withValues(alpha: 0.06) : Colors.black.withValues(alpha: 0.04)),
+            width: isCurrent ? 1.5 : 1,
+          ),
+          right: BorderSide(
+            color: isCurrent
+                ? accentColor.withValues(alpha: 0.6)
+                : (isDark ? Colors.white.withValues(alpha: 0.06) : Colors.black.withValues(alpha: 0.04)),
+            width: isCurrent ? 1.5 : 1,
+          ),
+          bottom: BorderSide(
+            color: isCurrent
+                ? accentColor.withValues(alpha: 0.6)
+                : (isDark ? Colors.white.withValues(alpha: 0.06) : Colors.black.withValues(alpha: 0.04)),
+            width: isCurrent ? 1.5 : 1,
+          ),
         ),
         boxShadow: isCurrent
             ? [
                 BoxShadow(
-                  color: gold.withValues(alpha: 0.15),
+                  color: accentColor.withValues(alpha: 0.25),
                   blurRadius: 14,
                   offset: const Offset(0, 4),
                 ),
               ]
             : null,
       ),
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 15),
       child: Row(
         children: [
           Container(
             width: 44,
             height: 44,
             decoration: BoxDecoration(
-              color: isCurrent
-                  ? gold.withValues(alpha: 0.18)
-                  : (isDark ? Colors.white.withValues(alpha: 0.07) : const Color(0xFFF2F5F4)),
+              color: accentColor.withValues(alpha: isDark ? 0.25 : 0.14),
               borderRadius: BorderRadius.circular(14),
             ),
-            child: Icon(icon, color: isCurrent ? gold : subCol, size: 22),
+            child: Icon(icon, color: accentColor, size: 22),
           ),
           const SizedBox(width: 14),
           Expanded(
@@ -887,13 +916,13 @@ class _PrayerRow extends StatelessWidget {
                   style: _f(
                     sz: 17,
                     fw: isCurrent ? FontWeight.w800 : FontWeight.w600,
-                    c: isCurrent ? (isDark ? Colors.white : const Color(0xFF9C5414)) : textCol,
+                    c: isCurrent ? accentColor : textCol,
                   ),
                 ),
                 if (isCurrent)
                   Text(
                     'الصلاة القادمة',
-                    style: _f(sz: 11, fw: FontWeight.w600, c: gold),
+                    style: _f(sz: 11, fw: FontWeight.w700, c: accentColor),
                   ),
               ],
             ),
@@ -901,15 +930,18 @@ class _PrayerRow extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
             decoration: BoxDecoration(
-              color: isCurrent ? gold.withValues(alpha: 0.16) : Colors.transparent,
+              color: accentColor.withValues(alpha: 0.14),
               borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: accentColor.withValues(alpha: 0.3)),
             ),
             child: Text(
               fmt(time),
               style: GoogleFonts.ibmPlexSansArabic(
                 fontSize: 15,
                 fontWeight: FontWeight.w700,
-                color: isCurrent ? gold : textCol,
+                color: isDark && (accentColor == const Color(0xFF0D1B4B) || accentColor == const Color(0xFF1A237E))
+                    ? Colors.white
+                    : accentColor,
               ),
             ),
           ),

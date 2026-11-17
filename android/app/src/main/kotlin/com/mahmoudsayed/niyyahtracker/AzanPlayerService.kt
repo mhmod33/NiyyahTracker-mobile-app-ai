@@ -5,8 +5,10 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.media.AudioManager
 import android.media.AudioAttributes
 import android.media.MediaPlayer
@@ -31,6 +33,7 @@ class AzanPlayerService : Service() {
     private var wakeLock: PowerManager.WakeLock? = null
     private var volumeHandler: Handler? = null
     private var volumeCheckRunnable: Runnable? = null
+    private var volumeReceiver: BroadcastReceiver? = null
     private var initialAlarmVolume: Int = -1
     private var initialMusicVolume: Int = -1
     private var isStopping = false
@@ -145,8 +148,18 @@ class AzanPlayerService : Service() {
         stopSelf()
     }
 
-    /// Periodically check system volume. If volume drops to 0 while playing,
-    /// assume the user pressed volume down to stop the azan.
+    private fun isMuteOnVolumeDownEnabled(): Boolean {
+        return try {
+            val sp = getSharedPreferences("azan_prefs", Context.MODE_PRIVATE)
+            sp.getBoolean("mute_on_volume_down", true)
+        } catch (_: Exception) {
+            true
+        }
+    }
+
+    /// Periodically check system volume and listen to volume key broadcasts.
+    /// If volume decreases by even 1 step (volume down pressed once while locked),
+    /// mute/stop the azan immediately if the setting is enabled.
     private fun startVolumeMonitoring() {
         stopVolumeMonitoring()
         try {
@@ -158,15 +171,52 @@ class AzanPlayerService : Service() {
                 "AzanPlayerService: initial alarm vol=$initialAlarmVolume music vol=$initialMusicVolume"
             )
 
+            // 1. Dynamic BroadcastReceiver for immediate VOLUME_CHANGED_ACTION (fired when volume buttons pressed)
+            val filter = IntentFilter("android.media.VOLUME_CHANGED_ACTION")
+            volumeReceiver = object : BroadcastReceiver() {
+                override fun onReceive(context: Context?, intent: Intent?) {
+                    if (isStopping || mediaPlayer == null) return
+                    if (!isMuteOnVolumeDownEnabled()) return
+
+                    val prevVol = intent?.getIntExtra("android.media.EXTRA_PREV_VOLUME_STREAM_VALUE", -1) ?: -1
+                    val currentVol = intent?.getIntExtra("android.media.EXTRA_VOLUME_STREAM_VALUE", -1) ?: -1
+
+                    // Single click on volume down decreases volume (currentVol < prevVol)
+                    if (prevVol != -1 && currentVol < prevVol) {
+                        AzanAlarmReceiver.writeLog(
+                            this@AzanPlayerService,
+                            "AzanPlayerService: volume down pressed once ($currentVol < $prevVol) → muting azan"
+                        )
+                        stopPlayback()
+                        return
+                    }
+                }
+            }
+            registerReceiver(volumeReceiver, filter)
+
+            // 2. High-frequency polling (every 100ms) for reliable detection across all device lock states
             volumeHandler = Handler(Looper.getMainLooper())
             volumeCheckRunnable = object : Runnable {
                 override fun run() {
                     if (isStopping || mediaPlayer == null) return
-                    val audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
-                    val alarmVol = audioManager.getStreamVolume(AudioManager.STREAM_ALARM)
-                    val musicVol = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
+                    val am = getSystemService(Context.AUDIO_SERVICE) as AudioManager
+                    val alarmVol = am.getStreamVolume(AudioManager.STREAM_ALARM)
+                    val musicVol = am.getStreamVolume(AudioManager.STREAM_MUSIC)
 
-                    // If volume dropped to 0 from a non-zero initial, stop
+                    if (isMuteOnVolumeDownEnabled()) {
+                        // Volume down pressed once -> volume dropped by 1+ step from initial
+                        if ((initialAlarmVolume > 0 && alarmVol < initialAlarmVolume) ||
+                            (initialMusicVolume > 0 && musicVol < initialMusicVolume)) {
+                            AzanAlarmReceiver.writeLog(
+                                this@AzanPlayerService,
+                                "AzanPlayerService: volume down pressed ($alarmVol < $initialAlarmVolume) → muting azan"
+                            )
+                            stopPlayback()
+                            return
+                        }
+                    }
+
+                    // Fallback: If volume dropped to 0
                     if ((initialAlarmVolume > 0 && alarmVol == 0) ||
                         (initialMusicVolume > 0 && musicVol == 0)) {
                         AzanAlarmReceiver.writeLog(
@@ -177,19 +227,7 @@ class AzanPlayerService : Service() {
                         return
                     }
 
-                    // Also detect rapid decrease: if volume dropped by 2+ steps at once
-                    if ((initialAlarmVolume >= 0 && alarmVol < initialAlarmVolume - 1) ||
-                        (initialMusicVolume >= 0 && musicVol < initialMusicVolume - 1)) {
-                        AzanAlarmReceiver.writeLog(
-                            this@AzanPlayerService,
-                            "AzanPlayerService: rapid volume decrease → stopping azan"
-                        )
-                        stopPlayback()
-                        return
-                    }
-
-                    // Check again in 400ms
-                    volumeHandler?.postDelayed(this, 400)
+                    volumeHandler?.postDelayed(this, 100)
                 }
             }
             volumeHandler?.post(volumeCheckRunnable!!)
@@ -197,6 +235,10 @@ class AzanPlayerService : Service() {
     }
 
     private fun stopVolumeMonitoring() {
+        try {
+            volumeReceiver?.let { unregisterReceiver(it) }
+        } catch (_: Exception) {}
+        volumeReceiver = null
         try {
             volumeCheckRunnable?.let { volumeHandler?.removeCallbacks(it) }
         } catch (_: Exception) {}

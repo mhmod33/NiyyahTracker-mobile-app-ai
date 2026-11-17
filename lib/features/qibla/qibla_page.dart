@@ -7,8 +7,18 @@ import 'package:geolocator/geolocator.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/directional_icon.dart';
 
-TextStyle _f({double sz = 14, FontWeight fw = FontWeight.w400, Color? c, double? h}) =>
-    GoogleFonts.ibmPlexSansArabic(fontSize: sz, fontWeight: fw, color: c, height: h);
+TextStyle _f({
+  double sz = 14,
+  FontWeight fw = FontWeight.w400,
+  Color? c,
+  double? h,
+}) =>
+    GoogleFonts.ibmPlexSansArabic(
+      fontSize: sz,
+      fontWeight: fw,
+      color: c,
+      height: h,
+    );
 
 class QiblaPage extends StatefulWidget {
   const QiblaPage({super.key});
@@ -17,11 +27,16 @@ class QiblaPage extends StatefulWidget {
   State<QiblaPage> createState() => _QiblaPageState();
 }
 
-class _QiblaPageState extends State<QiblaPage> with SingleTickerProviderStateMixin {
+class _QiblaPageState extends State<QiblaPage>
+    with TickerProviderStateMixin {
   Future<bool>? _permissionFuture;
   bool _wasAligned = false;
   DateTime? _lastVibrateTime;
   late AnimationController _glowCtrl;
+  late AnimationController _tiltCtrl;
+  late AnimationController _needleCtrl;
+  late Animation<double> _needleAnim;
+  double _lastTurns = 0.0;
 
   @override
   void initState() {
@@ -30,12 +45,28 @@ class _QiblaPageState extends State<QiblaPage> with SingleTickerProviderStateMix
       vsync: this,
       duration: const Duration(seconds: 2),
     )..repeat(reverse: true);
+
+    _tiltCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 4),
+    )..repeat(reverse: true);
+
+    _needleCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 280),
+    );
+    _needleAnim = Tween<double>(begin: 0, end: 0).animate(
+      CurvedAnimation(parent: _needleCtrl, curve: Curves.easeOutCubic),
+    );
+
     _permissionFuture = _checkLocationPermission();
   }
 
   @override
   void dispose() {
     _glowCtrl.dispose();
+    _tiltCtrl.dispose();
+    _needleCtrl.dispose();
     super.dispose();
   }
 
@@ -77,6 +108,23 @@ class _QiblaPageState extends State<QiblaPage> with SingleTickerProviderStateMix
     _wasAligned = isAligned;
   }
 
+  void _updateNeedleAngle(double targetAngleDeg) {
+    // targetAngle in degrees -> turns = angle / 360
+    final targetTurns = (-targetAngleDeg / 360.0);
+    double diff = (targetTurns - _lastTurns) % 1.0;
+    if (diff > 0.5) diff -= 1.0;
+    if (diff < -0.5) diff += 1.0;
+    final newTurns = _lastTurns + diff;
+
+    if ((newTurns - _lastTurns).abs() > 0.001) {
+      _needleAnim = Tween<double>(begin: _lastTurns, end: newTurns).animate(
+        CurvedAnimation(parent: _needleCtrl, curve: Curves.easeOutCubic),
+      );
+      _lastTurns = newTurns;
+      _needleCtrl.forward(from: 0.0);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -84,119 +132,158 @@ class _QiblaPageState extends State<QiblaPage> with SingleTickerProviderStateMix
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
-        body: Container(
-          width: double.infinity,
-          height: double.infinity,
-          decoration: const BoxDecoration(
-            // Atmospheric Nusuk-inspired gradient (Dusk Sky Blue -> Warm Amber -> Golden Sand)
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                Color(0xFF2B4D70),
-                Color(0xFF7B6452),
-                Color(0xFFCB7848),
-                Color(0xFFC39457),
-              ],
-            ),
-          ),
-          child: Stack(
-            children: [
-              // Atmospheric glowing sun/horizon backdrop
-              Positioned(
-                top: 120,
-                right: -50,
-                child: Container(
-                  width: 240,
-                  height: 240,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: RadialGradient(
-                      colors: [
-                        const Color(0xFFFFB259).withValues(alpha: 0.35),
-                        Colors.transparent,
-                      ],
-                    ),
+        body: Stack(
+          children: [
+            // ── Feature 12: Sleek Modern Dark Gradient Background ──
+            Positioned.fill(
+              child: Container(
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      Color(0xFF060D17), // Deep midnight navy
+                      Color(0xFF091C27), // Dark ocean teal
+                      Color(0xFF07241A), // Deep emerald
+                      Color(0xFF030A0E), // Obsidian base
+                    ],
                   ),
                 ),
               ),
-              SafeArea(
-                child: Column(
-                  children: [
-                    // ── Top Bar ──
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(20, 12, 20, 8),
-                      child: Row(
-                        children: [
-                          GestureDetector(
-                            onTap: () => Navigator.pop(context),
-                            child: Container(
-                              padding: const EdgeInsets.all(10),
-                              decoration: BoxDecoration(
-                                color: Colors.white.withValues(alpha: 0.16),
-                                shape: BoxShape.circle,
-                                border: Border.all(color: Colors.white.withValues(alpha: 0.25)),
-                              ),
-                              child: const DirectionalIcon(
-                                isBack: true,
-                                size: 18,
-                                color: Colors.white,
-                              ),
+            ),
+
+            // ── Feature 12: Subtle Islamic Star & Geometric Pattern ──
+            Positioned.fill(
+              child: CustomPaint(
+                painter: _GeometricStarBackdropPainter(),
+              ),
+            ),
+
+            // Atmospheric glowing radial highlight behind the compass
+            Positioned(
+              top: MediaQuery.of(context).size.height * 0.28,
+              left: 0,
+              right: 0,
+              child: Center(
+                child: AnimatedBuilder(
+                  animation: _glowCtrl,
+                  builder: (context, _) {
+                    return Container(
+                      width: 320,
+                      height: 320,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: RadialGradient(
+                          colors: [
+                            const Color(0xFF1B7A4E).withOpacity(
+                              0.20 + 0.10 * _glowCtrl.value,
                             ),
-                          ),
-                          Expanded(
-                            child: Text(
-                              'بوصلة القبلة',
-                              textAlign: TextAlign.center,
-                              style: _f(sz: 20, fw: FontWeight.w800, c: Colors.white),
-                            ),
-                          ),
-                          Container(
-                            padding: const EdgeInsets.all(10),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withValues(alpha: 0.16),
-                              shape: BoxShape.circle,
-                              border: Border.all(color: Colors.white.withValues(alpha: 0.25)),
-                            ),
-                            child: const Icon(Icons.vibration_rounded, size: 18, color: Colors.white),
-                          ),
-                        ],
+                            const Color(0xFFD4A843).withOpacity(0.06),
+                            Colors.transparent,
+                          ],
+                        ),
                       ),
-                    ),
-                    // ── Main Content ──
-                    Expanded(
-                      child: kIsWeb
-                          ? _buildUnsupported(isDark, true)
-                          : FutureBuilder<bool>(
-                              future: _permissionFuture,
-                              builder: (context, snapshot) {
-                                if (snapshot.connectionState == ConnectionState.waiting) {
-                                  return Center(
-                                    child: Column(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        const CircularProgressIndicator(color: Colors.white),
-                                        const SizedBox(height: 16),
-                                        Text(
-                                          'جاري فحص أذونات الموقع...',
-                                          style: _f(sz: 14, c: Colors.white70),
-                                        ),
-                                      ],
-                                    ),
-                                  );
-                                }
-                                if (snapshot.hasError || !snapshot.hasData || snapshot.data == false) {
-                                  return _buildUnsupported(isDark, false);
-                                }
-                                return _buildCompass(isDark);
-                              },
-                            ),
-                    ),
-                  ],
+                    );
+                  },
                 ),
               ),
-            ],
-          ),
+            ),
+
+            // ── Foreground UI ──
+            SafeArea(
+              child: Column(
+                children: [
+                  // ── Top Bar ──
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 12, 20, 8),
+                    child: Row(
+                      children: [
+                        GestureDetector(
+                          onTap: () => Navigator.pop(context),
+                          child: Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.12),
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: Colors.white.withOpacity(0.20),
+                              ),
+                            ),
+                            child: const DirectionalIcon(
+                              isBack: true,
+                              size: 18,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                        Expanded(
+                          child: Text(
+                            'بوصلة القبلة ثلاثية الأبعاد',
+                            textAlign: TextAlign.center,
+                            style: _f(
+                              sz: 19,
+                              fw: FontWeight.w800,
+                              c: Colors.white,
+                            ),
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.12),
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: Colors.white.withOpacity(0.20),
+                            ),
+                          ),
+                          child: const Icon(
+                            Icons.vibration_rounded,
+                            size: 18,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // ── Main Compass Body ──
+                  Expanded(
+                    child: kIsWeb
+                        ? _buildUnsupported(isDark, true)
+                        : FutureBuilder<bool>(
+                            future: _permissionFuture,
+                            builder: (context, snapshot) {
+                              if (snapshot.connectionState ==
+                                  ConnectionState.waiting) {
+                                return Center(
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const CircularProgressIndicator(
+                                        color: Color(0xFF6FCF97),
+                                      ),
+                                      const SizedBox(height: 16),
+                                      Text(
+                                        'جاري فحص أذونات الموقع...',
+                                        style: _f(sz: 14, c: Colors.white70),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              }
+                              if (snapshot.hasError ||
+                                  !snapshot.hasData ||
+                                  snapshot.data == false) {
+                                return _buildUnsupported(isDark, false);
+                              }
+                              return _build3DCompass(isDark);
+                            },
+                          ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -209,9 +296,9 @@ class _QiblaPageState extends State<QiblaPage> with SingleTickerProviderStateMix
         child: Container(
           padding: const EdgeInsets.all(28),
           decoration: BoxDecoration(
-            color: Colors.black.withValues(alpha: 0.25),
+            color: Colors.black.withOpacity(0.35),
             borderRadius: BorderRadius.circular(28),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
+            border: Border.all(color: Colors.white.withOpacity(0.18)),
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -220,10 +307,14 @@ class _QiblaPageState extends State<QiblaPage> with SingleTickerProviderStateMix
                 width: 76,
                 height: 76,
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.14),
+                  color: Colors.white.withOpacity(0.12),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.sensors_off_rounded, size: 38, color: Colors.white),
+                child: const Icon(
+                  Icons.sensors_off_rounded,
+                  size: 38,
+                  color: Colors.white,
+                ),
               ),
               const SizedBox(height: 20),
               Text(
@@ -234,8 +325,8 @@ class _QiblaPageState extends State<QiblaPage> with SingleTickerProviderStateMix
               const SizedBox(height: 10),
               Text(
                 isWeb
-                    ? 'اتجاه القبلة غير مدعوم على متصفح الويب.\nيرجى استخدام التطبيق على هاتفك.'
-                    : 'تأكد أن جهازك يحتوي على بوصلة رقمية\nوأن أذونات الموقع مفعّلة.',
+                    ? 'اتجاه القبلة غير مدعوم على متصفح الويب.\nيرجى استخدام التطبيق على هاتفك المحمول.'
+                    : 'تأكد أن جهازك يحتوي على مستشعر البوصلة الرقمية\nوأن أذونات الموقع مفعّلة.',
                 textAlign: TextAlign.center,
                 style: _f(sz: 14, c: Colors.white70, h: 1.7),
               ),
@@ -246,7 +337,7 @@ class _QiblaPageState extends State<QiblaPage> with SingleTickerProviderStateMix
     );
   }
 
-  Widget _buildCompass(bool isDark) {
+  Widget _build3DCompass(bool isDark) {
     return StreamBuilder<QiblahDirection>(
       stream: FlutterQiblah.qiblahStream,
       builder: (context, snapshot) {
@@ -255,9 +346,12 @@ class _QiblaPageState extends State<QiblaPage> with SingleTickerProviderStateMix
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const CircularProgressIndicator(color: Colors.white),
+                const CircularProgressIndicator(color: Color(0xFF6FCF97)),
                 const SizedBox(height: 16),
-                Text('جاري تحديد اتجاه القبلة...', style: _f(sz: 14, c: Colors.white70)),
+                Text(
+                  'جاري تحديد اتجاه القبلة...',
+                  style: _f(sz: 14, c: Colors.white70),
+                ),
               ],
             ),
           );
@@ -273,38 +367,43 @@ class _QiblaPageState extends State<QiblaPage> with SingleTickerProviderStateMix
         if (diff < -180) diff += 360;
         final isAligned = diff.abs() <= 5.0;
 
-        // Trigger vibration / haptic feedback when aligned toward Qibla
+        // Animate needle turns
+        _updateNeedleAngle(q.qiblah);
+
+        // Alignment haptic trigger
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (mounted) _triggerAlignmentHaptic(isAligned);
         });
 
-        final qiblaAngle = q.qiblah * (pi / 180) * -1;
         final compassAngle = q.direction * (pi / 180) * -1;
 
         return Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // Top Kaaba Badge & Status Pill
+            // ── Alignment Status Pill ──
             AnimatedContainer(
               duration: const Duration(milliseconds: 300),
-              padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 10),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 24,
+                vertical: 11,
+              ),
               decoration: BoxDecoration(
                 color: isAligned
-                    ? const Color(0xFF1B7A4E).withValues(alpha: 0.90)
-                    : Colors.white.withValues(alpha: 0.16),
+                    ? const Color(0xFF1B7A4E).withOpacity(0.92)
+                    : Colors.black.withOpacity(0.35),
                 borderRadius: BorderRadius.circular(30),
                 border: Border.all(
                   color: isAligned
                       ? const Color(0xFF6FCF97)
-                      : Colors.white.withValues(alpha: 0.3),
-                  width: 1.5,
+                      : Colors.white.withOpacity(0.22),
+                  width: isAligned ? 1.8 : 1.2,
                 ),
                 boxShadow: isAligned
                     ? [
                         BoxShadow(
-                          color: const Color(0xFF1B7A4E).withValues(alpha: 0.5),
-                          blurRadius: 20,
-                          spreadRadius: 2,
+                          color: const Color(0xFF1B7A4E).withOpacity(0.6),
+                          blurRadius: 22,
+                          spreadRadius: 3,
                         ),
                       ]
                     : null,
@@ -313,156 +412,183 @@ class _QiblaPageState extends State<QiblaPage> with SingleTickerProviderStateMix
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Icon(
-                    isAligned ? Icons.check_circle_rounded : Icons.explore_rounded,
-                    color: Colors.white,
+                    isAligned
+                        ? Icons.check_circle_rounded
+                        : Icons.explore_rounded,
+                    color: isAligned
+                        ? const Color(0xFF6FCF97)
+                        : const Color(0xFFFFD580),
                     size: 20,
                   ),
                   const SizedBox(width: 8),
                   Text(
                     isAligned
-                        ? 'أنت الآن في اتجاه القبلة الصحيح 🕋'
+                        ? 'أنت الآن في اتجاه القبلة الشريفة 🕋'
                         : 'زاوية القبلة ${q.offset.toStringAsFixed(0)}° • اتجاهك ${q.direction.toStringAsFixed(0)}°',
-                    style: _f(sz: 14, fw: FontWeight.w800, c: Colors.white),
+                    style: _f(
+                      sz: 14,
+                      fw: FontWeight.w800,
+                      c: Colors.white,
+                    ),
                   ),
                 ],
               ),
             ),
 
-            const SizedBox(height: 30),
+            const SizedBox(height: 28),
 
-            // ── Nusuk-Style Celestial Dial & Qibla Arc ──
+            // ── Feature 12: 3D Compass Housing & 3D Needle ──
             AnimatedBuilder(
-              animation: _glowCtrl,
+              animation: Listenable.merge([_glowCtrl, _tiltCtrl, _needleAnim]),
               builder: (context, _) {
+                // Dynamic tilt calculation for 3D perspective
+                final tiltX = 0.22 + 0.04 * sin(_tiltCtrl.value * pi);
+                final tiltY = 0.03 * cos(_tiltCtrl.value * pi);
+
                 return SizedBox(
-                  width: 310,
-                  height: 310,
+                  width: 320,
+                  height: 320,
                   child: Stack(
                     alignment: Alignment.center,
                     children: [
-                      // Outer glowing aura when aligned
+                      // Outer 3D glow aura when aligned
                       if (isAligned)
                         Container(
-                          width: 295,
-                          height: 295,
+                          width: 300,
+                          height: 300,
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
                             boxShadow: [
                               BoxShadow(
-                                color: const Color(0xFF6FCF97)
-                                    .withValues(alpha: 0.35 + 0.25 * _glowCtrl.value),
-                                blurRadius: 36,
-                                spreadRadius: 8,
+                                color: const Color(0xFF6FCF97).withOpacity(
+                                  0.35 + 0.25 * _glowCtrl.value,
+                                ),
+                                blurRadius: 40,
+                                spreadRadius: 10,
                               ),
                             ],
                           ),
                         ),
 
-                      // Frosted glass dial backdrop
-                      Container(
-                        width: 284,
-                        height: 284,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: Colors.black.withValues(alpha: 0.18),
-                          border: Border.all(
-                            color: isAligned
-                                ? const Color(0xFF6FCF97)
-                                : Colors.white.withValues(alpha: 0.35),
-                            width: isAligned ? 2.5 : 1.5,
-                          ),
-                        ),
-                      ),
-
-                      // Rotating Compass Rose ticks & Arabic cardinal directions
-                      Transform.rotate(
-                        angle: compassAngle,
-                        child: CustomPaint(
-                          size: const Size(270, 270),
-                          painter: _NusukCompassPainter(isAligned: isAligned),
-                        ),
-                      ),
-
-                      // Rotating Qibla Pointer with Kaaba Emblem on the rim (like Nusuk arc)
-                      Transform.rotate(
-                        angle: qiblaAngle,
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            // Kaaba circle badge at the tip of the Qibla needle
-                            Container(
-                              width: 52,
-                              height: 52,
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                shape: BoxShape.circle,
-                                border: Border.all(
-                                  color: isAligned
-                                      ? const Color(0xFF1B7A4E)
-                                      : const Color(0xFFE58C3A),
-                                  width: 2.5,
-                                ),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withValues(alpha: 0.25),
-                                    blurRadius: 12,
-                                    offset: const Offset(0, 4),
-                                  ),
-                                ],
-                              ),
-                              child: Center(
-                                child: CustomPaint(
-                                  size: const Size(26, 26),
-                                  painter: _QiblaKaabaPainter(
-                                    color: isAligned
-                                        ? const Color(0xFF1B7A4E)
-                                        : const Color(0xFF1E293B),
-                                  ),
-                                ),
-                              ),
+                      // 3D Bevelled Dial Housing (applied perspective tilt)
+                      Transform(
+                        alignment: Alignment.center,
+                        transform: Matrix4.identity()
+                          ..setEntry(3, 2, 0.0018) // perspective
+                          ..rotateX(tiltX)
+                          ..rotateY(tiltY),
+                        child: Container(
+                          width: 290,
+                          height: 290,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            gradient: const RadialGradient(
+                              colors: [
+                                Color(0xFF0E1A16),
+                                Color(0xFF091410),
+                                Color(0xFF040A07),
+                              ],
                             ),
-                            // Golden / Green needle beam pointing from center to Kaaba
-                            Container(
-                              width: 3.5,
-                              height: 68,
-                              decoration: BoxDecoration(
-                                gradient: LinearGradient(
-                                  begin: Alignment.topCenter,
-                                  end: Alignment.bottomCenter,
-                                  colors: [
-                                    isAligned
+                            border: Border.all(
+                              color: isAligned
+                                  ? const Color(0xFF6FCF97)
+                                  : const Color(0xFFD4A843).withOpacity(0.65),
+                              width: isAligned ? 3.0 : 2.0,
+                            ),
+                            boxShadow: [
+                              // 3D depth shadows
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.6),
+                                blurRadius: 28,
+                                offset: const Offset(0, 16),
+                              ),
+                              BoxShadow(
+                                color: (isAligned
                                         ? const Color(0xFF6FCF97)
-                                        : const Color(0xFFFFB347),
-                                    Colors.white.withValues(alpha: 0.05),
-                                  ],
-                                ),
-                                borderRadius: BorderRadius.circular(2),
+                                        : const Color(0xFFD4A843))
+                                    .withOpacity(0.18),
+                                blurRadius: 16,
+                                spreadRadius: -2,
                               ),
-                            ),
-                            const SizedBox(height: 120),
-                          ],
+                            ],
+                          ),
                         ),
                       ),
 
-                      // Center pivot hub
-                      Container(
-                        width: 58,
-                        height: 58,
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.18),
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: Colors.white.withValues(alpha: 0.4),
-                            width: 1.5,
+                      // Rotating Compass Rose (applied perspective tilt)
+                      Transform(
+                        alignment: Alignment.center,
+                        transform: Matrix4.identity()
+                          ..setEntry(3, 2, 0.0018)
+                          ..rotateX(tiltX)
+                          ..rotateY(tiltY),
+                        child: Transform.rotate(
+                          angle: compassAngle,
+                          child: CustomPaint(
+                            size: const Size(276, 276),
+                            painter: _3DCompassRosePainter(
+                              isAligned: isAligned,
+                            ),
                           ),
                         ),
-                        child: Center(
-                          child: Text(
-                            '${q.direction.toStringAsFixed(0)}°',
-                            style: GoogleFonts.ibmPlexSansArabic(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w800,
-                              color: Colors.white,
+                      ),
+
+                      // ── Feature 12: 3D Needle using Transform.perspective + RotationTransition ──
+                      Transform(
+                        alignment: Alignment.center,
+                        transform: Matrix4.identity()
+                          ..setEntry(3, 2, 0.0022) // perspective depth
+                          ..rotateX(tiltX + 0.04) // distinct 3D tilt on needle
+                          ..rotateY(tiltY),
+                        child: RotationTransition(
+                          turns: _needleAnim,
+                          child: _3DNeedleWidget(isAligned: isAligned),
+                        ),
+                      ),
+
+                      // Center 3D Pivot Hub
+                      Transform(
+                        alignment: Alignment.center,
+                        transform: Matrix4.identity()
+                          ..setEntry(3, 2, 0.0018)
+                          ..rotateX(tiltX)
+                          ..rotateY(tiltY),
+                        child: Container(
+                          width: 58,
+                          height: 58,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            gradient: const LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [
+                                Color(0xFF3A5A4A),
+                                Color(0xFF132A1F),
+                                Color(0xFF09140E),
+                              ],
+                            ),
+                            border: Border.all(
+                              color: isAligned
+                                  ? const Color(0xFF6FCF97)
+                                  : const Color(0xFFD4A843),
+                              width: 1.8,
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.4),
+                                blurRadius: 8,
+                                offset: const Offset(0, 3),
+                              ),
+                            ],
+                          ),
+                          child: Center(
+                            child: Text(
+                              '${q.direction.toStringAsFixed(0)}°',
+                              style: GoogleFonts.ibmPlexSansArabic(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w800,
+                                color: Colors.white,
+                              ),
                             ),
                           ),
                         ),
@@ -473,34 +599,47 @@ class _QiblaPageState extends State<QiblaPage> with SingleTickerProviderStateMix
               },
             ),
 
-            const SizedBox(height: 30),
+            const SizedBox(height: 32),
 
             // Instruction card at bottom
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 28),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 14,
+                ),
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.14),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
+                  color: Colors.white.withOpacity(0.10),
+                  borderRadius: BorderRadius.circular(22),
+                  border: Border.all(
+                    color: Colors.white.withOpacity(0.18),
+                  ),
                 ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Icon(
-                      isAligned ? Icons.vibration_rounded : Icons.screen_rotation_rounded,
-                      color: isAligned ? const Color(0xFF6FCF97) : const Color(0xFFFFD580),
+                      isAligned
+                          ? Icons.vibration_rounded
+                          : Icons.screen_rotation_rounded,
+                      color: isAligned
+                          ? const Color(0xFF6FCF97)
+                          : const Color(0xFFFFD580),
                       size: 20,
                     ),
-                    const SizedBox(width: 10),
+                    const SizedBox(width: 12),
                     Flexible(
                       child: Text(
                         isAligned
-                            ? 'اهتز الهاتف تأكيداً لمحاذاتك للقبلة الشريفة'
-                            : 'أدر هاتفك بشكل مسطح حتى تتطابق أيقونة الكعبة مع الأعلى',
+                            ? 'اهتز الهاتف تأكيداً لمحاذاتك للقبلة المشرفة'
+                            : 'أدر هاتفك بشكل مسطح حتى تطابق أيقونة الكعبة مع السهم الأخضر',
                         textAlign: TextAlign.center,
-                        style: _f(sz: 13, fw: FontWeight.w600, c: Colors.white),
+                        style: _f(
+                          sz: 13,
+                          fw: FontWeight.w600,
+                          c: Colors.white,
+                        ),
                       ),
                     ),
                   ],
@@ -514,9 +653,134 @@ class _QiblaPageState extends State<QiblaPage> with SingleTickerProviderStateMix
   }
 }
 
-class _NusukCompassPainter extends CustomPainter {
+/// 3D Needle widget with dual-tone shading, shadow, and Kaaba badge.
+class _3DNeedleWidget extends StatelessWidget {
   final bool isAligned;
-  _NusukCompassPainter({required this.isAligned});
+
+  const _3DNeedleWidget({required this.isAligned});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // Kaaba badge on needle crest with 3D elevation
+        Container(
+          width: 52,
+          height: 52,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            shape: BoxShape.circle,
+            border: Border.all(
+              color: isAligned
+                  ? const Color(0xFF1B7A4E)
+                  : const Color(0xFFE58C3A),
+              width: 2.5,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.40),
+                blurRadius: 14,
+                offset: const Offset(0, 6),
+              ),
+              if (isAligned)
+                BoxShadow(
+                  color: const Color(0xFF6FCF97).withOpacity(0.5),
+                  blurRadius: 12,
+                ),
+            ],
+          ),
+          child: Center(
+            child: CustomPaint(
+              size: const Size(26, 26),
+              painter: _QiblaKaaba3DPainter(
+                color: isAligned
+                    ? const Color(0xFF1B7A4E)
+                    : const Color(0xFF1E293B),
+              ),
+            ),
+          ),
+        ),
+
+        // 3D Bevelled Needle Spine (Dual Tone Light/Dark to create 3D ridge)
+        SizedBox(
+          width: 20,
+          height: 74,
+          child: CustomPaint(
+            painter: _3DNeedleSpinePainter(isAligned: isAligned),
+          ),
+        ),
+
+        const SizedBox(height: 110),
+      ],
+    );
+  }
+}
+
+/// Painter for the 3D-bevelled dual-tone needle spine.
+class _3DNeedleSpinePainter extends CustomPainter {
+  final bool isAligned;
+
+  _3DNeedleSpinePainter({required this.isAligned});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final w = size.width;
+    final h = size.height;
+    final cx = w / 2;
+
+    // Shadow under the needle
+    final shadowPath = Path()
+      ..moveTo(cx + 2, 4)
+      ..lineTo(w - 2, h - 2)
+      ..lineTo(2, h - 2)
+      ..close();
+    canvas.drawPath(
+      shadowPath,
+      Paint()
+        ..color = Colors.black.withOpacity(0.35)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4),
+    );
+
+    // Left facet (highlighted / lighter side of 3D needle)
+    final leftPath = Path()
+      ..moveTo(cx, 0)
+      ..lineTo(cx, h)
+      ..lineTo(2, h)
+      ..close();
+    final leftPaint = Paint()
+      ..color = isAligned ? const Color(0xFF86E3A8) : const Color(0xFFFFD580)
+      ..style = PaintingStyle.fill;
+    canvas.drawPath(leftPath, leftPaint);
+
+    // Right facet (shadowed / darker side of 3D needle)
+    final rightPath = Path()
+      ..moveTo(cx, 0)
+      ..lineTo(w - 2, h)
+      ..lineTo(cx, h)
+      ..close();
+    final rightPaint = Paint()
+      ..color = isAligned ? const Color(0xFF2E9A60) : const Color(0xFFE58C3A)
+      ..style = PaintingStyle.fill;
+    canvas.drawPath(rightPath, rightPaint);
+
+    // Center ridge line
+    final ridgePaint = Paint()
+      ..color = Colors.white.withOpacity(0.7)
+      ..strokeWidth = 1.0;
+    canvas.drawLine(Offset(cx, 0), Offset(cx, h), ridgePaint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _3DNeedleSpinePainter oldDelegate) =>
+      oldDelegate.isAligned != isAligned;
+}
+
+/// Custom painter for the 3D compass rose (ticks and cardinal letters).
+class _3DCompassRosePainter extends CustomPainter {
+  final bool isAligned;
+
+  _3DCompassRosePainter({required this.isAligned});
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -528,12 +792,13 @@ class _NusukCompassPainter extends CustomPainter {
       final isMajor = i % 90 == 0;
       final isMinor = i % 30 == 0;
       final len = isMajor ? 16.0 : (isMinor ? 10.0 : 5.0);
-      final tp = Paint()
+
+      final p = Paint()
         ..color = isMajor
-            ? Colors.white
+            ? (isAligned ? const Color(0xFF6FCF97) : const Color(0xFFD4A843))
             : (isMinor
-                ? Colors.white.withValues(alpha: 0.6)
-                : Colors.white.withValues(alpha: 0.25))
+                ? Colors.white.withOpacity(0.55)
+                : Colors.white.withOpacity(0.20))
         ..strokeWidth = isMajor ? 2.5 : (isMinor ? 1.5 : 1.0)
         ..strokeCap = StrokeCap.round;
 
@@ -546,25 +811,31 @@ class _NusukCompassPainter extends CustomPainter {
           center.dx + (radius - 8 - len) * cos(angle - pi / 2),
           center.dy + (radius - 8 - len) * sin(angle - pi / 2),
         ),
-        tp,
+        p,
       );
     }
 
-    final labels = {'N': 0, 'E': 90, 'S': 180, 'W': 270};
-    final arabic = {'N': 'ش', 'E': 'شر', 'S': 'ج', 'W': 'غ'};
-    labels.forEach((key, deg) {
+    final arabicLabels = {'N': 'ش', 'E': 'شر', 'S': 'ج', 'W': 'غ'};
+    final angles = {'N': 0, 'E': 90, 'S': 180, 'W': 270};
+
+    angles.forEach((key, deg) {
       final angle = deg * pi / 180 - pi / 2;
       final tp = TextPainter(
         text: TextSpan(
-          text: arabic[key],
+          text: arabicLabels[key],
           style: GoogleFonts.ibmPlexSansArabic(
             fontSize: 14,
             fontWeight: FontWeight.w800,
-            color: key == 'N' ? const Color(0xFFFFB347) : Colors.white70,
+            color: key == 'N'
+                ? (isAligned
+                    ? const Color(0xFF6FCF97)
+                    : const Color(0xFFFFB347))
+                : Colors.white.withOpacity(0.70),
           ),
         ),
         textDirection: TextDirection.ltr,
       )..layout();
+
       tp.paint(
         canvas,
         Offset(
@@ -576,13 +847,15 @@ class _NusukCompassPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _NusukCompassPainter oldDelegate) =>
+  bool shouldRepaint(covariant _3DCompassRosePainter oldDelegate) =>
       oldDelegate.isAligned != isAligned;
 }
 
-class _QiblaKaabaPainter extends CustomPainter {
+/// Custom Kaaba vector icon painter with golden Kiswah belt.
+class _QiblaKaaba3DPainter extends CustomPainter {
   final Color color;
-  _QiblaKaabaPainter({required this.color});
+
+  _QiblaKaaba3DPainter({required this.color});
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -618,12 +891,84 @@ class _QiblaKaabaPainter extends CustomPainter {
       ..close();
     canvas.drawPath(rightPath, paint);
 
+    // Kiswah golden band
     final bandPaint = Paint()
       ..color = const Color(0xFFD4A843)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2.0;
-    canvas.drawLine(Offset(w * 0.12, h * 0.42), Offset(w * 0.5, h * 0.60), bandPaint);
-    canvas.drawLine(Offset(w * 0.5, h * 0.60), Offset(w * 0.88, h * 0.42), bandPaint);
+    canvas.drawLine(
+      Offset(w * 0.12, h * 0.42),
+      Offset(w * 0.5, h * 0.60),
+      bandPaint,
+    );
+    canvas.drawLine(
+      Offset(w * 0.5, h * 0.60),
+      Offset(w * 0.88, h * 0.42),
+      bandPaint,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+/// Feature 12: Subtle Islamic Star & Geometric Lattice Backdrop CustomPainter.
+class _GeometricStarBackdropPainter extends CustomPainter {
+  static final _rng = Random(77);
+  static final List<Offset> _stars = List.generate(
+    45,
+    (_) => Offset(_rng.nextDouble(), _rng.nextDouble()),
+  );
+  static final List<double> _radii = List.generate(
+    45,
+    (_) => _rng.nextDouble() * 1.8 + 0.5,
+  );
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    // 1. Draw subtle night stars
+    final starPaint = Paint()..color = Colors.white.withOpacity(0.22);
+    for (int i = 0; i < _stars.length; i++) {
+      canvas.drawCircle(
+        Offset(_stars[i].dx * size.width, _stars[i].dy * size.height),
+        _radii[i],
+        starPaint,
+      );
+    }
+
+    // 2. Draw subtle Islamic 8-point geometric rosette patterns
+    final geomPaint = Paint()
+      ..color = const Color(0xFFD4A843).withOpacity(0.045)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.0;
+
+    final center = Offset(size.width / 2, size.height * 0.48);
+    _drawIslamicStar(canvas, center, 140, geomPaint);
+    _drawIslamicStar(canvas, center, 220, geomPaint);
+    _drawIslamicStar(canvas, center, 300, geomPaint);
+  }
+
+  void _drawIslamicStar(
+    Canvas canvas,
+    Offset center,
+    double radius,
+    Paint paint,
+  ) {
+    const points = 8;
+    final path = Path();
+    for (int i = 0; i < points * 2; i++) {
+      final r = i.isEven ? radius : radius * 0.70;
+      final angle = i * pi / points - pi / 2;
+      final x = center.dx + r * cos(angle);
+      final y = center.dy + r * sin(angle);
+      if (i == 0) {
+        path.moveTo(x, y);
+      } else {
+        path.lineTo(x, y);
+      }
+    }
+    path.close();
+    canvas.drawPath(path, paint);
   }
 
   @override

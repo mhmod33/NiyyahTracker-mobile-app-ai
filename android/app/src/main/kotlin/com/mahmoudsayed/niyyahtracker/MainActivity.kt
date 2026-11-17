@@ -59,6 +59,12 @@ class MainActivity : FlutterActivity() {
                         } catch (_: Exception) {}
                         result.success(true)
                     }
+                    "setMuteOnVolumeDown" -> {
+                        val enabled = call.argument<Boolean>("enabled") ?: true
+                        val sp = getSharedPreferences("azan_prefs", Context.MODE_PRIVATE)
+                        sp.edit().putBoolean("mute_on_volume_down", enabled).apply()
+                        result.success(true)
+                    }
                     else -> result.notImplemented()
                 }
             }

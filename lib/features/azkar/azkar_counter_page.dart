@@ -282,7 +282,19 @@ class _AzkarCounterPageState extends State<AzkarCounterPage> with SingleTickerPr
             ),
           ),
           title: Text('📿 $_title', style: _f(fw: FontWeight.w800, sz: 20, c: textColor)),
-          actions: [IconButton(icon: Icon(Icons.restart_alt, color: subColor), tooltip: 'إعادة ضبط الكل', onPressed: _resetAll)],
+          actions: [
+            IconButton(
+              icon: Icon(Icons.copy_rounded, color: subColor),
+              tooltip: 'نسخ الذكر',
+              onPressed: () {
+                Clipboard.setData(ClipboardData(text: _current.text));
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('تم نسخ الذكر'), duration: Duration(seconds: 2)),
+                );
+              },
+            ),
+            IconButton(icon: Icon(Icons.restart_alt, color: subColor), tooltip: 'إعادة ضبط الكل', onPressed: _resetAll),
+          ],
         ),
         body: Column(children: [
           // ── Azkar selector ──
@@ -325,7 +337,33 @@ class _AzkarCounterPageState extends State<AzkarCounterPage> with SingleTickerPr
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Text(_current.text, textAlign: TextAlign.center, style: _f(sz: _current.text.length > 150 ? 20 : 24, fw: FontWeight.w900, c: greenColor, h: 1.7)),
+                        Stack(
+                          alignment: Alignment.topLeft,
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                              child: Text(
+                                _current.text,
+                                textAlign: TextAlign.center,
+                                style: _f(sz: _current.text.length > 150 ? 20 : 24, fw: FontWeight.w900, c: greenColor, h: 1.7),
+                              ),
+                            ),
+                            Positioned(
+                              top: 0,
+                              left: 0,
+                              child: IconButton(
+                                icon: Icon(Icons.copy_rounded, size: 20, color: greenColor.withValues(alpha: 0.7)),
+                                tooltip: 'نسخ الذكر',
+                                onPressed: () {
+                                  Clipboard.setData(ClipboardData(text: _current.text));
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(content: Text('تم نسخ الذكر'), duration: Duration(seconds: 2)),
+                                  );
+                                },
+                              ),
+                            ),
+                          ],
+                        ),
                         const SizedBox(height: 12),
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),

@@ -22,6 +22,10 @@ import 'services/fcm_service.dart';
 import 'services/app_update_service.dart';
 import 'services/admin_notification_service.dart';
 import 'services/admin_background_checker.dart';
+import 'services/azkar_reminder_service.dart';
+import 'widgets/adhan_overlay_widget.dart';
+
+final GlobalKey<NavigatorState> appNavigatorKey = GlobalKey<NavigatorState>();
 
 /// App-wide font helper — IBM Plex Sans Arabic everywhere.
 TextStyle _font({
@@ -138,14 +142,60 @@ Future<void> _deferredStartupWork() async {
   } catch (_) {}
 }
 
-class BasairApp extends StatelessWidget {
+class BasairApp extends StatefulWidget {
   const BasairApp({super.key});
+
+  @override
+  State<BasairApp> createState() => _BasairAppState();
+}
+
+class _BasairAppState extends State<BasairApp> with WidgetsBindingObserver {
+  StreamSubscription? _adhanSubscription;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    AzkarReminderService.navigatorKey = appNavigatorKey;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Future.delayed(const Duration(milliseconds: 2500), () {
+        AzkarReminderService().checkAndShowReminder();
+      });
+    });
+    _adhanSubscription = AzanService().onAdhanTrigger.listen((event) {
+      if (!AzanService().showAdhanBanner) return;
+      final nav = appNavigatorKey.currentState;
+      if (nav != null) {
+        nav.push(
+          AdhanSlideFromTopRoute(
+            prayerName: event['prayerName'] ?? '',
+            prayerTime: event['prayerTime'] ?? '',
+          ),
+        );
+      }
+    });
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      AzkarReminderService().checkAndShowReminder();
+    }
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _adhanSubscription?.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     final themeProvider = context.watch<ThemeProvider>();
 
     return MaterialApp(
+      navigatorKey: appNavigatorKey,
       title: 'بصائر',
       debugShowCheckedModeBanner: false,
       locale: const Locale('ar', 'SA'),

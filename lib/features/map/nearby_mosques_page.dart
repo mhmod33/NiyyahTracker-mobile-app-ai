@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:geolocator_android/geolocator_android.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -9,7 +8,6 @@ import 'package:http/http.dart' as http;
 import 'package:latlong2/latlong.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../core/app_colors.dart';
-import '../../core/directional_icon.dart';
 
 // ─────────────────────────────────────────
 // Data model
@@ -109,7 +107,6 @@ class _NearbyMosquesPageState extends State<NearbyMosquesPage>
   MosqueModel? _selected;
   bool _loading = true;
   bool _mapReady = false;
-  bool _isSatelliteView = false;
   String _error = '';
   double _radiusKm = 2.0;
   final MapController _mapController = MapController();
@@ -529,12 +526,6 @@ class _NearbyMosquesPageState extends State<NearbyMosquesPage>
           ),
           const SizedBox(width: 8),
           IconButton(
-            icon: Icon(_isSatelliteView ? Icons.map : Icons.satellite_alt, color: AppColors.darkGreen),
-            tooltip: _isSatelliteView ? 'عرض الخريطة' : 'عرض القمر الصناعي',
-            onPressed: () => setState(() => _isSatelliteView = !_isSatelliteView),
-          ),
-          const SizedBox(width: 8),
-          IconButton(
             icon: const Icon(Icons.refresh, color: AppColors.darkGreen),
             tooltip: 'تحديث',
             onPressed: _loading ? null : _fetchMosques,
@@ -556,13 +547,12 @@ class _NearbyMosquesPageState extends State<NearbyMosquesPage>
         onTap: (_, __) => _clearSelection(),
       ),
       children: [
-        // Tile layer — OpenStreetMap or Satellite
+        // Tile layer — Satellite only
         TileLayer(
-              urlTemplate: _isSatelliteView 
-                ? 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
-                : 'https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png',
+          urlTemplate:
+              'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
           userAgentPackageName: 'com.niyyahtracker.app',
-          maxZoom: _isSatelliteView ? 18 : 19,
+          maxZoom: 18,
         ),
 
         // User accuracy circle
@@ -685,7 +675,7 @@ class _NearbyMosquesPageState extends State<NearbyMosquesPage>
             Text(
               isEmptyMosques 
                 ? 'لم يتم العثور على مساجد في نطاق ${_radiusKm.toStringAsFixed(1)} كم'
-                : _error!,
+                : _error,
               textAlign: TextAlign.center,
               style: GoogleFonts.ibmPlexSansArabic(color: isDark ? Colors.white70 : AppColors.gray, fontSize: 15, fontWeight: FontWeight.w600),
             ),

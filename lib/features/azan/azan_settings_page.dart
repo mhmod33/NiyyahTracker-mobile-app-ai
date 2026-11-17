@@ -34,6 +34,8 @@ class _AzanSettingsPageState extends State<AzanSettingsPage> {
   bool _asrEnabled = true;
   bool _maghribEnabled = true;
   bool _ishaEnabled = true;
+  bool _muteOnVolumeDown = true;
+  bool _showAdhanBanner = true;
   String _selectedMuazzinName = '';
   bool _isLoading = false;
 
@@ -51,6 +53,8 @@ class _AzanSettingsPageState extends State<AzanSettingsPage> {
       _asrEnabled = _azanService.asrAzanEnabled;
       _maghribEnabled = _azanService.maghribAzanEnabled;
       _ishaEnabled = _azanService.ishaAzanEnabled;
+      _muteOnVolumeDown = _azanService.muteOnVolumeDown;
+      _showAdhanBanner = _azanService.showAdhanBanner;
       _selectedMuazzinName = _azanService.selectedMuazzin.nameAr;
     });
   }
@@ -306,6 +310,41 @@ class _AzanSettingsPageState extends State<AzanSettingsPage> {
                           ),
                         ),
 
+
+                        const SizedBox(height: 20),
+
+                        // Advanced Adhan Settings
+                        _SettingsSection(
+                          title: 'خيارات متقدمة',
+                          icon: Icons.tune_rounded,
+                          isDark: isDark,
+                          children: [
+                            _SettingsTile(
+                              title: 'كتم الأذان بزر خفض الصوت',
+                              subtitle:
+                                  'اضغط زر خفض الصوت مرة واحدة لإيقاف الأذان حتى مع قفل الشاشة',
+                              icon: Icons.volume_down_rounded,
+                              value: _muteOnVolumeDown,
+                              onChanged: (v) async {
+                                await _azanService.setMuteOnVolumeDown(v);
+                                setState(() => _muteOnVolumeDown = v);
+                              },
+                              isDark: isDark,
+                            ),
+                            _SettingsTile(
+                              title: 'إظهار شعار الأذان',
+                              subtitle:
+                                  'عرض شريط تنبيه الأذان المنسدل عند دخول وقت الصلاة',
+                              icon: Icons.notifications_paused_rounded,
+                              value: _showAdhanBanner,
+                              onChanged: (v) async {
+                                await _azanService.setShowAdhanBanner(v);
+                                setState(() => _showAdhanBanner = v);
+                              },
+                              isDark: isDark,
+                            ),
+                          ],
+                        ),
 
                         const SizedBox(height: 32),
                       ]),

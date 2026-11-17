@@ -1,7 +1,12 @@
+import 'dart:io';
 import 'dart:math' as math;
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
+import 'package:share_plus/share_plus.dart';
 import '../../core/app_colors.dart';
 import '../../core/directional_icon.dart';
 import '../../models/badge_model.dart';
@@ -945,24 +950,52 @@ class _BadgeDetailSheet extends StatelessWidget {
               ),
             ],
 
-            const SizedBox(height: 20),
+            const SizedBox(height: 18),
+
+            // Share Achievement Button (Luxury Design)
+            if (isEarned) ...[
+              SizedBox(
+                width: double.infinity,
+                height: 52,
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    _showLuxuryBadgeShareDialog(context, definition, userBadge, isDark);
+                  },
+                  icon: const Icon(Icons.share_rounded, color: Colors.white, size: 20),
+                  label: Text(
+                    'مشاركة وسام الإنجاز',
+                    style: _f(sz: 15, fw: FontWeight.bold, c: Colors.white),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.gold,
+                    foregroundColor: Colors.white,
+                    elevation: 3,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10),
+            ],
 
             // Done button
             SizedBox(
               width: double.infinity,
-              height: 52,
-              child: ElevatedButton(
+              height: 50,
+              child: OutlinedButton(
                 onPressed: () => Navigator.pop(context),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.darkGreen,
+                style: OutlinedButton.styleFrom(
+                  side: BorderSide(color: isDark ? Colors.white24 : AppColors.darkGreen.withValues(alpha: 0.3)),
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16)),
                 ),
-                child: Text('تم',
+                child: Text('إغلاق',
                     style: _f(
-                        sz: 16,
+                        sz: 15,
                         fw: FontWeight.bold,
-                        c: Colors.white)),
+                        c: isDark ? Colors.white : AppColors.darkGreen)),
               ),
             ),
           ],
@@ -999,4 +1032,229 @@ class _BadgeDetailSheet extends StatelessWidget {
     ];
     return '${d.day} ${months[d.month - 1]} ${d.year}';
   }
+}
+
+void _showLuxuryBadgeShareDialog(
+  BuildContext context,
+  BadgeDefinition def,
+  UserBadge? userBadge,
+  bool isDark,
+) {
+  final boundaryKey = GlobalKey();
+  final dateStr = userBadge?.earnedAt != null
+      ? '${userBadge!.earnedAt!.day}/${userBadge.earnedAt!.month}/${userBadge.earnedAt!.year}'
+      : '';
+
+  showDialog(
+    context: context,
+    builder: (dlgCtx) => Directionality(
+      textDirection: TextDirection.rtl,
+      child: AlertDialog(
+        backgroundColor: isDark ? const Color(0xFF0F1813) : Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        contentPadding: const EdgeInsets.all(16),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            RepaintBoundary(
+              key: boundaryKey,
+              child: Container(
+                width: 320,
+                padding: const EdgeInsets.all(22),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [
+                      Color(0xFF04150C),
+                      Color(0xFF0E3321),
+                      Color(0xFF020C06),
+                    ],
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                  ),
+                  borderRadius: BorderRadius.circular(22),
+                  border: Border.all(color: AppColors.gold, width: 2),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.gold.withValues(alpha: 0.3),
+                      blurRadius: 20,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.stars_rounded, color: AppColors.gold, size: 20),
+                        const SizedBox(width: 6),
+                        Text(
+                          'بصائر • وسام إنجاز مبارك',
+                          style: GoogleFonts.ibmPlexSansArabic(
+                            color: AppColors.gold,
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        const Icon(Icons.stars_rounded, color: AppColors.gold, size: 20),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppColors.gold.withValues(alpha: 0.35),
+                            blurRadius: 30,
+                            spreadRadius: 6,
+                          ),
+                        ],
+                      ),
+                      child: _BadgeMedal(
+                        definition: def,
+                        isEarned: true,
+                        size: 96,
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    Text(
+                      def.title,
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.amiri(
+                        fontSize: 24,
+                        fontWeight: FontWeight.w900,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: AppColors.gold.withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: AppColors.gold.withValues(alpha: 0.6)),
+                      ),
+                      child: Text(
+                        def.level.label,
+                        style: GoogleFonts.ibmPlexSansArabic(
+                          color: AppColors.gold,
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      def.description,
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.ibmPlexSansArabic(
+                        fontSize: 12,
+                        color: Colors.white.withValues(alpha: 0.8),
+                        height: 1.5,
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.06),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: Colors.white12),
+                      ),
+                      child: Text(
+                        '«وَفِي ذَٰلِكَ فَلْيَتَنَافَسِ الْمُتَنَافِسُونَ»',
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.amiri(
+                          fontSize: 13,
+                          color: AppColors.gold,
+                          fontStyle: FontStyle.italic,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'تطبيق بصائر',
+                          style: GoogleFonts.ibmPlexSansArabic(
+                            color: Colors.white54,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        if (dateStr.isNotEmpty)
+                          Text(
+                            dateStr,
+                            style: GoogleFonts.inter(
+                              color: Colors.white38,
+                              fontSize: 10,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 14),
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: () async {
+                      try {
+                        final ro = boundaryKey.currentContext?.findRenderObject();
+                        if (ro is! RenderRepaintBoundary) return;
+                        final img = await ro.toImage(pixelRatio: 3.0);
+                        final bd = await img.toByteData(format: ui.ImageByteFormat.png);
+                        if (bd == null) return;
+                        final tempDir = await getTemporaryDirectory();
+                        final file = File('${tempDir.path}/badge_${def.id}.png');
+                        await file.writeAsBytes(bd.buffer.asUint8List());
+                        await Share.shareXFiles(
+                          [XFile(file.path)],
+                          text: 'حققتُ وسام «${def.title}» في تطبيق بصائر 🌟',
+                        );
+                      } catch (e) {
+                        debugPrint('Badge share error: $e');
+                      }
+                    },
+                    icon: const Icon(Icons.share_rounded, size: 18),
+                    label: Text(
+                      'مشاركة الصورة',
+                      style: GoogleFonts.ibmPlexSansArabic(fontWeight: FontWeight.bold, fontSize: 13),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.gold,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      padding: const EdgeInsets.symmetric(vertical: 11),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                TextButton(
+                  onPressed: () => Navigator.pop(dlgCtx),
+                  child: Text(
+                    'إغلاق',
+                    style: GoogleFonts.ibmPlexSansArabic(
+                      color: isDark ? Colors.white70 : AppColors.darkGreen,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
 }

@@ -12,6 +12,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:path_provider/path_provider.dart';
 import 'azan_debug_log.dart';
+import 'notification_service.dart';
 
 /// Native MethodChannel for scheduling azan alarms via Android AlarmManager.
 /// The native side (Kotlin) handles: AlarmManager → BroadcastReceiver → ForegroundService → MediaPlayer.
@@ -68,6 +69,23 @@ class AzanService {
   Timer? _stopMonitor; // Monitors if notification was dismissed to stop audio
   StreamSubscription<double>? _volumeSubscription;
 
+  // Stream for Adhan trigger events (for full-screen overlay UI)
+  final StreamController<Map<String, String>> _onAdhanTriggerController =
+      StreamController<Map<String, String>>.broadcast();
+
+  Stream<Map<String, String>> get onAdhanTrigger =>
+      _onAdhanTriggerController.stream;
+
+  void triggerAdhanOverlay({
+    required String prayerName,
+    required String prayerTime,
+  }) {
+    _onAdhanTriggerController.add({
+      'prayerName': prayerName,
+      'prayerTime': prayerTime,
+    });
+  }
+
   // Use the shared singleton plugin instance
   final FlutterLocalNotificationsPlugin _notificationsPlugin =
       FlutterLocalNotificationsPlugin();
@@ -80,6 +98,8 @@ class AzanService {
   static const String _asrAzanEnabledKey = 'asr_azan_enabled';
   static const String _maghribAzanEnabledKey = 'maghrib_azan_enabled';
   static const String _ishaAzanEnabledKey = 'isha_azan_enabled';
+  static const String _muteOnVolumeDownKey = 'mute_on_volume_down';
+  static const String _showAdhanBannerKey = 'show_adhan_banner';
 
   /// Increment this whenever bundled audio filenames or content change.
   /// A mismatch wipes the extracted folder and forces a clean re-extraction,
@@ -343,6 +363,25 @@ class AzanService {
 
   bool get ishaAzanEnabled =>
       _settingsBox.get(_ishaAzanEnabledKey, defaultValue: true);
+
+  bool get muteOnVolumeDown =>
+      _settingsBox.get(_muteOnVolumeDownKey, defaultValue: true);
+
+  bool get showAdhanBanner =>
+      _settingsBox.get(_showAdhanBannerKey, defaultValue: true);
+
+  Future<void> setMuteOnVolumeDown(bool enabled) async {
+    await _settingsBox.put(_muteOnVolumeDownKey, enabled);
+    try {
+      if (Platform.isAndroid) {
+        await _azanChannel.invokeMethod('setMuteOnVolumeDown', {'enabled': enabled});
+      }
+    } catch (_) {}
+  }
+
+  Future<void> setShowAdhanBanner(bool enabled) async {
+    await _settingsBox.put(_showAdhanBannerKey, enabled);
+  }
 
   bool isPrayerAzanEnabled(String prayerName) {
     switch (prayerName) {
@@ -680,6 +719,18 @@ class AzanService {
     // 2. Refresh coordinates asynchronously
     try {
       final pt = await _getPrayerTimes();
+      final prayers = [
+        {'name': 'الفجر', 'time': pt.fajr},
+        {'name': 'الظهر', 'time': pt.dhuhr},
+        {'name': 'العصر', 'time': pt.asr},
+        {'name': 'المغرب', 'time': pt.maghrib},
+        {'name': 'العشاء', 'time': pt.isha},
+      ];
+      unawaited(
+        NotificationService().schedulePrayerApproachingNotification(
+          prayers: prayers,
+        ),
+      );
       return pt;
     } catch (_) {
       return initial;
@@ -919,6 +970,14 @@ class AzanService {
 
             await _showAzanNotification(prayerName);
 
+            // Trigger full-screen Adhan overlay
+            final h = prayerTime.hour > 12
+                ? prayerTime.hour - 12
+                : (prayerTime.hour == 0 ? 12 : prayerTime.hour);
+            final timeStr =
+                '$h:${prayerTime.minute.toString().padLeft(2, '0')} ${prayerTime.hour >= 12 ? 'م' : 'ص'}';
+            triggerAdhanOverlay(prayerName: prayerName, prayerTime: timeStr);
+
             await playAzan(isFajr: isFajr);
           } else {
             AzanDebugLog.write('_checkAndPlayAzan: $prayerName match but audioPlayer already playing');
@@ -1149,6 +1208,15 @@ class AzanService {
           'isFajr': false,
         },
       ];
+
+      // Schedule approaching 15-minute notifications & persistent next prayer notification
+      try {
+        await NotificationService().schedulePrayerApproachingNotification(
+          prayers: prayers,
+        );
+      } catch (e) {
+        developer.log('⚠️ Failed to schedule prayer approaching notifications: $e', name: 'AzanService');
+      }
 
       for (final prayer in prayers) {
         if (!(prayer['enabled'] as bool)) continue;

@@ -1717,4 +1717,158 @@ class NotificationService {
       );
     }
   }
+
+  // ── Feature 11: Prayer Approaching Notifications ──
+
+  static const String _prayerApproachingChannelId = 'prayer_approaching';
+
+  /// Schedules a notification 15 minutes before each prayer time.
+  /// Also shows a persistent ongoing notification with the next prayer time.
+  Future<void> schedulePrayerApproachingNotification({
+    required List<Map<String, dynamic>> prayers,
+  }) async {
+    developer.log(
+      '📌 Scheduling prayer approaching notifications...',
+      name: 'NotificationService',
+    );
+
+    try {
+      // Create the approaching prayer channel if needed
+      await _notifications
+          .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin
+          >()
+          ?.createNotificationChannel(
+        const AndroidNotificationChannel(
+          _prayerApproachingChannelId,
+          'تنبيه اقتراب الصلاة',
+          description: 'إشعار قبل 15 دقيقة من موعد كل صلاة',
+          importance: Importance.high,
+        ),
+      );
+
+      // Cancel existing approaching notifications (IDs 3101–3105)
+      for (int id = 3101; id <= 3105; id++) {
+        await _notifications.cancel(id);
+      }
+      // Cancel existing persistent next-prayer notification (ID 3200)
+      await _notifications.cancel(3200);
+
+      final now = DateTime.now();
+      int approachingId = 3101;
+      Map<String, dynamic>? nextPrayer;
+
+      for (final prayer in prayers) {
+        final prayerTime = prayer['time'] as DateTime;
+        final prayerName = prayer['name'] as String;
+
+        // Track next upcoming prayer for persistent notification
+        if (nextPrayer == null && prayerTime.isAfter(now)) {
+          nextPrayer = prayer;
+        }
+
+        // Schedule 15-minute pre-prayer notification
+        final reminderTime = prayerTime.subtract(const Duration(minutes: 15));
+        if (reminderTime.isAfter(now)) {
+          final tzReminderTime = tz.TZDateTime.from(reminderTime, tz.local);
+
+          await _scheduleZoned(
+            id: approachingId,
+            title: 'تنبيه • صلاة $prayerName',
+            body: 'باقي 15 دقيقة على صلاة $prayerName',
+            scheduledTime: tzReminderTime,
+            details: NotificationDetails(
+              android: AndroidNotificationDetails(
+                _prayerApproachingChannelId,
+                'تنبيه اقتراب الصلاة',
+                channelDescription: 'إشعار قبل 15 دقيقة من موعد كل صلاة',
+                importance: Importance.high,
+                priority: Priority.high,
+                icon: '@mipmap/ic_launcher',
+                enableVibration: true,
+                playSound: true,
+                ticker: 'باقي 15 دقيقة على صلاة $prayerName',
+                styleInformation: BigTextStyleInformation(
+                  'باقي 15 دقيقة على صلاة $prayerName\nاستعد للصلاة',
+                  contentTitle: 'تنبيه • صلاة $prayerName',
+                ),
+              ),
+              iOS: const DarwinNotificationDetails(
+                presentAlert: true,
+                presentBadge: true,
+                presentSound: true,
+                interruptionLevel: InterruptionLevel.timeSensitive,
+              ),
+            ),
+            matchDateTimeComponents: DateTimeComponents.time,
+          );
+
+          developer.log(
+            '📅 Approaching notification scheduled for $prayerName at $reminderTime (id=$approachingId)',
+            name: 'NotificationService',
+          );
+        }
+        approachingId++;
+      }
+
+      // Show persistent ongoing notification with next prayer time
+      if (nextPrayer != null) {
+        final nextName = nextPrayer['name'] as String;
+        final nextTime = nextPrayer['time'] as DateTime;
+        final h = nextTime.hour > 12
+            ? nextTime.hour - 12
+            : (nextTime.hour == 0 ? 12 : nextTime.hour);
+        final timeStr =
+            '$h:${nextTime.minute.toString().padLeft(2, '0')} ${nextTime.hour >= 12 ? 'م' : 'ص'}';
+
+        await _notifications.show(
+          3200,
+          'الصلاة القادمة • $nextName',
+          'وقت صلاة $nextName: $timeStr',
+          NotificationDetails(
+            android: AndroidNotificationDetails(
+              _prayerApproachingChannelId,
+              'تنبيه اقتراب الصلاة',
+              channelDescription: 'إشعار قبل 15 دقيقة من موعد كل صلاة',
+              importance: Importance.low,
+              priority: Priority.low,
+              icon: '@mipmap/ic_launcher',
+              ongoing: true,
+              autoCancel: false,
+              playSound: false,
+              enableVibration: false,
+              visibility: NotificationVisibility.public,
+              showWhen: false,
+              ticker: 'الصلاة القادمة: $nextName',
+            ),
+            iOS: const DarwinNotificationDetails(
+              presentAlert: false,
+              presentBadge: false,
+              presentSound: false,
+            ),
+          ),
+          payload: 'next_prayer_$nextName',
+        );
+
+        developer.log(
+          '📌 Persistent next-prayer notification shown: $nextName at $timeStr',
+          name: 'NotificationService',
+        );
+      }
+    } catch (e, stackTrace) {
+      developer.log(
+        '❌ Error scheduling prayer approaching notifications',
+        name: 'NotificationService',
+        error: e,
+        stackTrace: stackTrace,
+      );
+    }
+  }
+
+  /// Cancel the persistent next-prayer notification.
+  Future<void> cancelPersistentPrayerNotification() async {
+    try {
+      await _notifications.cancel(3200);
+    } catch (_) {}
+  }
 }
