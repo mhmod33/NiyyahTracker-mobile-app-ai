@@ -622,7 +622,11 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
               subtextColor,
             ),
             Expanded(
-              child: PageView.builder(
+              // LTR paging so the next page sits to the right and pages
+              // advance rightward; each page keeps its own RTL content.
+              child: Directionality(
+                textDirection: TextDirection.ltr,
+                child: PageView.builder(
                 controller: _pageController,
                 scrollDirection: _verticalScroll
                     ? Axis.vertical
@@ -634,7 +638,9 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
                   _saveReadingProgress(i);
                   _maybeTrackKahf(i);
                 },
-                itemBuilder: (ctx, index) => _MushafPageWidget(
+                itemBuilder: (ctx, index) => Directionality(
+                  textDirection: TextDirection.rtl,
+                  child: _MushafPageWidget(
                   pageNumber: index + 1,
                   highlightSurah: _highlightSurah,
                   highlightVerse: _highlightVerse,
@@ -667,6 +673,8 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
                   onVerseLongPress: (surah, verse) {
                     _showVerseActions(context, surah, verse);
                   },
+                  ),
+                ),
                 ),
               ),
             ),
@@ -1253,10 +1261,10 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          // Right button — next page (in RTL Mushaf, next = higher surah/later content on the right)
-          _navBtn(Icons.arrow_forward_rounded, canNext, isDark, () {
+          // Right side in RTL: step back toward the start of the mushaf.
+          _navBtn(Icons.arrow_forward_rounded, canPrev, isDark, () {
             _pageController.animateToPage(
-              _currentPage + 1,
+              _currentPage - 1,
               duration: const Duration(milliseconds: 250),
               curve: Curves.easeInOut,
             );
@@ -1302,10 +1310,10 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
               ),
             ),
           ),
-          // Left button — previous page
-          _navBtn(Icons.arrow_back_rounded, canPrev, isDark, () {
+          // Left side in RTL: advance toward the later pages.
+          _navBtn(Icons.arrow_back_rounded, canNext, isDark, () {
             _pageController.animateToPage(
-              _currentPage - 1,
+              _currentPage + 1,
               duration: const Duration(milliseconds: 250),
               curve: Curves.easeInOut,
             );
@@ -2566,6 +2574,7 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
         ),
         child: Icon(
           icon,
+          textDirection: TextDirection.ltr,
           size: 22,
           color: enabled
               ? AppColors.darkGreen
