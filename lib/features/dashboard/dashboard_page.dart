@@ -2903,7 +2903,7 @@ class _QuoteCarouselState extends State<_QuoteCarousel> {
       {
         'text':
             'تُعْرَضُ الأَعْمَالُ يَوْمَ الاِثْنَيْنِ وَالْخَمِيسِ فَأُحِبُّ أَنْ يُعْرَضَ عَمَلِي وَأَنَا صَائِمٌ',
-        'source': 'حديث شريف • إشراقة الاثنين',
+        'source': 'حديث شريف',
       },
       {
         'text':
@@ -2920,7 +2920,7 @@ class _QuoteCarouselState extends State<_QuoteCarousel> {
     2: [
       {
         'text': 'فَاذْكُرُونِي أَذْكُرْكُمْ وَاشْكُرُوا لِي وَلَا تَكْفُرُونِ',
-        'source': 'سورة البقرة • إشراقة الثلاثاء',
+        'source': 'سورة البقرة',
       },
       {
         'text': 'أَحَبُّ الأعمالِ إلى اللهِ أدْوَمُها وإنْ قَلَّ',
@@ -2936,7 +2936,7 @@ class _QuoteCarouselState extends State<_QuoteCarousel> {
     3: [
       {
         'text': 'أَلَا بِذِكْرِ اللَّهِ تَطْمَئِنُّ الْقُلُوبُ',
-        'source': 'سورة الرعد • إشراقة الأربعاء',
+        'source': 'سورة الرعد',
       },
       {
         'text':
@@ -2955,7 +2955,7 @@ class _QuoteCarouselState extends State<_QuoteCarousel> {
       {
         'text':
             'وَإِذَا سَأَلَكَ عِبَادِي عَنِّي فَإِنِّي قَرِيبٌ أُجِيبُ دَعْوَةَ الدَّاعِ إِذَا دَعَانِ',
-        'source': 'سورة البقرة • إشراقة الخميس',
+        'source': 'سورة البقرة',
       },
       {
         'text': 'اقرؤوا القرآن فإنه يأتي يوم القيامة شفيعاً لأصحابه',
@@ -2972,7 +2972,7 @@ class _QuoteCarouselState extends State<_QuoteCarousel> {
       {
         'text':
             'إِنَّ اللَّهَ وَمَلَائِكَتَهُ يُصَلُّونَ عَلَى النَّبِيِّ يَا أَيُّهَا الَّذِينَ آمَنُوا صَلُّوا عَلَيْهِ وَسَلِّمُوا تَسْلِيمًا',
-        'source': 'سورة الأحزاب • نور الجمعة',
+        'source': 'سورة الأحزاب',
       },
       {
         'text':
@@ -2990,7 +2990,7 @@ class _QuoteCarouselState extends State<_QuoteCarousel> {
     6: [
       {
         'text': 'فَمَنْ أَبْصَرَ فَلِنَفْسِهِ وَمَنْ عَمِيَ فَعَلَيْهَا',
-        'source': 'سورة الأنعام • إشراقة السبت',
+        'source': 'سورة الأنعام',
       },
       {
         'text': 'إنّ مع العُسرِ يُسراً • فإنّ مع العُسرِ يُسراً',
@@ -3008,7 +3008,7 @@ class _QuoteCarouselState extends State<_QuoteCarousel> {
       {
         'text':
             'وَسَارِعُوا إِلَىٰ مَغْفِرَةٍ مِّن رَّبِّكُمْ وَجَنَّةٍ عَرْضُهَا السَّمَاوَاتُ وَالْأَرْضُ',
-        'source': 'سورة آل عمران • إشراقة الأحد',
+        'source': 'سورة آل عمران',
       },
       {
         'text':
@@ -3104,7 +3104,38 @@ class _QuoteCarouselState extends State<_QuoteCarousel> {
   Future<void> _shareQuoteAsImage() async {
     final q = _currentQuote;
     final repaintKey = GlobalKey();
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     HapticFeedback.mediumImpact();
+
+    // Theme-aware card colors
+    final cardBg = isDark ? const Color(0xFF080E12) : const Color(0xFFFAF8F2);
+    final quoteTextColor = isDark ? Colors.white : const Color(0xFF1E293B);
+    final subtleTextColor = isDark
+        ? Colors.white.withValues(alpha: 0.5)
+        : const Color(0xFF1E293B).withValues(alpha: 0.45);
+    final accentColor = isDark ? AppColors.lightGreen : AppColors.darkGreen;
+    final glowColor = accentColor.withValues(alpha: isDark ? 0.22 : 0.10);
+    final panelColor = isDark
+        ? Colors.white.withValues(alpha: 0.06)
+        : AppColors.darkGreen.withValues(alpha: 0.05);
+    final panelBorderColor = isDark
+        ? Colors.white.withValues(alpha: 0.10)
+        : AppColors.darkGreen.withValues(alpha: 0.18);
+    final dividerColor = accentColor.withValues(alpha: 0.35);
+    final cardBorderColor = accentColor.withValues(alpha: isDark ? 0.4 : 0.3);
+    final backdropTint = isDark
+        ? Colors.white.withValues(alpha: 0.04)
+        : Colors.black.withValues(alpha: 0.01);
+    final buttonStripBg = isDark
+        ? Colors.white.withValues(alpha: 0.08)
+        : Colors.black.withValues(alpha: 0.04);
+    final closeBorderColor = isDark ? Colors.white54 : accentColor;
+    final closeTextColor = isDark ? Colors.white : accentColor;
+    final shareButtonBg = isDark
+        ? [AppColors.midGreen, AppColors.darkGreen]
+        : [AppColors.darkGreen, AppColors.midGreen];
+    final shareButtonTextColor = Colors.white;
+    final shareButtonShadowColor = accentColor.withValues(alpha: 0.3);
 
     await showDialog(
       context: context,
@@ -3120,159 +3151,279 @@ class _QuoteCarouselState extends State<_QuoteCarousel> {
                 key: repaintKey,
                 child: Container(
                   width: double.infinity,
-                  padding: const EdgeInsets.all(28),
                   decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      begin: Alignment.topRight,
-                      end: Alignment.bottomLeft,
-                      colors: [
-                        Color(0xFF0D2818),
-                        Color(0xFF145A3A),
-                        Color(0xFF0A2013),
-                      ],
-                    ),
-                    borderRadius: BorderRadius.circular(28),
+                    color: cardBg,
+                    borderRadius: BorderRadius.circular(32),
                     border: Border.all(
-                      color: AppColors.gold.withValues(alpha: 0.55),
-                      width: 1.5,
+                      color: cardBorderColor,
+                      width: 1,
                     ),
                   ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(
-                            Icons.auto_awesome_rounded,
-                            color: AppColors.gold,
-                            size: 18,
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            'نورٌ وبصيرة',
-                            style: _f(
-                              sz: 14,
-                              fw: FontWeight.w800,
-                              c: AppColors.gold,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(32),
+                    child: Stack(
+                      children: [
+                        // Radial gold glow top-right
+                        Positioned.fill(
+                          child: Container(
+                            decoration: BoxDecoration(
+                              gradient: RadialGradient(
+                                center: const Alignment(0.8, -0.8),
+                                radius: 1.2,
+                                colors: [glowColor, Colors.transparent],
+                                stops: const [0.0, 0.6],
+                              ),
                             ),
                           ),
-                        ],
-                      ),
-                      const SizedBox(height: 20),
-                      Text(
-                        '« ${q['text']!} »',
-                        textAlign: TextAlign.center,
-                        style: GoogleFonts.amiri(
-                          fontSize: 24,
-                          fontWeight: FontWeight.w700,
-                          color: Colors.white,
-                          height: 1.75,
                         ),
-                      ),
-                      const SizedBox(height: 18),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 14,
-                          vertical: 5,
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppColors.gold.withValues(alpha: 0.16),
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                        child: Text(
-                          q['source']!,
-                          style: _f(
-                            sz: 12,
-                            fw: FontWeight.w700,
-                            c: AppColors.gold,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-                      Divider(color: Colors.white.withValues(alpha: 0.15)),
-                      const SizedBox(height: 6),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            'تطبيق بصائر',
-                            style: _f(
-                              sz: 11,
-                              fw: FontWeight.w700,
-                              c: Colors.white70,
+                        // Frosted glass layer
+                        Positioned.fill(
+                          child: BackdropFilter(
+                            filter: ui.ImageFilter.blur(
+                              sigmaX: 14,
+                              sigmaY: 14,
+                            ),
+                            child: Container(
+                              color: backdropTint,
                             ),
                           ),
-                          Text(
-                            widget.date,
-                            style: _f(sz: 10.5, c: Colors.white54),
+                        ),
+                        // Inner content
+                        Padding(
+                          padding: const EdgeInsets.all(28),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              // Ornamental divider
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Divider(
+                                      color: accentColor.withValues(alpha: 0.4),
+                                      thickness: 0.8,
+                                    ),
+                                  ),
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 10,
+                                    ),
+                                    child: Text(
+                                      '◆',
+                                      style: TextStyle(
+                                        color: accentColor,
+                                        fontSize: 10,
+                                      ),
+                                    ),
+                                  ),
+                                  Expanded(
+                                    child: Divider(
+                                      color: accentColor.withValues(alpha: 0.4),
+                                      thickness: 0.8,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 20),
+                              // Inner glass panel with quote
+                              Container(
+                                padding: const EdgeInsets.all(24),
+                                decoration: BoxDecoration(
+                                  color: panelColor,
+                                  borderRadius: BorderRadius.circular(24),
+                                  border: Border.all(color: panelBorderColor),
+                                ),
+                                child: Column(
+                                  children: [
+                                    Text(
+                                      '❝',
+                                      style: TextStyle(
+                                        color: accentColor,
+                                        fontSize: 28,
+                                        height: 1,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      q['text']!,
+                                      textAlign: TextAlign.center,
+                                      textDirection: TextDirection.rtl,
+                                      style: GoogleFonts.amiri(
+                                        color: quoteTextColor,
+                                        fontSize: 23,
+                                        height: 1.85,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      '❞',
+                                      style: TextStyle(
+                                        color: accentColor,
+                                        fontSize: 28,
+                                        height: 1,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                              // Source badge
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 7,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: panelColor,
+                                  borderRadius: BorderRadius.circular(20),
+                                  border: Border.all(
+                                    color: accentColor.withValues(alpha: 0.4),
+                                  ),
+                                ),
+                                child: Text(
+                                  q['source']!,
+                                  style: GoogleFonts.amiri(
+                                    color: accentColor,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 20),
+                              // Bottom divider and branding
+                              Divider(color: dividerColor),
+                              const SizedBox(height: 10),
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    'بصائر',
+                                    style: TextStyle(
+                                      color: subtleTextColor,
+                                      fontSize: 11,
+                                    ),
+                                  ),
+                                  Text(
+                                    widget.date,
+                                    style: TextStyle(
+                                      color: subtleTextColor,
+                                      fontSize: 11,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
                           ),
-                        ],
-                      ),
-                    ],
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
               const SizedBox(height: 16),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  ElevatedButton.icon(
-                    onPressed: () async {
-                      try {
-                        final boundary =
-                            repaintKey.currentContext?.findRenderObject()
-                                as RenderRepaintBoundary?;
-                        if (boundary == null) return;
-                        final ui.Image image = await boundary.toImage(
-                          pixelRatio: 3.0,
-                        );
-                        final ByteData? byteData = await image.toByteData(
-                          format: ui.ImageByteFormat.png,
-                        );
-                        if (byteData == null) return;
-                        final Uint8List pngBytes = byteData.buffer
-                            .asUint8List();
-                        final tempDir = await getTemporaryDirectory();
-                        final file = File(
-                          '${tempDir.path}/nur_wa_basirah_${DateTime.now().millisecondsSinceEpoch}.png',
-                        );
-                        await file.writeAsBytes(pngBytes);
-                        if (ctx.mounted) Navigator.pop(ctx);
-                        await Share.shareXFiles([
-                          XFile(file.path),
-                        ], text: _formattedText(q));
-                      } catch (_) {
-                        if (ctx.mounted) Navigator.pop(ctx);
-                        await Share.share(_formattedText(q));
-                      }
-                    },
-                    icon: const Icon(Icons.image_rounded, size: 18),
-                    label: Text(
-                      'مشاركة البطاقة كصورة',
-                      style: _f(sz: 13, fw: FontWeight.w800, c: Colors.black87),
-                    ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.gold,
-                      foregroundColor: Colors.black87,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 20,
-                        vertical: 12,
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 10,
+                ),
+                decoration: BoxDecoration(
+                  color: buttonStripBg,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(colors: shareButtonBg),
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: [
+                          BoxShadow(
+                            color: shareButtonShadowColor,
+                            blurRadius: 12,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
                       ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
+                      child: ElevatedButton.icon(
+                        onPressed: () async {
+                          try {
+                            final boundary =
+                                repaintKey.currentContext?.findRenderObject()
+                                    as RenderRepaintBoundary?;
+                            if (boundary == null) return;
+                            final ui.Image image = await boundary.toImage(
+                              pixelRatio: 3.0,
+                            );
+                            final ByteData? byteData = await image.toByteData(
+                              format: ui.ImageByteFormat.png,
+                            );
+                            if (byteData == null) return;
+                            final Uint8List pngBytes = byteData.buffer
+                                .asUint8List();
+                            final tempDir = await getTemporaryDirectory();
+                            final file = File(
+                              '${tempDir.path}/nur_wa_basirah_${DateTime.now().millisecondsSinceEpoch}.png',
+                            );
+                            await file.writeAsBytes(pngBytes);
+                            if (ctx.mounted) Navigator.pop(ctx);
+                            await Share.shareXFiles([
+                              XFile(file.path),
+                            ], text: _formattedText(q));
+                          } catch (_) {
+                            if (ctx.mounted) Navigator.pop(ctx);
+                            await Share.share(_formattedText(q));
+                          }
+                        },
+                        icon: const Icon(Icons.image_rounded, size: 18),
+                        label: Text(
+                          'مشاركة البطاقة كصورة',
+                          style: _f(
+                            sz: 13,
+                            fw: FontWeight.w800,
+                            c: shareButtonTextColor,
+                          ),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.transparent,
+                          foregroundColor: shareButtonTextColor,
+                          elevation: 0,
+                          shadowColor: Colors.transparent,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 28,
+                            vertical: 14,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                        ),
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 10),
-                  TextButton(
-                    onPressed: () => Navigator.pop(ctx),
-                    child: Text(
-                      'إغلاق',
-                      style: _f(sz: 13, fw: FontWeight.w700, c: Colors.white),
+                    const SizedBox(width: 10),
+                    OutlinedButton(
+                      onPressed: () => Navigator.pop(ctx),
+                      style: OutlinedButton.styleFrom(
+                        side: BorderSide(color: closeBorderColor),
+                        foregroundColor: closeTextColor,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 14,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                      ),
+                      child: Text(
+                        'إغلاق',
+                        style: _f(
+                          sz: 13,
+                          fw: FontWeight.w700,
+                          c: closeTextColor,
+                        ),
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ],
           ),

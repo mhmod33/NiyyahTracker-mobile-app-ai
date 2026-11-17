@@ -2072,12 +2072,29 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
     final key = GlobalKey();
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
+    // Theme-aware card colors
+    final cardBg = isDark ? const Color(0xFF06100A) : const Color(0xFFFAF8F2);
+    final verseTextColor = isDark ? Colors.white : const Color(0xFF1E293B);
+    final subtleTextColor = isDark
+        ? Colors.white.withValues(alpha: 0.5)
+        : const Color(0xFF1E293B).withValues(alpha: 0.45);
+    final glowColor = isDark
+        ? const Color(0xFFD4A843)
+        : AppColors.gold.withValues(alpha: 0.18);
+    final cardBorderColor =
+        AppColors.gold.withValues(alpha: isDark ? 0.4 : 0.55);
+    final backdropTint = isDark
+        ? Colors.white.withValues(alpha: 0.03)
+        : Colors.black.withValues(alpha: 0.01);
+    final dividerColor = AppColors.gold.withValues(alpha: isDark ? 0.2 : 0.4);
+    final dialogBg = isDark ? const Color(0xFF111611) : AppColors.cardBg;
+
     showDialog(
       context: context,
       builder: (ctx) => Directionality(
         textDirection: TextDirection.rtl,
         child: AlertDialog(
-          backgroundColor: isDark ? const Color(0xFF111611) : AppColors.cardBg,
+          backgroundColor: dialogBg,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(20),
           ),
@@ -2088,162 +2105,182 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
               RepaintBoundary(
                 key: key,
                 child: ClipRRect(
-                  borderRadius: BorderRadius.circular(20),
-                  child: Stack(
-                    children: [
-                      // Base frosted green gradient layer
-                      Positioned.fill(
-                        child: Container(
-                          decoration: const BoxDecoration(
-                            gradient: LinearGradient(
-                              colors: [
-                                Color(0xFF091610),
-                                Color(0xFF132B1F),
-                                Color(0xFF08120D),
-                              ],
-                              begin: Alignment.topCenter,
-                              end: Alignment.bottomCenter,
-                            ),
-                          ),
-                        ),
+                  borderRadius: BorderRadius.circular(28),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: cardBg,
+                      borderRadius: BorderRadius.circular(28),
+                      border: Border.all(
+                        color: cardBorderColor,
+                        width: 1,
                       ),
-                      // Frosted glass: blur the green layer beneath, translucent white tint
-                      Positioned.fill(
-                        child: BackdropFilter(
-                          filter: ui.ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+                    ),
+                    child: Stack(
+                      children: [
+                        // Gold glow top-right
+                        Positioned.fill(
                           child: Container(
-                            color: Colors.white.withValues(alpha: 0.05),
+                            decoration: BoxDecoration(
+                              gradient: RadialGradient(
+                                center: const Alignment(0.8, -0.8),
+                                radius: 1.2,
+                                colors: [glowColor, Colors.transparent],
+                                stops: const [0.0, 0.55],
+                              ),
+                            ),
                           ),
                         ),
-                      ),
-                      // Content with gold frame on a transparent top container
-                      Container(
-                        width: 360,
-                        padding: const EdgeInsets.all(24),
-                        decoration: BoxDecoration(
-                          border: Border.all(color: AppColors.gold, width: 2),
-                          borderRadius: BorderRadius.circular(20),
+                        // Frosted glass
+                        Positioned.fill(
+                          child: BackdropFilter(
+                            filter: ui.ImageFilter.blur(
+                              sigmaX: 14,
+                              sigmaY: 14,
+                            ),
+                            child: Container(
+                              color: backdropTint,
+                            ),
+                          ),
                         ),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 20,
-                                vertical: 6,
-                              ),
-                              decoration: BoxDecoration(
-                                gradient: LinearGradient(
-                                  colors: [
-                                    AppColors.gold.withValues(alpha: 0.25),
-                                    AppColors.darkGreen.withValues(alpha: 0.35),
-                                  ],
+                        // Inner content
+                        Container(
+                          width: 360,
+                          padding: const EdgeInsets.all(26),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              // Surah name badge
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 18,
+                                  vertical: 8,
                                 ),
-                                border: Border.all(
-                                  color: AppColors.gold,
-                                  width: 1.5,
+                                decoration: BoxDecoration(
+                                  gradient: const LinearGradient(
+                                    colors: [
+                                      Color(0xFFD4A843),
+                                      Color(0xFFB8860B),
+                                    ],
+                                  ),
+                                  borderRadius: BorderRadius.circular(20),
                                 ),
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                              child: Text(
-                                'سورة $surahName',
-                                style: GoogleFonts.amiri(
-                                  color: AppColors.gold,
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 18),
-                            ConstrainedBox(
-                              constraints: const BoxConstraints(maxHeight: 380),
-                              child: SingleChildScrollView(
-                                child: Column(
-                                  children: sortedVerses.map((v) {
-                                    final text = quran.getVerse(surah, v);
-                                    return Padding(
-                                      padding: const EdgeInsets.symmetric(
-                                        vertical: 6,
-                                      ),
-                                      child: Column(
-                                        children: [
-                                          Text(
-                                            text,
-                                            style: const TextStyle(
-                                              fontFamily:
-                                                  'KFGQPC Uthmanic Script Hafs',
-                                              color: Colors.white,
-                                              fontSize: 19,
-                                              height: 1.85,
-                                            ),
-                                            textAlign: TextAlign.center,
-                                          ),
-                                          const SizedBox(height: 4),
-                                          Row(
-                                            mainAxisAlignment:
-                                                MainAxisAlignment.center,
-                                            children: [
-                                              const Text(
-                                                '◈ ',
-                                                style: TextStyle(
-                                                  color: AppColors.gold,
-                                                  fontSize: 14,
-                                                ),
-                                              ),
-                                              Text(
-                                                '﴿ $v ﴾',
-                                                style: GoogleFonts.amiri(
-                                                  color: AppColors.gold,
-                                                  fontSize: 16,
-                                                ),
-                                              ),
-                                              const Text(
-                                                ' ◈',
-                                                style: TextStyle(
-                                                  color: AppColors.gold,
-                                                  fontSize: 14,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ],
-                                      ),
-                                    );
-                                  }).toList(),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                            Container(
-                              height: 1,
-                              color: AppColors.gold.withValues(alpha: 0.3),
-                            ),
-                            const SizedBox(height: 12),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(
-                                  Icons.auto_stories_rounded,
-                                  color: AppColors.gold.withValues(alpha: 0.8),
-                                  size: 16,
-                                ),
-                                const SizedBox(width: 8),
-                                Text(
-                                  'بصائر • نية متجددة',
-                                  style: GoogleFonts.ibmPlexSansArabic(
-                                    color: AppColors.gold.withValues(
-                                      alpha: 0.8,
-                                    ),
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w600,
+                                child: Text(
+                                  'سورة $surahName',
+                                  style: GoogleFonts.amiri(
+                                    color: Colors.black,
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.bold,
                                   ),
                                 ),
-                              ],
-                            ),
-                          ],
+                              ),
+                              const SizedBox(height: 14),
+                              // Ornamental divider
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Divider(
+                                      color: AppColors.gold.withValues(
+                                        alpha: 0.4,
+                                      ),
+                                      thickness: 0.8,
+                                    ),
+                                  ),
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 10,
+                                    ),
+                                    child: Text(
+                                      '◆',
+                                      style: TextStyle(
+                                        color: AppColors.gold,
+                                        fontSize: 10,
+                                      ),
+                                    ),
+                                  ),
+                                  Expanded(
+                                    child: Divider(
+                                      color: AppColors.gold.withValues(
+                                        alpha: 0.4,
+                                      ),
+                                      thickness: 0.8,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 16),
+                              // Verses
+                              ConstrainedBox(
+                                constraints: const BoxConstraints(
+                                  maxHeight: 380,
+                                ),
+                                child: SingleChildScrollView(
+                                  child: Column(
+                                    children: sortedVerses.map((v) {
+                                      final text = quran.getVerse(surah, v);
+                                      return Padding(
+                                        padding: const EdgeInsets.symmetric(
+                                          vertical: 6,
+                                        ),
+                                        child: Column(
+                                          children: [
+                                            Text(
+                                              text,
+                                              textAlign: TextAlign.center,
+                                              textDirection: TextDirection.rtl,
+                                              style: TextStyle(
+                                                fontFamily:
+                                                    'KFGQPC Uthmanic Script Hafs',
+                                                color: verseTextColor,
+                                                fontSize: 20,
+                                                height: 1.9,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 6),
+                                            Text(
+                                              '﴿ $v ﴾',
+                                              style: GoogleFonts.amiri(
+                                                color: AppColors.gold,
+                                                fontSize: 15,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 10),
+                                          ],
+                                        ),
+                                      );
+                                    }).toList(),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              // Bottom divider and branding
+                              Divider(color: dividerColor),
+                              const SizedBox(height: 10),
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    'بصائر',
+                                    style: TextStyle(
+                                      color: subtleTextColor,
+                                      fontSize: 11,
+                                    ),
+                                  ),
+                                  Text(
+                                    '${DateTime.now().day}/${DateTime.now().month}/${DateTime.now().year}',
+                                    style: TextStyle(
+                                      color: subtleTextColor,
+                                      fontSize: 11,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -2252,64 +2289,93 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
                 child: Row(
                   children: [
                     Expanded(
-                      child: TextButton(
+                      child: OutlinedButton(
                         onPressed: () => Navigator.pop(ctx),
+                        style: OutlinedButton.styleFrom(
+                          side: BorderSide(
+                            color: AppColors.gold.withValues(alpha: 0.75),
+                          ),
+                          foregroundColor: AppColors.gold.withValues(
+                            alpha: 0.75,
+                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                        ),
                         child: Text(
                           'إلغاء',
                           style: GoogleFonts.ibmPlexSansArabic(
-                            color: isDark
-                                ? Colors.white60
-                                : AppColors.textSecondary,
+                            color: AppColors.gold.withValues(alpha: 0.75),
                           ),
                         ),
                       ),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
-                      child: ElevatedButton.icon(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.darkGreen,
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFFD4A843), Color(0xFFB8860B)],
                           ),
+                          borderRadius: BorderRadius.circular(20),
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppColors.gold.withValues(alpha: 0.35),
+                              blurRadius: 12,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
                         ),
-                        onPressed: () async {
-                          try {
-                            final boundary =
-                                key.currentContext!.findRenderObject()
-                                    as RenderRepaintBoundary;
-                            final image = await boundary.toImage(
-                              pixelRatio: 3.0,
-                            );
-                            final byteData = await image.toByteData(
-                              format: ui.ImageByteFormat.png,
-                            );
-                            final bytes = byteData!.buffer.asUint8List();
-                            final dir = await getTemporaryDirectory();
-                            final file = File(
-                              '${dir.path}/ayah_${surah}_${sortedVerses.join("_")}.png',
-                            );
-                            await file.writeAsBytes(bytes);
-                            if (!ctx.mounted) return;
-                            Navigator.pop(ctx);
-                            final verseRange = sortedVerses.length == 1
-                                ? 'آية ${sortedVerses.first}'
-                                : 'آيات ${sortedVerses.first}-${sortedVerses.last}';
-                            await Share.shareXFiles([
-                              XFile(file.path),
-                            ], text: 'سورة $surahName - $verseRange\nبصائر');
-                          } catch (e) {
-                            if (!ctx.mounted) return;
-                            Navigator.pop(ctx);
-                            _snack(context, 'حدث خطأ في المشاركة');
-                          }
-                        },
-                        icon: const Icon(Icons.share_rounded, size: 18),
-                        label: Text(
-                          'مشاركة',
-                          style: GoogleFonts.ibmPlexSansArabic(
-                            fontWeight: FontWeight.bold,
+                        child: ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.transparent,
+                            foregroundColor: Colors.black87,
+                            elevation: 0,
+                            shadowColor: Colors.transparent,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                          ),
+                          onPressed: () async {
+                            try {
+                              final boundary =
+                                  key.currentContext!.findRenderObject()
+                                      as RenderRepaintBoundary;
+                              final image = await boundary.toImage(
+                                pixelRatio: 3.0,
+                              );
+                              final byteData = await image.toByteData(
+                                format: ui.ImageByteFormat.png,
+                              );
+                              final bytes = byteData!.buffer.asUint8List();
+                              final dir = await getTemporaryDirectory();
+                              final file = File(
+                                '${dir.path}/ayah_${surah}_${sortedVerses.join("_")}.png',
+                              );
+                              await file.writeAsBytes(bytes);
+                              if (!ctx.mounted) return;
+                              Navigator.pop(ctx);
+                              final verseRange = sortedVerses.length == 1
+                                  ? 'آية ${sortedVerses.first}'
+                                  : 'آيات ${sortedVerses.first}-${sortedVerses.last}';
+                              await Share.shareXFiles([
+                                XFile(file.path),
+                              ], text: 'سورة $surahName - $verseRange\nبصائر');
+                            } catch (e) {
+                              if (!ctx.mounted) return;
+                              Navigator.pop(ctx);
+                              _snack(context, 'حدث خطأ في المشاركة');
+                            }
+                          },
+                          icon: const Icon(Icons.share_rounded, size: 18),
+                          label: Text(
+                            'مشاركة',
+                            style: GoogleFonts.ibmPlexSansArabic(
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black87,
+                            ),
                           ),
                         ),
                       ),
