@@ -165,6 +165,35 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
         visitedList.removeRange(0, visitedList.length - 100);
       }
       await box.put('visited_surahs', visitedList);
+
+      // Record reading "stops": each contiguous run of pages inside one surah
+      // becomes a segment, so partial reads of a surah are preserved even when
+      // the user jumps to another surah before finishing it.
+      final rawStops = box.get('reading_stops');
+      final stops = rawStops is List ? List<dynamic>.from(rawStops) : <dynamic>[];
+      final nowMs = DateTime.now().millisecondsSinceEpoch;
+      if (stops.isNotEmpty && stops.last is Map) {
+        final last = stops.last as Map;
+        if ((last['surahNumber'] as int?) == surahNum) {
+          last['endPage'] = pageNum;
+          last['lastTimestamp'] = nowMs;
+          await box.put('reading_stops', stops);
+          return;
+        }
+      }
+      stops.add({
+        'surahNumber': surahNum,
+        'surahName': surahName,
+        'startPage': pageNum,
+        'endPage': pageNum,
+        'firstTimestamp': nowMs,
+        'lastTimestamp': nowMs,
+      });
+      // Keep last 200 stop segments
+      if (stops.length > 200) {
+        stops.removeRange(0, stops.length - 200);
+      }
+      await box.put('reading_stops', stops);
     } catch (_) {}
   }
 
@@ -483,8 +512,9 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bgColor = isDark ? const Color(0xFF0D0D0D) : AppColors.background;
-    final headerFooterColor = isDark ? Colors.black : AppColors.cardBg;
+    final bgColor = isDark ? const Color(0xFF0B120D) : AppColors.background;
+    final headerFooterColor = isDark ? const Color(0xFF0B120D) : AppColors.cardBg;
+
     final textColor = isDark ? Colors.white : AppColors.textPrimary;
     final subtextColor = isDark ? Colors.white70 : AppColors.textSecondary;
     
@@ -649,16 +679,20 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
             onTap: () => Navigator.pop(context),
             child: DirectionalIcon(isBack: true, size: 18, color: isDark ? Colors.white70 : AppColors.textSecondary),
           ),
-          Text(
-            quran.getSurahNameArabic(s),
-            style: useMushafFont
-                ? TextStyle(
-                    fontFamily: 'Al Mushaf',
-                    fontSize: mushafHeaderFontSize,
-                    fontWeight: FontWeight.bold,
-                    color: textColor,
-                  )
-                : GoogleFonts.amiri(color: textColor, fontWeight: FontWeight.bold, fontSize: mushafHeaderFontSize),
+          Flexible(
+            child: Text(
+              quran.getSurahNameArabic(s),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: useMushafFont
+                  ? TextStyle(
+                      fontFamily: 'Al Mushaf',
+                      fontSize: mushafHeaderFontSize,
+                      fontWeight: FontWeight.bold,
+                      color: textColor,
+                    )
+                  : GoogleFonts.amiri(color: textColor, fontWeight: FontWeight.bold, fontSize: mushafHeaderFontSize),
+            ),
           ),
           Text('Juz $j', style: GoogleFonts.inter(color: subtextColor, fontSize: 12)),
           Text('Hizb $h', style: GoogleFonts.inter(color: subtextColor, fontSize: 12)),
@@ -979,9 +1013,9 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          // Left button in row
-          _navBtn(Icons.chevron_left_rounded, canPrev, isDark, () {
-            _pageController.animateToPage(_currentPage - 1, duration: const Duration(milliseconds: 250), curve: Curves.easeInOut);
+          // Left chevron — next page (RTL reading flow)
+          _navBtn(Icons.chevron_left_rounded, canNext, isDark, () {
+            _pageController.animateToPage(_currentPage + 1, duration: const Duration(milliseconds: 250), curve: Curves.easeInOut);
           }),
           // Feature 9: Tap page number to reveal quick navigation slider
           GestureDetector(
@@ -1017,9 +1051,9 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
               ),
             ),
           ),
-          // Right button in row
-          _navBtn(Icons.chevron_right_rounded, canNext, isDark, () {
-            _pageController.animateToPage(_currentPage + 1, duration: const Duration(milliseconds: 250), curve: Curves.easeInOut);
+          // Right chevron — previous page (RTL reading flow)
+          _navBtn(Icons.chevron_right_rounded, canPrev, isDark, () {
+            _pageController.animateToPage(_currentPage - 1, duration: const Duration(milliseconds: 250), curve: Curves.easeInOut);
           }),
         ],
       ),
@@ -1413,97 +1447,112 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
             children: [
               RepaintBoundary(
                 key: key,
-                child: Container(
-                  width: 340,
-                  padding: const EdgeInsets.all(22),
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFF091610), Color(0xFF132B1F), Color(0xFF08120D)],
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                    ),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: AppColors.gold, width: 2),
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppColors.gold.withValues(alpha: 0.25),
-                        blurRadius: 16,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(20),
+                  child: Stack(
                     children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 5),
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [
-                              AppColors.gold.withValues(alpha: 0.25),
-                              AppColors.darkGreen.withValues(alpha: 0.35),
-                            ],
-                          ),
-                          border: Border.all(color: AppColors.gold, width: 1.5),
-                          borderRadius: BorderRadius.circular(18),
-                        ),
-                        child: Text(
-                          'سورة $surahName • آية $verse',
-                          style: GoogleFonts.amiri(
-                            color: AppColors.gold,
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 18),
-                      // Partial text with decorative quotation dots
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(Icons.more_horiz_rounded, color: AppColors.gold, size: 24),
-                          const SizedBox(width: 4),
-                          Text('«', style: GoogleFonts.amiri(fontSize: 22, color: AppColors.gold)),
-                        ],
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                        child: Text(
-                          partialText,
-                          style: const TextStyle(
-                            fontFamily: 'KFGQPC Uthmanic Script Hafs',
-                            color: Colors.white,
-                            fontSize: 20,
-                            height: 1.85,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                      ),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text('»', style: GoogleFonts.amiri(fontSize: 22, color: AppColors.gold)),
-                          const SizedBox(width: 4),
-                          const Icon(Icons.more_horiz_rounded, color: AppColors.gold, size: 24),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      Container(height: 1, color: AppColors.gold.withValues(alpha: 0.3)),
-                      const SizedBox(height: 10),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.auto_stories_rounded, color: AppColors.gold.withValues(alpha: 0.8), size: 14),
-                          const SizedBox(width: 6),
-                          Text(
-                            'اقتباس قرآني • بصائر',
-                            style: GoogleFonts.ibmPlexSansArabic(
-                              color: AppColors.gold.withValues(alpha: 0.8),
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
+                      // Base frosted green gradient layer
+                      Positioned.fill(
+                        child: Container(
+                          decoration: const BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [Color(0xFF091610), Color(0xFF132B1F), Color(0xFF08120D)],
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
                             ),
                           ),
-                        ],
+                        ),
+                      ),
+                      // Frosted glass: blur the green layer beneath, translucent white tint
+                      Positioned.fill(
+                        child: BackdropFilter(
+                          filter: ui.ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+                          child: Container(color: Colors.white.withValues(alpha: 0.05)),
+                        ),
+                      ),
+                      // Content with gold frame on a transparent top container
+                      Container(
+                        width: 340,
+                        padding: const EdgeInsets.all(22),
+                        decoration: BoxDecoration(
+                          border: Border.all(color: AppColors.gold, width: 2),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 5),
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: [
+                                    AppColors.gold.withValues(alpha: 0.25),
+                                    AppColors.darkGreen.withValues(alpha: 0.35),
+                                  ],
+                                ),
+                                border: Border.all(color: AppColors.gold, width: 1.5),
+                                borderRadius: BorderRadius.circular(18),
+                              ),
+                              child: Text(
+                                'سورة $surahName • آية $verse',
+                                style: GoogleFonts.amiri(
+                                  color: AppColors.gold,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 18),
+                            // Partial text with decorative quotation dots
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const Icon(Icons.more_horiz_rounded, color: AppColors.gold, size: 24),
+                                const SizedBox(width: 4),
+                                Text('«', style: GoogleFonts.amiri(fontSize: 22, color: AppColors.gold)),
+                              ],
+                            ),
+                            Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                              child: Text(
+                                partialText,
+                                style: const TextStyle(
+                                  fontFamily: 'KFGQPC Uthmanic Script Hafs',
+                                  color: Colors.white,
+                                  fontSize: 20,
+                                  height: 1.85,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text('»', style: GoogleFonts.amiri(fontSize: 22, color: AppColors.gold)),
+                                const SizedBox(width: 4),
+                                const Icon(Icons.more_horiz_rounded, color: AppColors.gold, size: 24),
+                              ],
+                            ),
+                            const SizedBox(height: 16),
+                            Container(height: 1, color: AppColors.gold.withValues(alpha: 0.3)),
+                            const SizedBox(height: 10),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.auto_stories_rounded, color: AppColors.gold.withValues(alpha: 0.8), size: 14),
+                                const SizedBox(width: 6),
+                                Text(
+                                  'اقتباس قرآني • بصائر',
+                                  style: GoogleFonts.ibmPlexSansArabic(
+                                    color: AppColors.gold.withValues(alpha: 0.8),
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
                       ),
                     ],
                   ),
@@ -1567,103 +1616,118 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
             children: [
               RepaintBoundary(
                 key: key,
-                child: Container(
-                  width: 360,
-                  padding: const EdgeInsets.all(24),
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFF091610), Color(0xFF132B1F), Color(0xFF08120D)],
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                    ),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: AppColors.gold, width: 2),
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppColors.gold.withValues(alpha: 0.25),
-                        blurRadius: 16,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(20),
+                  child: Stack(
                     children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [
-                              AppColors.gold.withValues(alpha: 0.25),
-                              AppColors.darkGreen.withValues(alpha: 0.35),
-                            ],
-                          ),
-                          border: Border.all(color: AppColors.gold, width: 1.5),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Text(
-                          'سورة $surahName',
-                          style: GoogleFonts.amiri(
-                            color: AppColors.gold,
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 18),
-                      ConstrainedBox(
-                        constraints: const BoxConstraints(maxHeight: 380),
-                        child: SingleChildScrollView(
-                          child: Column(
-                            children: sortedVerses.map((v) {
-                              final text = quran.getVerse(surah, v);
-                              return Padding(
-                                padding: const EdgeInsets.symmetric(vertical: 6),
-                                child: Column(
-                                  children: [
-                                    Text(
-                                      text,
-                                      style: const TextStyle(
-                                        fontFamily: 'KFGQPC Uthmanic Script Hafs',
-                                        color: Colors.white,
-                                        fontSize: 19,
-                                        height: 1.85,
-                                      ),
-                                      textAlign: TextAlign.center,
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Row(
-                                      mainAxisAlignment: MainAxisAlignment.center,
-                                      children: [
-                                        const Text('◈ ', style: TextStyle(color: AppColors.gold, fontSize: 14)),
-                                        Text('﴿ $v ﴾', style: GoogleFonts.amiri(color: AppColors.gold, fontSize: 16)),
-                                        const Text(' ◈', style: TextStyle(color: AppColors.gold, fontSize: 14)),
-                                      ],
-                                    ),
-                                  ],
-                                ),
-                              );
-                            }).toList(),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      Container(height: 1, color: AppColors.gold.withValues(alpha: 0.3)),
-                      const SizedBox(height: 12),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.auto_stories_rounded, color: AppColors.gold.withValues(alpha: 0.8), size: 16),
-                          const SizedBox(width: 8),
-                          Text(
-                            'بصائر • نية متجددة',
-                            style: GoogleFonts.ibmPlexSansArabic(
-                              color: AppColors.gold.withValues(alpha: 0.8),
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
+                      // Base frosted green gradient layer
+                      Positioned.fill(
+                        child: Container(
+                          decoration: const BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [Color(0xFF091610), Color(0xFF132B1F), Color(0xFF08120D)],
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
                             ),
                           ),
-                        ],
+                        ),
+                      ),
+                      // Frosted glass: blur the green layer beneath, translucent white tint
+                      Positioned.fill(
+                        child: BackdropFilter(
+                          filter: ui.ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+                          child: Container(color: Colors.white.withValues(alpha: 0.05)),
+                        ),
+                      ),
+                      // Content with gold frame on a transparent top container
+                      Container(
+                        width: 360,
+                        padding: const EdgeInsets.all(24),
+                        decoration: BoxDecoration(
+                          border: Border.all(color: AppColors.gold, width: 2),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: [
+                                    AppColors.gold.withValues(alpha: 0.25),
+                                    AppColors.darkGreen.withValues(alpha: 0.35),
+                                  ],
+                                ),
+                                border: Border.all(color: AppColors.gold, width: 1.5),
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Text(
+                                'سورة $surahName',
+                                style: GoogleFonts.amiri(
+                                  color: AppColors.gold,
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 18),
+                            ConstrainedBox(
+                              constraints: const BoxConstraints(maxHeight: 380),
+                              child: SingleChildScrollView(
+                                child: Column(
+                                  children: sortedVerses.map((v) {
+                                    final text = quran.getVerse(surah, v);
+                                    return Padding(
+                                      padding: const EdgeInsets.symmetric(vertical: 6),
+                                      child: Column(
+                                        children: [
+                                          Text(
+                                            text,
+                                            style: const TextStyle(
+                                              fontFamily: 'KFGQPC Uthmanic Script Hafs',
+                                              color: Colors.white,
+                                              fontSize: 19,
+                                              height: 1.85,
+                                            ),
+                                            textAlign: TextAlign.center,
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Row(
+                                            mainAxisAlignment: MainAxisAlignment.center,
+                                            children: [
+                                              const Text('◈ ', style: TextStyle(color: AppColors.gold, fontSize: 14)),
+                                              Text('﴿ $v ﴾', style: GoogleFonts.amiri(color: AppColors.gold, fontSize: 16)),
+                                              const Text(' ◈', style: TextStyle(color: AppColors.gold, fontSize: 14)),
+                                            ],
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                  }).toList(),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            Container(height: 1, color: AppColors.gold.withValues(alpha: 0.3)),
+                            const SizedBox(height: 12),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.auto_stories_rounded, color: AppColors.gold.withValues(alpha: 0.8), size: 16),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'بصائر • نية متجددة',
+                                  style: GoogleFonts.ibmPlexSansArabic(
+                                    color: AppColors.gold.withValues(alpha: 0.8),
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
                       ),
                     ],
                   ),
@@ -2601,11 +2665,11 @@ class _DecoratedMushafFrame extends StatelessWidget {
         : AppColors.darkGreen.withValues(alpha: 0.85);
     final cornerColor = isDark ? AppColors.gold : AppColors.darkGreen;
     final fillStart = isDark
-        ? const Color(0xFF11150F)
-        : const Color(0xFFFAF6EC);
+        ? const Color(0xFF0E1B13)
+        : const Color(0xFFF4F9F5);
     final fillEnd = isDark
-        ? const Color(0xFF0A0D08)
-        : const Color(0xFFF1EAD6);
+        ? const Color(0xFF081209)
+        : const Color(0xFFE8F2EC);
 
     return Container(
       decoration: BoxDecoration(

@@ -1,0 +1,25 @@
+{
+  "id": "FEAT-001",
+  "type": "feat",
+  "description": "Quran reader revamp — independent file cluster (no dashboard changes). Fixes the DirectionalIcon RTL bug, reverses the surah footer page-navigation arrows for Arabic reading, fixes the surah-name header overflow on long names (آل عمران), and gives the shared-verse images a frosted-glass green background. Files: lib/core/directional_icon.dart, lib/features/quran/surah_reader_page.dart.",
+  "status": "completed",
+  "steps": [
+    "Fix lib/core/directional_icon.dart: in the RTL branch of build(), change to `icon = isBack ? Icons.arrow_forward_ios_rounded : Icons.arrow_back_ios_new;` so back points right and forward points left in RTL. The LTR branch stays `isBack ? Icons.arrow_back_ios_new : Icons.arrow_forward_ios_rounded`. (Today both branches are identical — the bug.)",
+    "In lib/features/quran/surah_reader_page.dart `_buildFooter`: swap the two `_navBtn` callbacks + enable-flags so the RIGHT chevron (`Icons.chevron_right_rounded`) calls `animateToPage(_currentPage - 1)` enabled `canPrev` (previous page) and the LEFT chevron (`Icons.chevron_left_rounded`) calls `animateToPage(_currentPage + 1)` enabled `canNext` (next page). Keep the chevron icons and the middle page-number button unchanged.",
+    "In `_buildHeader` of the same file: wrap the surah-name `Text(quran.getSurahNameArabic(s))` in `Flexible(child: Text(…, maxLines: 1, overflow: TextOverflow.ellipsis, …))` keeping the existing useMushafFont/fontSize/color logic, so long names like آل عمران never overflow the crowded header Row.",
+    "In `_shareVersesAsImage` and `_sharePartialAsImage` (same file): make the captured image glassy. Replace the single-decoration RepaintBoundary Container with a `ClipRRect(borderRadius matching the card)` wrapping a `Stack`: [base green gradient Container, then a `BackdropFilter(filter: ui.ImageFilter.blur(sigmaX: 8, sigmaY: 8))` over a translucent `Container(color: Colors.white.withValues(alpha: 0.05))`, then the existing content Column with the gold border moved onto a transparent top Container]. The BackdropFilter blurs the green layer beneath it inside the RepaintBoundary so the exported PNG shows a real frosted-glass look. Keep all share/path_provider/Share.shareXFiles logic intact."
+  ],
+  "acceptance_criteria": [
+    "`flutter analyze` reports 0 errors after this FEAT.",
+    "In surah_reader_page `_buildFooter`, the right chevron navigates to the previous page and the left chevron to the next page.",
+    "DirectionalIcon in RTL renders isBack as arrow_forward_ios_rounded and forward as arrow_back_ios_new.",
+    "The header surah name never overflows on surah 3 (آل عمران).",
+    "Sharing a verse (single or multi) as an image produces a PNG with a frosted green glass background + gold frame."
+  ],
+  "verification": [
+    "Run `flutter analyze` from e:/NiyyahTracker-mobile-app-ai and confirm 0 errors.",
+    "Manually open surah 3 (آل عمران) in the reader: header name is not clipped; tapping the right footer chevron goes to the previous page and the left chevron to the next; share one verse as an image and confirm the preview/exported PNG has a frosted glass green background."
+  ],
+  "blocked_reason": null,
+  "findings": "Completed. (1) DirectionalIcon RTL branch fixed: isBack -> Icons.arrow_forward_ios_rounded (points right), forward -> Icons.arrow_back_ios_new (points left); LTR branch unchanged. Any other feature using DirectionalIcon (e.g. _actionTile trailing in surah_reader) now renders the correct RTL arrow too. (2) _buildFooter nav swapped for RTL reading flow: RIGHT chevron (chevron_right_rounded) -> previous page (animateToPage(_currentPage-1), enabled canPrev); LEFT chevron (chevron_left_rounded) -> next page (animateToPage(_currentPage+1), enabled canNext); middle page-number button unchanged. (3) _buildHeader surah name wrapped in Flexible(maxLines:1, overflow: ellipsis) so آل عمران no longer overflows the crowded header Row. (4) _shareVersesAsImage + _sharePartialAsImage now render a real frosted-glass card: RepaintBoundary -> ClipRRect(r20) -> Stack[Positioned.fill green gradient, Positioned.fill BackdropFilter(ui.ImageFilter.blur sigma 8) over translucent white(alpha 0.05), then the content Column on a transparent Container that keeps only the gold border]. The boxShadow was removed (it would be clipped by ClipRRect anyway). The gradient is now `const`. BackdropFilter blurs the green layer beneath it, so toImage(pixelRatio:3) exports a frosted green PNG with a sharp gold frame; this pattern can be reused by later share-image features. Gate: flutter analyze = 0 errors (the only diagnostics in these two files are pre-existing info-level hints on untouched lines: use_super_parameters on the DirectionalIcon ctor and two activeColor deprecations in the settings sheet)."
+}
