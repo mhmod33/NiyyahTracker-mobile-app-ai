@@ -57,7 +57,8 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
     super.initState();
     // Keep the screen on while reading.
     WakelockPlus.enable();
-    final int startPage = (widget.initialPage != null &&
+    final int startPage =
+        (widget.initialPage != null &&
             widget.initialPage! >= 1 &&
             widget.initialPage! <= 604)
         ? widget.initialPage!
@@ -65,7 +66,7 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
     _currentPage = startPage - 1;
     _pageController = PageController(initialPage: _currentPage);
     _loadSettings();
-    
+
     // Setup temporary highlight
     if (widget.initialVerse != 1) {
       _highlightSurah = widget.surahNumber;
@@ -96,9 +97,11 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
           : await Hive.openBox('quran_settings');
       if (mounted) {
         setState(() {
-          _fontSize = (box.get('fontSize', defaultValue: 22.0) as num).toDouble();
+          _fontSize = (box.get('fontSize', defaultValue: 22.0) as num)
+              .toDouble();
           _boldFont = box.get('boldFont', defaultValue: false) as bool;
-          _verticalScroll = box.get('verticalScroll', defaultValue: false) as bool;
+          _verticalScroll =
+              box.get('verticalScroll', defaultValue: false) as bool;
         });
       }
     } catch (_) {}
@@ -139,7 +142,9 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
 
       // Smart progression: track the furthest page ever reached.
       final existing = box.get('max_page');
-      final existingMax = existing is Map ? ((existing['page'] as int?) ?? 0) : 0;
+      final existingMax = existing is Map
+          ? ((existing['page'] as int?) ?? 0)
+          : 0;
       if (pageNum > existingMax) {
         await box.put('max_page', {
           'page': pageNum,
@@ -153,7 +158,9 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
 
       // Record reading history of visited surahs with timestamps
       final rawHistory = box.get('visited_surahs');
-      final visitedList = rawHistory is List ? List<dynamic>.from(rawHistory) : <dynamic>[];
+      final visitedList = rawHistory is List
+          ? List<dynamic>.from(rawHistory)
+          : <dynamic>[];
       visitedList.add({
         'surahNumber': surahNum,
         'surahName': surahName,
@@ -170,7 +177,9 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
       // becomes a segment, so partial reads of a surah are preserved even when
       // the user jumps to another surah before finishing it.
       final rawStops = box.get('reading_stops');
-      final stops = rawStops is List ? List<dynamic>.from(rawStops) : <dynamic>[];
+      final stops = rawStops is List
+          ? List<dynamic>.from(rawStops)
+          : <dynamic>[];
       final nowMs = DateTime.now().millisecondsSinceEpoch;
       if (stops.isNotEmpty && stops.last is Map) {
         final last = stops.last as Map;
@@ -226,181 +235,247 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
       backgroundColor: isDark ? const Color(0xFF1A1F1C) : Colors.white,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setSheet) => Directionality(
           textDirection: TextDirection.rtl,
           child: Padding(
             padding: EdgeInsets.only(
-              left: 24, right: 24, top: 20,
+              left: 24,
+              right: 24,
+              top: 20,
               bottom: MediaQuery.of(ctx).viewInsets.bottom + 24,
             ),
-            child: Column(mainAxisSize: MainAxisSize.min, children: [
-              Container(
-                width: 40, height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.grey[300],
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              const SizedBox(height: 16),
-              Row(children: [
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
                 Container(
-                  padding: const EdgeInsets.all(8),
+                  width: 40,
+                  height: 4,
                   decoration: BoxDecoration(
-                    color: AppColors.darkGreen.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(10),
+                    color: Colors.grey[300],
+                    borderRadius: BorderRadius.circular(2),
                   ),
-                  child: const Icon(Icons.auto_stories_rounded,
-                      color: AppColors.darkGreen, size: 20),
                 ),
-                const SizedBox(width: 12),
-                Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text('تسجيل الورد اليومي',
-                      style: GoogleFonts.ibmPlexSansArabic(
-                          fontSize: 16, fontWeight: FontWeight.w800,
-                          color: isDark ? Colors.white : AppColors.darkGreen)),
-                  Text('قرأت ${today.pagesRead}/${today.targetPages} صفحة اليوم',
-                      style: GoogleFonts.ibmPlexSansArabic(
-                          fontSize: 12,
-                          color: isDark ? Colors.white54 : AppColors.gray)),
-                ])),
-              ]),
-              const SizedBox(height: 20),
-              Text('كم صفحة قرأت الآن؟',
-                  style: GoogleFonts.ibmPlexSansArabic(
-                      fontSize: 14, fontWeight: FontWeight.w600,
-                      color: isDark ? Colors.white : AppColors.textPrimary)),
-              const SizedBox(height: 14),
-              Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                _stepBtn(Icons.remove_rounded, isDark, () {
-                  if (pagesToAdd > 1) setSheet(() => pagesToAdd--);
-                }),
-                const SizedBox(width: 20),
-                Text('$pagesToAdd',
-                    style: GoogleFonts.ibmPlexSansArabic(
-                        fontSize: 36, fontWeight: FontWeight.w900,
-                        color: isDark ? Colors.white : AppColors.darkGreen)),
-                const SizedBox(width: 20),
-                _stepBtn(Icons.add_rounded, isDark, () {
-                  setSheet(() => pagesToAdd++);
-                }),
-              ]),
-              const SizedBox(height: 8),
-              Wrap(
-                alignment: WrapAlignment.center,
-                spacing: 8,
-                children: [1, 2, 3, 5, 10].map((n) => ActionChip(
-                  label: Text('$n',
-                      style: GoogleFonts.ibmPlexSansArabic(
-                          fontSize: 13, fontWeight: FontWeight.w700,
-                          color: pagesToAdd == n ? Colors.white : null)),
-                  backgroundColor: pagesToAdd == n
-                      ? AppColors.darkGreen
-                      : (isDark ? Colors.white.withValues(alpha: 0.08) : AppColors.paleGreen),
-                  onPressed: () => setSheet(() => pagesToAdd = n),
-                )).toList(),
-              ),
-              const SizedBox(height: 20),
-              // ── Session picker ──
-              Align(
-                alignment: AlignmentDirectional.centerStart,
-                child: Text('في أي فترة قرأت؟',
-                    style: GoogleFonts.ibmPlexSansArabic(
-                        fontSize: 14, fontWeight: FontWeight.w600,
-                        color: isDark ? Colors.white : AppColors.textPrimary)),
-              ),
-              const SizedBox(height: 10),
-              Row(
-                children: WirdSession.all.map((s) {
-                  final selected = s == selectedSession;
-                  return Expanded(
-                    child: GestureDetector(
-                      onTap: () => setSheet(() => selectedSession = s),
-                      child: Container(
-                        margin: const EdgeInsets.symmetric(horizontal: 4),
-                        padding: const EdgeInsets.symmetric(vertical: 10),
-                        decoration: BoxDecoration(
-                          color: selected
-                              ? AppColors.darkGreen
-                              : (isDark
-                                  ? Colors.white.withValues(alpha: 0.06)
-                                  : AppColors.paleGreen),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: selected
-                                ? AppColors.darkGreen
-                                : Colors.transparent,
-                            width: 1.5,
-                          ),
-                        ),
-                        child: Column(children: [
-                          Icon(
-                            WirdSession.iconData(s),
-                            size: 20,
-                            color: selected
-                                ? Colors.white
-                                : WirdSession.iconColor(s),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            WirdSession.label(s),
-                            style: GoogleFonts.ibmPlexSansArabic(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w700,
-                              color: selected
-                                  ? Colors.white
-                                  : (isDark
-                                      ? Colors.white70
-                                      : AppColors.darkGreen),
-                            ),
-                          ),
-                        ]),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: AppColors.darkGreen.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Icon(
+                        Icons.auto_stories_rounded,
+                        color: AppColors.darkGreen,
+                        size: 20,
                       ),
                     ),
-                  );
-                }).toList(),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'سيُحسب الوقت تلقائياً (${(pagesToAdd * 0.5).ceil()} دقيقة)',
-                style: GoogleFonts.ibmPlexSansArabic(
-                    fontSize: 11, color: AppColors.gold,
-                    fontWeight: FontWeight.w600),
-              ),
-              const SizedBox(height: 18),
-              SizedBox(
-                width: double.infinity,
-                height: 50,
-                child: ElevatedButton.icon(
-                  onPressed: () async {
-                    await _wirdService.addPages(
-                      pagesToAdd,
-                      session: selectedSession,
-                    );
-                    if (ctx.mounted) Navigator.pop(ctx);
-                    if (mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                        content: Text(
-                          'تم تسجيل $pagesToAdd صفحة في فترة ${WirdSession.label(selectedSession)}',
-                          style: GoogleFonts.ibmPlexSansArabic(color: Colors.white),
-                        ),
-                        backgroundColor: AppColors.darkGreen,
-                        duration: const Duration(seconds: 2),
-                      ));
-                    }
-                  },
-                  icon: const Icon(Icons.check_rounded, color: Colors.white),
-                  label: Text('تسجيل $pagesToAdd صفحة',
-                      style: GoogleFonts.ibmPlexSansArabic(
-                          fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white)),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.darkGreen,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'تسجيل الورد اليومي',
+                            style: GoogleFonts.ibmPlexSansArabic(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w800,
+                              color: isDark
+                                  ? Colors.white
+                                  : AppColors.darkGreen,
+                            ),
+                          ),
+                          Text(
+                            'قرأت ${today.pagesRead}/${today.targetPages} صفحة اليوم',
+                            style: GoogleFonts.ibmPlexSansArabic(
+                              fontSize: 12,
+                              color: isDark ? Colors.white54 : AppColors.gray,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                Text(
+                  'كم صفحة قرأت الآن؟',
+                  style: GoogleFonts.ibmPlexSansArabic(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: isDark ? Colors.white : AppColors.textPrimary,
                   ),
                 ),
-              ),
-            ]),
+                const SizedBox(height: 14),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    _stepBtn(Icons.remove_rounded, isDark, () {
+                      if (pagesToAdd > 1) setSheet(() => pagesToAdd--);
+                    }),
+                    const SizedBox(width: 20),
+                    Text(
+                      '$pagesToAdd',
+                      style: GoogleFonts.ibmPlexSansArabic(
+                        fontSize: 36,
+                        fontWeight: FontWeight.w900,
+                        color: isDark ? Colors.white : AppColors.darkGreen,
+                      ),
+                    ),
+                    const SizedBox(width: 20),
+                    _stepBtn(Icons.add_rounded, isDark, () {
+                      setSheet(() => pagesToAdd++);
+                    }),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Wrap(
+                  alignment: WrapAlignment.center,
+                  spacing: 8,
+                  children: [1, 2, 3, 5, 10]
+                      .map(
+                        (n) => ActionChip(
+                          label: Text(
+                            '$n',
+                            style: GoogleFonts.ibmPlexSansArabic(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              color: pagesToAdd == n ? Colors.white : null,
+                            ),
+                          ),
+                          backgroundColor: pagesToAdd == n
+                              ? AppColors.darkGreen
+                              : (isDark
+                                    ? Colors.white.withValues(alpha: 0.08)
+                                    : AppColors.paleGreen),
+                          onPressed: () => setSheet(() => pagesToAdd = n),
+                        ),
+                      )
+                      .toList(),
+                ),
+                const SizedBox(height: 20),
+                // ── Session picker ──
+                Align(
+                  alignment: AlignmentDirectional.centerStart,
+                  child: Text(
+                    'في أي فترة قرأت؟',
+                    style: GoogleFonts.ibmPlexSansArabic(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: isDark ? Colors.white : AppColors.textPrimary,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  children: WirdSession.all.map((s) {
+                    final selected = s == selectedSession;
+                    return Expanded(
+                      child: GestureDetector(
+                        onTap: () => setSheet(() => selectedSession = s),
+                        child: Container(
+                          margin: const EdgeInsets.symmetric(horizontal: 4),
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                          decoration: BoxDecoration(
+                            color: selected
+                                ? AppColors.darkGreen
+                                : (isDark
+                                      ? Colors.white.withValues(alpha: 0.06)
+                                      : AppColors.paleGreen),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: selected
+                                  ? AppColors.darkGreen
+                                  : Colors.transparent,
+                              width: 1.5,
+                            ),
+                          ),
+                          child: Column(
+                            children: [
+                              Icon(
+                                WirdSession.iconData(s),
+                                size: 20,
+                                color: selected
+                                    ? Colors.white
+                                    : WirdSession.iconColor(s),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                WirdSession.label(s),
+                                style: GoogleFonts.ibmPlexSansArabic(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w700,
+                                  color: selected
+                                      ? Colors.white
+                                      : (isDark
+                                            ? Colors.white70
+                                            : AppColors.darkGreen),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'سيُحسب الوقت تلقائياً (${(pagesToAdd * 0.5).ceil()} دقيقة)',
+                  style: GoogleFonts.ibmPlexSansArabic(
+                    fontSize: 11,
+                    color: AppColors.gold,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 18),
+                SizedBox(
+                  width: double.infinity,
+                  height: 50,
+                  child: ElevatedButton.icon(
+                    onPressed: () async {
+                      await _wirdService.addPages(
+                        pagesToAdd,
+                        session: selectedSession,
+                      );
+                      if (ctx.mounted) Navigator.pop(ctx);
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              'تم تسجيل $pagesToAdd صفحة في فترة ${WirdSession.label(selectedSession)}',
+                              style: GoogleFonts.ibmPlexSansArabic(
+                                color: Colors.white,
+                              ),
+                            ),
+                            backgroundColor: AppColors.darkGreen,
+                            duration: const Duration(seconds: 2),
+                          ),
+                        );
+                      }
+                    },
+                    icon: const Icon(Icons.check_rounded, color: Colors.white),
+                    label: Text(
+                      'تسجيل $pagesToAdd صفحة',
+                      style: GoogleFonts.ibmPlexSansArabic(
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.darkGreen,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -411,9 +486,12 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        width: 40, height: 40,
+        width: 40,
+        height: 40,
         decoration: BoxDecoration(
-          color: isDark ? Colors.white.withValues(alpha: 0.1) : AppColors.paleGreen,
+          color: isDark
+              ? Colors.white.withValues(alpha: 0.1)
+              : AppColors.paleGreen,
           borderRadius: BorderRadius.circular(10),
           border: Border.all(color: AppColors.darkGreen.withValues(alpha: 0.3)),
         ),
@@ -439,7 +517,9 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
         final session = WirdSession.current;
         final wasAlreadyDone = _wirdService.isSessionDoneToday(session);
         if (!wasAlreadyDone) {
-          await WirdNotificationService().showSessionCompletedNotification(session);
+          await WirdNotificationService().showSessionCompletedNotification(
+            session,
+          );
         }
         final streak = _wirdService.getCurrentStreak();
         await WirdNotificationService().showStreakMilestone(streak);
@@ -481,8 +561,11 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
     final progressBox = Hive.isBoxOpen('quran_progress')
         ? Hive.box('quran_progress')
         : await Hive.openBox('quran_progress');
-    final todayKey = 'read_pages_${DateTime.now().toIso8601String().substring(0, 10)}';
-    final List readToday = List.from(progressBox.get(todayKey, defaultValue: []) as List);
+    final todayKey =
+        'read_pages_${DateTime.now().toIso8601String().substring(0, 10)}';
+    final List readToday = List.from(
+      progressBox.get(todayKey, defaultValue: []) as List,
+    );
     if (!readToday.contains(pageNumber)) {
       readToday.add(pageNumber);
       await progressBox.put(todayKey, readToday);
@@ -494,17 +577,21 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
         backgroundColor: AppColors.darkGreen,
         duration: const Duration(seconds: 2),
         behavior: SnackBarBehavior.floating,
-        content: Row(children: [
-          const Icon(Icons.check_circle_rounded, color: Colors.white),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              'تم احتساب صفحة $pageNumber في قراءتك اليوم (${readToday.length} صفحة)',
-              style: GoogleFonts.ibmPlexSansArabic(
-                  color: Colors.white, fontWeight: FontWeight.w700),
+        content: Row(
+          children: [
+            const Icon(Icons.check_circle_rounded, color: Colors.white),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                'تم احتساب صفحة $pageNumber في قراءتك اليوم (${readToday.length} صفحة)',
+                style: GoogleFonts.ibmPlexSansArabic(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
             ),
-          ),
-        ]),
+          ],
+        ),
       ),
     );
   }
@@ -513,11 +600,13 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final bgColor = isDark ? const Color(0xFF0B120D) : AppColors.background;
-    final headerFooterColor = isDark ? const Color(0xFF0B120D) : AppColors.cardBg;
+    final headerFooterColor = isDark
+        ? const Color(0xFF0B120D)
+        : AppColors.cardBg;
 
     final textColor = isDark ? Colors.white : AppColors.textPrimary;
     final subtextColor = isDark ? Colors.white70 : AppColors.textSecondary;
-    
+
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
@@ -525,11 +614,19 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
         body: Column(
           children: [
             SizedBox(height: MediaQuery.of(context).padding.top),
-            _buildHeader(_currentPage + 1, isDark, headerFooterColor, textColor, subtextColor),
+            _buildHeader(
+              _currentPage + 1,
+              isDark,
+              headerFooterColor,
+              textColor,
+              subtextColor,
+            ),
             Expanded(
               child: PageView.builder(
                 controller: _pageController,
-                scrollDirection: _verticalScroll ? Axis.vertical : Axis.horizontal,
+                scrollDirection: _verticalScroll
+                    ? Axis.vertical
+                    : Axis.horizontal,
                 itemCount: 604,
                 physics: const _SinglePagePhysics(),
                 onPageChanged: (i) {
@@ -542,7 +639,9 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
                   highlightSurah: _highlightSurah,
                   highlightVerse: _highlightVerse,
                   isDark: isDark,
-                  selectedVerses: _selectedSurah == null ? const {} : _selectedVerses,
+                  selectedVerses: _selectedSurah == null
+                      ? const {}
+                      : _selectedVerses,
                   selectedSurah: _selectedSurah,
                   readerFontSize: _fontSize,
                   boldFont: _boldFont,
@@ -571,8 +670,7 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
                 ),
               ),
             ),
-            if (_selectedVerses.isNotEmpty)
-              _buildSelectionBar(isDark),
+            if (_selectedVerses.isNotEmpty) _buildSelectionBar(isDark),
             _buildFooter(isDark, headerFooterColor, subtextColor),
           ],
         ),
@@ -586,9 +684,14 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1B2A20) : AppColors.goldLight.withValues(alpha: 0.6),
+        color: isDark
+            ? const Color(0xFF1B2A20)
+            : AppColors.goldLight.withValues(alpha: 0.6),
         border: Border(
-          top: BorderSide(color: AppColors.gold.withValues(alpha: 0.5), width: 1.5),
+          top: BorderSide(
+            color: AppColors.gold.withValues(alpha: 0.5),
+            width: 1.5,
+          ),
         ),
       ),
       child: Row(
@@ -599,7 +702,11 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
               color: AppColors.gold.withValues(alpha: 0.2),
               shape: BoxShape.circle,
             ),
-            child: const Icon(Icons.stars_rounded, color: AppColors.gold, size: 18),
+            child: const Icon(
+              Icons.stars_rounded,
+              color: AppColors.gold,
+              size: 18,
+            ),
           ),
           const SizedBox(width: 8),
           Text(
@@ -619,15 +726,28 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
               final combined = verses
                   .map((v) => '﴿$v﴾ ${quran.getVerse(surah, v)}')
                   .join('\n');
-              Clipboard.setData(ClipboardData(text: '$combined\n\n- سورة $surahName -'));
+              Clipboard.setData(
+                ClipboardData(text: '$combined\n\n- سورة $surahName -'),
+              );
               _snack(context, 'تم نسخ $count آية');
               setState(() {
                 _selectedVerses.clear();
                 _selectedSurah = null;
               });
             },
-            icon: const Icon(Icons.copy_rounded, size: 16, color: AppColors.darkGreen),
-            label: Text('نسخ', style: GoogleFonts.ibmPlexSansArabic(color: AppColors.darkGreen, fontSize: 12, fontWeight: FontWeight.bold)),
+            icon: const Icon(
+              Icons.copy_rounded,
+              size: 16,
+              color: AppColors.darkGreen,
+            ),
+            label: Text(
+              'نسخ',
+              style: GoogleFonts.ibmPlexSansArabic(
+                color: AppColors.darkGreen,
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           ),
           TextButton.icon(
             onPressed: () {
@@ -639,8 +759,19 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
                 _selectedSurah = null;
               });
             },
-            icon: const Icon(Icons.image_rounded, size: 16, color: AppColors.gold),
-            label: Text('مشاركة كصورة', style: GoogleFonts.ibmPlexSansArabic(color: AppColors.gold, fontSize: 12, fontWeight: FontWeight.bold)),
+            icon: const Icon(
+              Icons.image_rounded,
+              size: 16,
+              color: AppColors.gold,
+            ),
+            label: Text(
+              'مشاركة كصورة',
+              style: GoogleFonts.ibmPlexSansArabic(
+                color: AppColors.gold,
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           ),
           IconButton(
             icon: const Icon(Icons.close_rounded, size: 18, color: Colors.grey),
@@ -654,15 +785,21 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
     );
   }
 
-  Widget _buildHeader(int page, bool isDark, Color bgColor, Color textColor, Color subtextColor) {
+  Widget _buildHeader(
+    int page,
+    bool isDark,
+    Color bgColor,
+    Color textColor,
+    Color subtextColor,
+  ) {
     final data = quran.getPageData(page).first;
     final s = data['surah'] as int;
     final startVerse = data['start'] as int;
     final j = quran.getJuzNumber(s, startVerse);
     final h = ((j - 1) * 2 + 1);
     final audioService = QuranAudioService();
-    final isPlayingThisSurah = audioService.state.currentSurah == s &&
-        audioService.state.isPlaying;
+    final isPlayingThisSurah =
+        audioService.state.currentSurah == s && audioService.state.isPlaying;
 
     // Use Muhaf font for surah name on regular pages;
     // skip for Al-Fatihah (s==1) and pages that start a new surah (startVerse==1)
@@ -677,7 +814,11 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
         children: [
           GestureDetector(
             onTap: () => Navigator.pop(context),
-            child: DirectionalIcon(isBack: true, size: 18, color: isDark ? Colors.white70 : AppColors.textSecondary),
+            child: DirectionalIcon(
+              isBack: true,
+              size: 18,
+              color: isDark ? Colors.white70 : AppColors.textSecondary,
+            ),
           ),
           Flexible(
             child: Text(
@@ -691,11 +832,21 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
                       fontWeight: FontWeight.bold,
                       color: textColor,
                     )
-                  : GoogleFonts.amiri(color: textColor, fontWeight: FontWeight.bold, fontSize: mushafHeaderFontSize),
+                  : GoogleFonts.amiri(
+                      color: textColor,
+                      fontWeight: FontWeight.bold,
+                      fontSize: mushafHeaderFontSize,
+                    ),
             ),
           ),
-          Text('Juz $j', style: GoogleFonts.inter(color: subtextColor, fontSize: 12)),
-          Text('Hizb $h', style: GoogleFonts.inter(color: subtextColor, fontSize: 12)),
+          Text(
+            'Juz $j',
+            style: GoogleFonts.inter(color: subtextColor, fontSize: 12),
+          ),
+          Text(
+            'Hizb $h',
+            style: GoogleFonts.inter(color: subtextColor, fontSize: 12),
+          ),
           // Audio button
           GestureDetector(
             onTap: () {
@@ -731,7 +882,9 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
               decoration: BoxDecoration(
                 color: AppColors.lightGreen.withValues(alpha: 0.18),
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: AppColors.darkGreen.withValues(alpha: 0.25)),
+                border: Border.all(
+                  color: AppColors.darkGreen.withValues(alpha: 0.25),
+                ),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
@@ -785,7 +938,8 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
                   final key = 'page_$page';
                   if (b.containsKey(key)) {
                     await b.delete(key);
-                    if (mounted) _snack(context, 'تمت إزالة صفحة $page من المحفوظات');
+                    if (mounted)
+                      _snack(context, 'تمت إزالة صفحة $page من المحفوظات');
                   } else {
                     await b.put(key, {
                       'page': page,
@@ -794,7 +948,8 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
                       'juz': j,
                       'timestamp': DateTime.now().millisecondsSinceEpoch,
                     });
-                    if (mounted) _snack(context, 'تم حفظ صفحة $page في المحفوظات');
+                    if (mounted)
+                      _snack(context, 'تم حفظ صفحة $page في المحفوظات');
                   }
                   setState(() {});
                 },
@@ -803,12 +958,18 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
                   decoration: BoxDecoration(
                     color: isPageBookmarked
                         ? AppColors.gold.withValues(alpha: 0.25)
-                        : (isDark ? Colors.white.withValues(alpha: 0.08) : AppColors.grayLight),
+                        : (isDark
+                              ? Colors.white.withValues(alpha: 0.08)
+                              : AppColors.grayLight),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Icon(
-                    isPageBookmarked ? Icons.bookmark_rounded : Icons.bookmark_border_rounded,
-                    color: isPageBookmarked ? AppColors.gold : (isDark ? Colors.white60 : AppColors.textSecondary),
+                    isPageBookmarked
+                        ? Icons.bookmark_rounded
+                        : Icons.bookmark_border_rounded,
+                    color: isPageBookmarked
+                        ? AppColors.gold
+                        : (isDark ? Colors.white60 : AppColors.textSecondary),
                     size: 18,
                   ),
                 ),
@@ -822,11 +983,16 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
             child: Container(
               padding: const EdgeInsets.all(6),
               decoration: BoxDecoration(
-                color: isDark ? Colors.white.withValues(alpha: 0.08) : AppColors.grayLight,
+                color: isDark
+                    ? Colors.white.withValues(alpha: 0.08)
+                    : AppColors.grayLight,
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: Icon(Icons.settings_rounded,
-                  color: isDark ? Colors.white60 : AppColors.textSecondary, size: 18),
+              child: Icon(
+                Icons.settings_rounded,
+                color: isDark ? Colors.white60 : AppColors.textSecondary,
+                size: 18,
+              ),
             ),
           ),
         ],
@@ -840,130 +1006,201 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
       context: context,
       backgroundColor: isDark ? const Color(0xFF1A1F1C) : Colors.white,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setSheet) => Directionality(
           textDirection: TextDirection.rtl,
           child: Padding(
             padding: EdgeInsets.only(
-              left: 24, right: 24, top: 20,
+              left: 24,
+              right: 24,
+              top: 20,
               bottom: MediaQuery.of(ctx).viewInsets.bottom + 24,
             ),
-            child: Column(mainAxisSize: MainAxisSize.min, children: [
-              Container(width: 40, height: 4,
-                decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2))),
-              const SizedBox(height: 16),
-              Row(children: [
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
                 Container(
-                  padding: const EdgeInsets.all(8),
+                  width: 40,
+                  height: 4,
                   decoration: BoxDecoration(
-                    color: AppColors.darkGreen.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(10),
+                    color: Colors.grey[300],
+                    borderRadius: BorderRadius.circular(2),
                   ),
-                  child: const Icon(Icons.settings_rounded, color: AppColors.darkGreen, size: 20),
                 ),
-                const SizedBox(width: 12),
-                Text('إعدادات القارئ',
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: AppColors.darkGreen.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Icon(
+                        Icons.settings_rounded,
+                        color: AppColors.darkGreen,
+                        size: 20,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Text(
+                      'إعدادات القارئ',
+                      style: GoogleFonts.ibmPlexSansArabic(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
+                        color: isDark ? Colors.white : AppColors.darkGreen,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                // Scroll direction toggle
+                SwitchListTile(
+                  value: _verticalScroll,
+                  activeColor: AppColors.darkGreen,
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(
+                    'تمرير رأسي (العرض الديناميكي)',
                     style: GoogleFonts.ibmPlexSansArabic(
-                        fontSize: 16, fontWeight: FontWeight.w800,
-                        color: isDark ? Colors.white : AppColors.darkGreen)),
-              ]),
-              const SizedBox(height: 20),
-              // Scroll direction toggle
-              SwitchListTile(
-                value: _verticalScroll,
-                activeColor: AppColors.darkGreen,
-                contentPadding: EdgeInsets.zero,
-                title: Text('تمرير رأسي (العرض الديناميكي)',
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: isDark ? Colors.white : AppColors.textPrimary,
+                    ),
+                  ),
+                  subtitle: Text(
+                    'يتيح التحكم في حجم الخط والخط العريض',
                     style: GoogleFonts.ibmPlexSansArabic(
-                        fontSize: 14, fontWeight: FontWeight.w600,
-                        color: isDark ? Colors.white : AppColors.textPrimary)),
-                subtitle: Text('يتيح التحكم في حجم الخط والخط العريض',
-                    style: GoogleFonts.ibmPlexSansArabic(
-                        fontSize: 11,
-                        color: isDark ? Colors.white54 : AppColors.textSecondary)),
-                onChanged: (v) {
-                  setSheet(() => _verticalScroll = v);
-                  setState(() {
-                    _verticalScroll = v;
-                    // Rebuild PageController to reset scroll direction
-                    final page = _currentPage;
-                    _pageController.dispose();
-                    _pageController = PageController(initialPage: page);
-                  });
-                  _saveSettings();
-                },
-              ),
-              const SizedBox(height: 8),
-              // Font size & bold (active only in vertical scroll mode)
-              AnimatedOpacity(
-                opacity: _verticalScroll ? 1.0 : 0.45,
-                duration: const Duration(milliseconds: 200),
-                child: IgnorePointer(
-                  ignoring: !_verticalScroll,
-                  child: Column(
-                    children: [
-                      Row(children: [
-                        Icon(Icons.format_size_rounded, color: AppColors.darkGreen, size: 18),
-                        const SizedBox(width: 8),
-                        Text('حجم الخط: ${_fontSize.round()}',
-                            style: GoogleFonts.ibmPlexSansArabic(
-                                fontSize: 14, fontWeight: FontWeight.w600,
-                                color: isDark ? Colors.white : AppColors.textPrimary)),
-                        if (!_verticalScroll) ...[
-                          const SizedBox(width: 8),
-                          Text('(متاح في العرض الرأسي فقط)',
+                      fontSize: 11,
+                      color: isDark ? Colors.white54 : AppColors.textSecondary,
+                    ),
+                  ),
+                  onChanged: (v) {
+                    setSheet(() => _verticalScroll = v);
+                    setState(() {
+                      _verticalScroll = v;
+                      // Rebuild PageController to reset scroll direction
+                      final page = _currentPage;
+                      _pageController.dispose();
+                      _pageController = PageController(initialPage: page);
+                    });
+                    _saveSettings();
+                  },
+                ),
+                const SizedBox(height: 8),
+                // Font size & bold (active only in vertical scroll mode)
+                AnimatedOpacity(
+                  opacity: _verticalScroll ? 1.0 : 0.45,
+                  duration: const Duration(milliseconds: 200),
+                  child: IgnorePointer(
+                    ignoring: !_verticalScroll,
+                    child: Column(
+                      children: [
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.format_size_rounded,
+                              color: AppColors.darkGreen,
+                              size: 18,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              'حجم الخط: ${_fontSize.round()}',
                               style: GoogleFonts.ibmPlexSansArabic(
-                                  fontSize: 11, color: AppColors.gold)),
-                        ],
-                      ]),
-                      Slider(
-                        value: _fontSize,
-                        min: 16, max: 36,
-                        divisions: 20,
-                        activeColor: AppColors.darkGreen,
-                        inactiveColor: AppColors.darkGreen.withValues(alpha: 0.2),
-                        onChanged: (v) {
-                          setSheet(() => _fontSize = v);
-                          setState(() => _fontSize = v);
-                          _saveSettings();
-                        },
-                      ),
-                      SwitchListTile(
-                        value: _boldFont,
-                        activeColor: AppColors.darkGreen,
-                        contentPadding: EdgeInsets.zero,
-                        title: Text('خط عريض (Bold)',
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: isDark
+                                    ? Colors.white
+                                    : AppColors.textPrimary,
+                              ),
+                            ),
+                            if (!_verticalScroll) ...[
+                              const SizedBox(width: 8),
+                              Text(
+                                '(متاح في العرض الرأسي فقط)',
+                                style: GoogleFonts.ibmPlexSansArabic(
+                                  fontSize: 11,
+                                  color: AppColors.gold,
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                        Slider(
+                          value: _fontSize,
+                          min: 16,
+                          max: 36,
+                          divisions: 20,
+                          activeColor: AppColors.darkGreen,
+                          inactiveColor: AppColors.darkGreen.withValues(
+                            alpha: 0.2,
+                          ),
+                          onChanged: (v) {
+                            setSheet(() => _fontSize = v);
+                            setState(() => _fontSize = v);
+                            _saveSettings();
+                          },
+                        ),
+                        SwitchListTile(
+                          value: _boldFont,
+                          activeColor: AppColors.darkGreen,
+                          contentPadding: EdgeInsets.zero,
+                          title: Text(
+                            'خط عريض (Bold)',
                             style: GoogleFonts.ibmPlexSansArabic(
-                                fontSize: 14, fontWeight: FontWeight.w600,
-                                color: isDark ? Colors.white : AppColors.textPrimary)),
-                        onChanged: (v) {
-                          setSheet(() => _boldFont = v);
-                          setState(() => _boldFont = v);
-                          _saveSettings();
-                        },
-                      ),
-                    ],
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: isDark
+                                  ? Colors.white
+                                  : AppColors.textPrimary,
+                            ),
+                          ),
+                          onChanged: (v) {
+                            setSheet(() => _boldFont = v);
+                            setState(() => _boldFont = v);
+                            _saveSettings();
+                          },
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 12),
-              // ── Feature 9: Instructions section ──
-              Divider(color: isDark ? Colors.white12 : AppColors.grayLight),
-              const SizedBox(height: 8),
-              Text('ميزات المصحف',
+                const SizedBox(height: 12),
+                // ── Feature 9: Instructions section ──
+                Divider(color: isDark ? Colors.white12 : AppColors.grayLight),
+                const SizedBox(height: 8),
+                Text(
+                  'ميزات المصحف',
                   style: GoogleFonts.ibmPlexSansArabic(
-                      fontSize: 13, fontWeight: FontWeight.w700,
-                      color: isDark ? Colors.white60 : AppColors.textSecondary)),
-              const SizedBox(height: 8),
-              _featureTile(Icons.navigation_rounded, 'ميزة التنقل السريع',
-                  'اضغط على رقم الصفحة في الأسفل للانتقال إلى أي صفحة', isDark),
-              _featureTile(Icons.share_rounded, 'مشاركة وتفسير الآيات',
-                  'اضغط على أي آية لعرض خيارات النسخ والمشاركة والتفسير', isDark),
-              _featureTile(Icons.menu_book_rounded, 'المصحف الديناميكي',
-                  'اضغط مطولاً لتحديد آيات متعددة ومشاركتها كصورة', isDark),
-              const SizedBox(height: 8),
-            ]),
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: isDark ? Colors.white60 : AppColors.textSecondary,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                _featureTile(
+                  Icons.navigation_rounded,
+                  'ميزة التنقل السريع',
+                  'اضغط على رقم الصفحة في الأسفل للانتقال إلى أي صفحة',
+                  isDark,
+                ),
+                _featureTile(
+                  Icons.share_rounded,
+                  'مشاركة وتفسير الآيات',
+                  'اضغط على أي آية لعرض خيارات النسخ والمشاركة والتفسير',
+                  isDark,
+                ),
+                _featureTile(
+                  Icons.menu_book_rounded,
+                  'المصحف الديناميكي',
+                  'اضغط مطولاً لتحديد آيات متعددة ومشاركتها كصورة',
+                  isDark,
+                ),
+                const SizedBox(height: 8),
+              ],
+            ),
           ),
         ),
       ),
@@ -973,27 +1210,42 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
   Widget _featureTile(IconData icon, String title, String desc, bool isDark) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
-      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Container(
-          padding: const EdgeInsets.all(6),
-          decoration: BoxDecoration(
-            color: AppColors.darkGreen.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(6),
+            decoration: BoxDecoration(
+              color: AppColors.darkGreen.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(icon, color: AppColors.darkGreen, size: 16),
           ),
-          child: Icon(icon, color: AppColors.darkGreen, size: 16),
-        ),
-        const SizedBox(width: 10),
-        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(title,
-              style: GoogleFonts.ibmPlexSansArabic(
-                  fontSize: 13, fontWeight: FontWeight.w700,
-                  color: isDark ? Colors.white : AppColors.textPrimary)),
-          Text(desc,
-              style: GoogleFonts.ibmPlexSansArabic(
-                  fontSize: 11,
-                  color: isDark ? Colors.white54 : AppColors.textSecondary)),
-        ])),
-      ]),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: GoogleFonts.ibmPlexSansArabic(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: isDark ? Colors.white : AppColors.textPrimary,
+                  ),
+                ),
+                Text(
+                  desc,
+                  style: GoogleFonts.ibmPlexSansArabic(
+                    fontSize: 11,
+                    color: isDark ? Colors.white54 : AppColors.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -1013,9 +1265,13 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          // Left chevron — next page (RTL reading flow)
-          _navBtn(Icons.chevron_left_rounded, canNext, isDark, () {
-            _pageController.animateToPage(_currentPage + 1, duration: const Duration(milliseconds: 250), curve: Curves.easeInOut);
+          // Right chevron — next page (RTL reading flow)
+          _navBtn(Icons.chevron_right_rounded, canNext, isDark, () {
+            _pageController.animateToPage(
+              _currentPage + 1,
+              duration: const Duration(milliseconds: 250),
+              curve: Curves.easeInOut,
+            );
           }),
           // Feature 9: Tap page number to reveal quick navigation slider
           GestureDetector(
@@ -1025,12 +1281,19 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
               decoration: BoxDecoration(
                 color: AppColors.darkGreen.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppColors.gold.withValues(alpha: 0.4), width: 1),
+                border: Border.all(
+                  color: AppColors.gold.withValues(alpha: 0.4),
+                  width: 1,
+                ),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(Icons.explore_rounded, size: 14, color: AppColors.gold),
+                  const Icon(
+                    Icons.explore_rounded,
+                    size: 14,
+                    color: AppColors.gold,
+                  ),
                   const SizedBox(width: 6),
                   Text(
                     '${_currentPage + 1}',
@@ -1051,9 +1314,13 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
               ),
             ),
           ),
-          // Right chevron — previous page (RTL reading flow)
-          _navBtn(Icons.chevron_right_rounded, canPrev, isDark, () {
-            _pageController.animateToPage(_currentPage - 1, duration: const Duration(milliseconds: 250), curve: Curves.easeInOut);
+          // Left chevron — previous page (RTL reading flow)
+          _navBtn(Icons.chevron_left_rounded, canPrev, isDark, () {
+            _pageController.animateToPage(
+              _currentPage - 1,
+              duration: const Duration(milliseconds: 250),
+              curve: Curves.easeInOut,
+            );
           }),
         ],
       ),
@@ -1082,14 +1349,17 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
             textDirection: TextDirection.rtl,
             child: Padding(
               padding: EdgeInsets.only(
-                left: 20, right: 20, top: 16,
+                left: 20,
+                right: 20,
+                top: 16,
                 bottom: MediaQuery.of(ctx).viewInsets.bottom + 20,
               ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Container(
-                    width: 40, height: 4,
+                    width: 40,
+                    height: 4,
                     decoration: BoxDecoration(
                       color: Colors.grey.withValues(alpha: 0.4),
                       borderRadius: BorderRadius.circular(2),
@@ -1101,10 +1371,17 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
                     children: [
                       IconButton(
                         tooltip: 'السورة السابقة',
-                        icon: const Icon(Icons.skip_previous_rounded, color: AppColors.darkGreen, size: 28),
+                        icon: const Icon(
+                          Icons.skip_previous_rounded,
+                          color: AppColors.darkGreen,
+                          size: 28,
+                        ),
                         onPressed: s > 1
                             ? () {
-                                final targetPage = quran.getPageNumber(s - 1, 1);
+                                final targetPage = quran.getPageNumber(
+                                  s - 1,
+                                  1,
+                                );
                                 setNav(() => selectedPage = targetPage);
                                 _pageController.jumpToPage(targetPage - 1);
                               }
@@ -1126,17 +1403,26 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
                             style: GoogleFonts.ibmPlexSansArabic(
                               fontSize: 13,
                               fontWeight: FontWeight.w600,
-                              color: isDark ? Colors.white70 : AppColors.textPrimary,
+                              color: isDark
+                                  ? Colors.white70
+                                  : AppColors.textPrimary,
                             ),
                           ),
                         ],
                       ),
                       IconButton(
                         tooltip: 'السورة التالية',
-                        icon: const Icon(Icons.skip_next_rounded, color: AppColors.darkGreen, size: 28),
+                        icon: const Icon(
+                          Icons.skip_next_rounded,
+                          color: AppColors.darkGreen,
+                          size: 28,
+                        ),
                         onPressed: s < 114
                             ? () {
-                                final targetPage = quran.getPageNumber(s + 1, 1);
+                                final targetPage = quran.getPageNumber(
+                                  s + 1,
+                                  1,
+                                );
                                 setNav(() => selectedPage = targetPage);
                                 _pageController.jumpToPage(targetPage - 1);
                               }
@@ -1148,11 +1434,15 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
                   SliderTheme(
                     data: SliderTheme.of(ctx).copyWith(
                       activeTrackColor: AppColors.gold,
-                      inactiveTrackColor: AppColors.darkGreen.withValues(alpha: 0.18),
+                      inactiveTrackColor: AppColors.darkGreen.withValues(
+                        alpha: 0.18,
+                      ),
                       thumbColor: AppColors.gold,
                       overlayColor: AppColors.gold.withValues(alpha: 0.2),
                       trackHeight: 6,
-                      thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 9),
+                      thumbShape: const RoundSliderThumbShape(
+                        enabledThumbRadius: 9,
+                      ),
                     ),
                     child: Slider(
                       value: selectedPage.toDouble(),
@@ -1176,9 +1466,36 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
                       itemBuilder: (c, idx) {
                         final juzNum = idx + 1;
                         const juzPages = [
-                          1, 22, 42, 62, 82, 102, 122, 142, 162, 182,
-                          202, 222, 242, 262, 282, 302, 322, 342, 362, 382,
-                          402, 422, 442, 462, 482, 502, 522, 542, 562, 582,
+                          1,
+                          22,
+                          42,
+                          62,
+                          82,
+                          102,
+                          122,
+                          142,
+                          162,
+                          182,
+                          202,
+                          222,
+                          242,
+                          262,
+                          282,
+                          302,
+                          322,
+                          342,
+                          362,
+                          382,
+                          402,
+                          422,
+                          442,
+                          462,
+                          482,
+                          502,
+                          522,
+                          542,
+                          562,
+                          582,
                         ];
                         final isCurJuz = j == juzNum;
                         return Padding(
@@ -1187,13 +1504,19 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
                             padding: const EdgeInsets.symmetric(horizontal: 6),
                             backgroundColor: isCurJuz
                                 ? AppColors.darkGreen
-                                : (isDark ? Colors.white10 : AppColors.paleGreen),
+                                : (isDark
+                                      ? Colors.white10
+                                      : AppColors.paleGreen),
                             label: Text(
                               'جزء $juzNum',
                               style: GoogleFonts.ibmPlexSansArabic(
                                 fontSize: 11,
                                 fontWeight: FontWeight.bold,
-                                color: isCurJuz ? Colors.white : (isDark ? Colors.white70 : AppColors.darkGreen),
+                                color: isCurJuz
+                                    ? Colors.white
+                                    : (isDark
+                                          ? Colors.white70
+                                          : AppColors.darkGreen),
                               ),
                             ),
                             onPressed: () {
@@ -1225,90 +1548,146 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
       context: context,
       backgroundColor: isDark ? const Color(0xFF111611) : AppColors.cardBg,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
       builder: (ctx) => Directionality(
         textDirection: TextDirection.rtl,
         child: SingleChildScrollView(
           child: Padding(
-            padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom + 20, left: 20, right: 20, top: 20),
-            child: Column(mainAxisSize: MainAxisSize.min, children: [
-              Container(width: 40, height: 4, decoration: BoxDecoration(color: AppColors.darkGreen.withValues(alpha: 0.5), borderRadius: BorderRadius.circular(2))),
-              const SizedBox(height: 16),
-              Container(
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: AppColors.darkGreen.withValues(alpha: 0.08),
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: AppColors.gold.withValues(alpha: 0.3)),
-                ),
-                child: Text(
-                  verseText,
-                  style: TextStyle(
-                    fontFamily: 'KFGQPC Uthmanic Script Hafs',
-                    color: isDark ? Colors.white : AppColors.textPrimary,
-                    fontSize: 18,
-                    height: 1.8,
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.of(ctx).viewInsets.bottom + 20,
+              left: 20,
+              right: 20,
+              top: 20,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: AppColors.darkGreen.withValues(alpha: 0.5),
+                    borderRadius: BorderRadius.circular(2),
                   ),
-                  textAlign: TextAlign.center,
-                  maxLines: 3,
-                  overflow: TextOverflow.ellipsis,
                 ),
-              ),
-              const SizedBox(height: 6),
-              Text('سورة $surahName - آية $verse', style: GoogleFonts.ibmPlexSansArabic(color: AppColors.gold, fontSize: 13, fontWeight: FontWeight.w700)),
-              const SizedBox(height: 16),
-              _actionTile(Icons.copy_rounded, 'نسخ الآية كاملة', () {
-                Navigator.pop(ctx);
-                Clipboard.setData(ClipboardData(text: '﴿$verse﴾ $verseText\n- سورة $surahName -'));
-                _snack(context, 'تم نسخ الآية');
-              }, isDark),
-              _actionTile(Icons.content_cut_rounded, 'نسخ جزء من الآية', () {
-                Navigator.pop(ctx);
-                _showPartialCopyDialog(context, surah, verse, isDark);
-              }, isDark),
-              _actionTile(Icons.image_rounded, 'مشاركة كصورة', () {
-                Navigator.pop(ctx);
-                _shareVersesAsImage(context, surah, [verse]);
-              }, isDark),
-              _actionTile(Icons.checklist_rounded, 'تحديد آيات متعددة', () {
-                Navigator.pop(ctx);
-                setState(() {
-                  _selectedSurah = surah;
-                  _selectedVerses.clear();
-                  _selectedVerses.add(verse);
-                });
-                _snack(context, 'تم تفعيل التحديد. اضغط على الآيات لإضافتها.');
-              }, isDark),
-              _actionTile(Icons.menu_book_rounded, 'التفسير الميسر', () {
-                Navigator.pop(ctx);
-                _showTafseer(context, surah, verse, 'ar.muyassar', 'التفسير الميسر', isDark);
-              }, isDark),
-              _actionTile(Icons.auto_stories_rounded, 'تفسير الجلالين', () {
-                Navigator.pop(ctx);
-                _showTafseer(context, surah, verse, 'ar.jalalayn', 'تفسير الجلالين', isDark);
-              }, isDark),
-              _actionTile(Icons.share_rounded, 'مشاركة نص الآية', () {
-                Navigator.pop(ctx);
-                Share.share('﴿$verse﴾ $verseText\n\n- سورة $surahName -\n\nبصائر');
-              }, isDark),
-              _actionTile(Icons.bookmark_border_rounded, 'إضافة علامة', () async {
-                Navigator.pop(ctx);
-                final box = await Hive.openBox('quran_bookmarks');
-                final key = '$surah-$verse';
-                if (box.containsKey(key)) {
-                  if (context.mounted) _snack(context, 'الآية موجودة بالفعل في المحفوظات');
-                } else {
-                  await box.put(key, {
-                    'surah': surah,
-                    'verse': verse,
-                    'surahName': surahName,
-                    'timestamp': DateTime.now().millisecondsSinceEpoch,
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: AppColors.darkGreen.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                      color: AppColors.gold.withValues(alpha: 0.3),
+                    ),
+                  ),
+                  child: Text(
+                    verseText,
+                    style: TextStyle(
+                      fontFamily: 'KFGQPC Uthmanic Script Hafs',
+                      color: isDark ? Colors.white : AppColors.textPrimary,
+                      fontSize: 18,
+                      height: 1.8,
+                    ),
+                    textAlign: TextAlign.center,
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'سورة $surahName - آية $verse',
+                  style: GoogleFonts.ibmPlexSansArabic(
+                    color: AppColors.gold,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                _actionTile(Icons.copy_rounded, 'نسخ الآية كاملة', () {
+                  Navigator.pop(ctx);
+                  Clipboard.setData(
+                    ClipboardData(
+                      text: '﴿$verse﴾ $verseText\n- سورة $surahName -',
+                    ),
+                  );
+                  _snack(context, 'تم نسخ الآية');
+                }, isDark),
+                _actionTile(Icons.content_cut_rounded, 'نسخ جزء من الآية', () {
+                  Navigator.pop(ctx);
+                  _showPartialCopyDialog(context, surah, verse, isDark);
+                }, isDark),
+                _actionTile(Icons.image_rounded, 'مشاركة كصورة', () {
+                  Navigator.pop(ctx);
+                  _shareVersesAsImage(context, surah, [verse]);
+                }, isDark),
+                _actionTile(Icons.checklist_rounded, 'تحديد آيات متعددة', () {
+                  Navigator.pop(ctx);
+                  setState(() {
+                    _selectedSurah = surah;
+                    _selectedVerses.clear();
+                    _selectedVerses.add(verse);
                   });
-                  if (context.mounted) _snack(context, 'تم إضافة العلامة للمحفوظات');
-                }
-              }, isDark),
-              const SizedBox(height: 8),
-            ]),
+                  _snack(
+                    context,
+                    'تم تفعيل التحديد. اضغط على الآيات لإضافتها.',
+                  );
+                }, isDark),
+                _actionTile(Icons.menu_book_rounded, 'التفسير الميسر', () {
+                  Navigator.pop(ctx);
+                  _showTafseer(
+                    context,
+                    surah,
+                    verse,
+                    'ar.muyassar',
+                    'التفسير الميسر',
+                    isDark,
+                  );
+                }, isDark),
+                _actionTile(Icons.auto_stories_rounded, 'تفسير الجلالين', () {
+                  Navigator.pop(ctx);
+                  _showTafseer(
+                    context,
+                    surah,
+                    verse,
+                    'ar.jalalayn',
+                    'تفسير الجلالين',
+                    isDark,
+                  );
+                }, isDark),
+                _actionTile(Icons.share_rounded, 'مشاركة نص الآية', () {
+                  Navigator.pop(ctx);
+                  Share.share(
+                    '﴿$verse﴾ $verseText\n\n- سورة $surahName -\n\nبصائر',
+                  );
+                }, isDark),
+                _actionTile(
+                  Icons.bookmark_border_rounded,
+                  'إضافة علامة',
+                  () async {
+                    Navigator.pop(ctx);
+                    final box = await Hive.openBox('quran_bookmarks');
+                    final key = '$surah-$verse';
+                    if (box.containsKey(key)) {
+                      if (context.mounted)
+                        _snack(context, 'الآية موجودة بالفعل في المحفوظات');
+                    } else {
+                      await box.put(key, {
+                        'surah': surah,
+                        'verse': verse,
+                        'surahName': surahName,
+                        'timestamp': DateTime.now().millisecondsSinceEpoch,
+                      });
+                      if (context.mounted)
+                        _snack(context, 'تم إضافة العلامة للمحفوظات');
+                    }
+                  },
+                  isDark,
+                ),
+                const SizedBox(height: 8),
+              ],
+            ),
           ),
         ),
       ),
@@ -1316,7 +1695,12 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
   }
 
   // ── Feature 1: Partial copy & share dialog with SelectableText & dots highlight ──
-  void _showPartialCopyDialog(BuildContext context, int surah, int verse, bool isDark) {
+  void _showPartialCopyDialog(
+    BuildContext context,
+    int surah,
+    int verse,
+    bool isDark,
+  ) {
     final verseText = quran.getVerse(surah, verse);
     final surahName = quran.getSurahNameArabic(surah);
     final textCtrl = TextEditingController(text: verseText);
@@ -1334,7 +1718,11 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
             ),
             title: Row(
               children: [
-                const Icon(Icons.content_cut_rounded, color: AppColors.gold, size: 20),
+                const Icon(
+                  Icons.content_cut_rounded,
+                  color: AppColors.gold,
+                  size: 20,
+                ),
                 const SizedBox(width: 8),
                 Text(
                   'اقتطاع جزء من الآية ($surahName - $verse)',
@@ -1364,7 +1752,9 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
                     decoration: BoxDecoration(
                       color: isDark ? Colors.black26 : AppColors.paleGreen,
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: AppColors.gold.withValues(alpha: 0.3)),
+                      border: Border.all(
+                        color: AppColors.gold.withValues(alpha: 0.3),
+                      ),
                     ),
                     child: TextField(
                       controller: textCtrl,
@@ -1390,14 +1780,26 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
                   final portion = textCtrl.text.trim();
                   if (portion.isEmpty) return;
                   final highlighted = '··· $portion ···';
-                  Clipboard.setData(ClipboardData(text: '$highlighted\n\n- جزء من آية $verse سورة $surahName -\nتطبيق بصائر'));
+                  Clipboard.setData(
+                    ClipboardData(
+                      text:
+                          '$highlighted\n\n- جزء من آية $verse سورة $surahName -\nتطبيق بصائر',
+                    ),
+                  );
                   Navigator.pop(ctx);
                   _snack(context, 'تم نسخ الجزء مع نقاط التمييز (···)');
                 },
-                icon: const Icon(Icons.copy_rounded, size: 16, color: AppColors.darkGreen),
+                icon: const Icon(
+                  Icons.copy_rounded,
+                  size: 16,
+                  color: AppColors.darkGreen,
+                ),
                 label: Text(
                   'نسخ مع نقاط (···)',
-                  style: GoogleFonts.ibmPlexSansArabic(color: AppColors.darkGreen, fontWeight: FontWeight.bold),
+                  style: GoogleFonts.ibmPlexSansArabic(
+                    color: AppColors.darkGreen,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
               ElevatedButton.icon(
@@ -1407,19 +1809,31 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
                   Navigator.pop(ctx);
                   _sharePartialAsImage(context, surah, verse, portion);
                 },
-                icon: const Icon(Icons.image_rounded, size: 16, color: Colors.white),
+                icon: const Icon(
+                  Icons.image_rounded,
+                  size: 16,
+                  color: Colors.white,
+                ),
                 label: Text(
                   'مشاركة كصورة (···)',
-                  style: GoogleFonts.ibmPlexSansArabic(color: Colors.white, fontWeight: FontWeight.bold),
+                  style: GoogleFonts.ibmPlexSansArabic(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.gold,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
               ),
               TextButton(
                 onPressed: () => Navigator.pop(ctx),
-                child: Text('إلغاء', style: GoogleFonts.ibmPlexSansArabic(color: Colors.grey)),
+                child: Text(
+                  'إلغاء',
+                  style: GoogleFonts.ibmPlexSansArabic(color: Colors.grey),
+                ),
               ),
             ],
           ),
@@ -1429,7 +1843,12 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
   }
 
   // ── Feature 1: Share partial verse with ornamental dots highlight ──
-  Future<void> _sharePartialAsImage(BuildContext context, int surah, int verse, String partialText) async {
+  Future<void> _sharePartialAsImage(
+    BuildContext context,
+    int surah,
+    int verse,
+    String partialText,
+  ) async {
     final surahName = quran.getSurahNameArabic(surah);
     final key = GlobalKey();
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -1440,7 +1859,9 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
         textDirection: TextDirection.rtl,
         child: AlertDialog(
           backgroundColor: isDark ? const Color(0xFF111611) : AppColors.cardBg,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
           contentPadding: EdgeInsets.zero,
           content: Column(
             mainAxisSize: MainAxisSize.min,
@@ -1456,7 +1877,11 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
                         child: Container(
                           decoration: const BoxDecoration(
                             gradient: LinearGradient(
-                              colors: [Color(0xFF091610), Color(0xFF132B1F), Color(0xFF08120D)],
+                              colors: [
+                                Color(0xFF091610),
+                                Color(0xFF132B1F),
+                                Color(0xFF08120D),
+                              ],
                               begin: Alignment.topCenter,
                               end: Alignment.bottomCenter,
                             ),
@@ -1467,7 +1892,9 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
                       Positioned.fill(
                         child: BackdropFilter(
                           filter: ui.ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-                          child: Container(color: Colors.white.withValues(alpha: 0.05)),
+                          child: Container(
+                            color: Colors.white.withValues(alpha: 0.05),
+                          ),
                         ),
                       ),
                       // Content with gold frame on a transparent top container
@@ -1482,7 +1909,10 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 5),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 5,
+                              ),
                               decoration: BoxDecoration(
                                 gradient: LinearGradient(
                                   colors: [
@@ -1490,7 +1920,10 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
                                     AppColors.darkGreen.withValues(alpha: 0.35),
                                   ],
                                 ),
-                                border: Border.all(color: AppColors.gold, width: 1.5),
+                                border: Border.all(
+                                  color: AppColors.gold,
+                                  width: 1.5,
+                                ),
                                 borderRadius: BorderRadius.circular(18),
                               ),
                               child: Text(
@@ -1507,13 +1940,26 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
                             Row(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                const Icon(Icons.more_horiz_rounded, color: AppColors.gold, size: 24),
+                                const Icon(
+                                  Icons.more_horiz_rounded,
+                                  color: AppColors.gold,
+                                  size: 24,
+                                ),
                                 const SizedBox(width: 4),
-                                Text('«', style: GoogleFonts.amiri(fontSize: 22, color: AppColors.gold)),
+                                Text(
+                                  '«',
+                                  style: GoogleFonts.amiri(
+                                    fontSize: 22,
+                                    color: AppColors.gold,
+                                  ),
+                                ),
                               ],
                             ),
                             Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 8,
+                              ),
                               child: Text(
                                 partialText,
                                 style: const TextStyle(
@@ -1528,23 +1974,42 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
                             Row(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                Text('»', style: GoogleFonts.amiri(fontSize: 22, color: AppColors.gold)),
+                                Text(
+                                  '»',
+                                  style: GoogleFonts.amiri(
+                                    fontSize: 22,
+                                    color: AppColors.gold,
+                                  ),
+                                ),
                                 const SizedBox(width: 4),
-                                const Icon(Icons.more_horiz_rounded, color: AppColors.gold, size: 24),
+                                const Icon(
+                                  Icons.more_horiz_rounded,
+                                  color: AppColors.gold,
+                                  size: 24,
+                                ),
                               ],
                             ),
                             const SizedBox(height: 16),
-                            Container(height: 1, color: AppColors.gold.withValues(alpha: 0.3)),
+                            Container(
+                              height: 1,
+                              color: AppColors.gold.withValues(alpha: 0.3),
+                            ),
                             const SizedBox(height: 10),
                             Row(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                Icon(Icons.auto_stories_rounded, color: AppColors.gold.withValues(alpha: 0.8), size: 14),
+                                Icon(
+                                  Icons.auto_stories_rounded,
+                                  color: AppColors.gold.withValues(alpha: 0.8),
+                                  size: 14,
+                                ),
                                 const SizedBox(width: 6),
                                 Text(
                                   'اقتباس قرآني • بصائر',
                                   style: GoogleFonts.ibmPlexSansArabic(
-                                    color: AppColors.gold.withValues(alpha: 0.8),
+                                    color: AppColors.gold.withValues(
+                                      alpha: 0.8,
+                                    ),
                                     fontSize: 11,
                                     fontWeight: FontWeight.w600,
                                   ),
@@ -1563,7 +2028,10 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
-                    TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('إلغاء')),
+                    TextButton(
+                      onPressed: () => Navigator.pop(ctx),
+                      child: const Text('إلغاء'),
+                    ),
                     const SizedBox(width: 8),
                     ElevatedButton.icon(
                       onPressed: () async {
@@ -1571,20 +2039,29 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
                           final ro = key.currentContext?.findRenderObject();
                           if (ro is! RenderRepaintBoundary) return;
                           final img = await ro.toImage(pixelRatio: 3.0);
-                          final bd = await img.toByteData(format: ui.ImageByteFormat.png);
+                          final bd = await img.toByteData(
+                            format: ui.ImageByteFormat.png,
+                          );
                           if (bd == null) return;
                           final tempDir = await getTemporaryDirectory();
-                          final file = File('${tempDir.path}/verse_partial_${surah}_$verse.png');
+                          final file = File(
+                            '${tempDir.path}/verse_partial_${surah}_$verse.png',
+                          );
                           await file.writeAsBytes(bd.buffer.asUint8List());
                           if (context.mounted) Navigator.pop(ctx);
-                          await Share.shareXFiles([XFile(file.path)], text: '﴿ $partialText ﴾ - سورة $surahName ($verse)');
+                          await Share.shareXFiles(
+                            [XFile(file.path)],
+                            text: '﴿ $partialText ﴾ - سورة $surahName ($verse)',
+                          );
                         } catch (e) {
                           debugPrint('Share partial error: $e');
                         }
                       },
                       icon: const Icon(Icons.share_rounded, size: 16),
                       label: const Text('مشاركة الآن'),
-                      style: ElevatedButton.styleFrom(backgroundColor: AppColors.gold),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.gold,
+                      ),
                     ),
                   ],
                 ),
@@ -1597,7 +2074,11 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
   }
 
   // ── Feature 1: Sleek multi-verse share as image ──
-  Future<void> _shareVersesAsImage(BuildContext context, int surah, List<int> verses) async {
+  Future<void> _shareVersesAsImage(
+    BuildContext context,
+    int surah,
+    List<int> verses,
+  ) async {
     final sortedVerses = verses.toList()..sort();
     final surahName = quran.getSurahNameArabic(surah);
     final key = GlobalKey();
@@ -1609,7 +2090,9 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
         textDirection: TextDirection.rtl,
         child: AlertDialog(
           backgroundColor: isDark ? const Color(0xFF111611) : AppColors.cardBg,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
           contentPadding: EdgeInsets.zero,
           content: Column(
             mainAxisSize: MainAxisSize.min,
@@ -1625,7 +2108,11 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
                         child: Container(
                           decoration: const BoxDecoration(
                             gradient: LinearGradient(
-                              colors: [Color(0xFF091610), Color(0xFF132B1F), Color(0xFF08120D)],
+                              colors: [
+                                Color(0xFF091610),
+                                Color(0xFF132B1F),
+                                Color(0xFF08120D),
+                              ],
                               begin: Alignment.topCenter,
                               end: Alignment.bottomCenter,
                             ),
@@ -1636,7 +2123,9 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
                       Positioned.fill(
                         child: BackdropFilter(
                           filter: ui.ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-                          child: Container(color: Colors.white.withValues(alpha: 0.05)),
+                          child: Container(
+                            color: Colors.white.withValues(alpha: 0.05),
+                          ),
                         ),
                       ),
                       // Content with gold frame on a transparent top container
@@ -1651,7 +2140,10 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 20,
+                                vertical: 6,
+                              ),
                               decoration: BoxDecoration(
                                 gradient: LinearGradient(
                                   colors: [
@@ -1659,7 +2151,10 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
                                     AppColors.darkGreen.withValues(alpha: 0.35),
                                   ],
                                 ),
-                                border: Border.all(color: AppColors.gold, width: 1.5),
+                                border: Border.all(
+                                  color: AppColors.gold,
+                                  width: 1.5,
+                                ),
                                 borderRadius: BorderRadius.circular(20),
                               ),
                               child: Text(
@@ -1679,13 +2174,16 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
                                   children: sortedVerses.map((v) {
                                     final text = quran.getVerse(surah, v);
                                     return Padding(
-                                      padding: const EdgeInsets.symmetric(vertical: 6),
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 6,
+                                      ),
                                       child: Column(
                                         children: [
                                           Text(
                                             text,
                                             style: const TextStyle(
-                                              fontFamily: 'KFGQPC Uthmanic Script Hafs',
+                                              fontFamily:
+                                                  'KFGQPC Uthmanic Script Hafs',
                                               color: Colors.white,
                                               fontSize: 19,
                                               height: 1.85,
@@ -1694,11 +2192,30 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
                                           ),
                                           const SizedBox(height: 4),
                                           Row(
-                                            mainAxisAlignment: MainAxisAlignment.center,
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.center,
                                             children: [
-                                              const Text('◈ ', style: TextStyle(color: AppColors.gold, fontSize: 14)),
-                                              Text('﴿ $v ﴾', style: GoogleFonts.amiri(color: AppColors.gold, fontSize: 16)),
-                                              const Text(' ◈', style: TextStyle(color: AppColors.gold, fontSize: 14)),
+                                              const Text(
+                                                '◈ ',
+                                                style: TextStyle(
+                                                  color: AppColors.gold,
+                                                  fontSize: 14,
+                                                ),
+                                              ),
+                                              Text(
+                                                '﴿ $v ﴾',
+                                                style: GoogleFonts.amiri(
+                                                  color: AppColors.gold,
+                                                  fontSize: 16,
+                                                ),
+                                              ),
+                                              const Text(
+                                                ' ◈',
+                                                style: TextStyle(
+                                                  color: AppColors.gold,
+                                                  fontSize: 14,
+                                                ),
+                                              ),
                                             ],
                                           ),
                                         ],
@@ -1709,17 +2226,26 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
                               ),
                             ),
                             const SizedBox(height: 16),
-                            Container(height: 1, color: AppColors.gold.withValues(alpha: 0.3)),
+                            Container(
+                              height: 1,
+                              color: AppColors.gold.withValues(alpha: 0.3),
+                            ),
                             const SizedBox(height: 12),
                             Row(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                Icon(Icons.auto_stories_rounded, color: AppColors.gold.withValues(alpha: 0.8), size: 16),
+                                Icon(
+                                  Icons.auto_stories_rounded,
+                                  color: AppColors.gold.withValues(alpha: 0.8),
+                                  size: 16,
+                                ),
                                 const SizedBox(width: 8),
                                 Text(
                                   'بصائر • نية متجددة',
                                   style: GoogleFonts.ibmPlexSansArabic(
-                                    color: AppColors.gold.withValues(alpha: 0.8),
+                                    color: AppColors.gold.withValues(
+                                      alpha: 0.8,
+                                    ),
                                     fontSize: 12,
                                     fontWeight: FontWeight.w600,
                                   ),
@@ -1743,7 +2269,9 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
                         child: Text(
                           'إلغاء',
                           style: GoogleFonts.ibmPlexSansArabic(
-                            color: isDark ? Colors.white60 : AppColors.textSecondary,
+                            color: isDark
+                                ? Colors.white60
+                                : AppColors.textSecondary,
                           ),
                         ),
                       ),
@@ -1754,23 +2282,35 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.darkGreen,
                           foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
                         ),
                         onPressed: () async {
                           try {
-                            final boundary = key.currentContext!.findRenderObject() as RenderRepaintBoundary;
-                            final image = await boundary.toImage(pixelRatio: 3.0);
-                            final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+                            final boundary =
+                                key.currentContext!.findRenderObject()
+                                    as RenderRepaintBoundary;
+                            final image = await boundary.toImage(
+                              pixelRatio: 3.0,
+                            );
+                            final byteData = await image.toByteData(
+                              format: ui.ImageByteFormat.png,
+                            );
                             final bytes = byteData!.buffer.asUint8List();
                             final dir = await getTemporaryDirectory();
-                            final file = File('${dir.path}/ayah_${surah}_${sortedVerses.join("_")}.png');
+                            final file = File(
+                              '${dir.path}/ayah_${surah}_${sortedVerses.join("_")}.png',
+                            );
                             await file.writeAsBytes(bytes);
                             if (!ctx.mounted) return;
                             Navigator.pop(ctx);
                             final verseRange = sortedVerses.length == 1
                                 ? 'آية ${sortedVerses.first}'
                                 : 'آيات ${sortedVerses.first}-${sortedVerses.last}';
-                            await Share.shareXFiles([XFile(file.path)], text: 'سورة $surahName - $verseRange\nبصائر');
+                            await Share.shareXFiles([
+                              XFile(file.path),
+                            ], text: 'سورة $surahName - $verseRange\nبصائر');
                           } catch (e) {
                             if (!ctx.mounted) return;
                             Navigator.pop(ctx);
@@ -1778,7 +2318,12 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
                           }
                         },
                         icon: const Icon(Icons.share_rounded, size: 18),
-                        label: Text('مشاركة', style: GoogleFonts.ibmPlexSansArabic(fontWeight: FontWeight.bold)),
+                        label: Text(
+                          'مشاركة',
+                          style: GoogleFonts.ibmPlexSansArabic(
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                       ),
                     ),
                   ],
@@ -1791,35 +2336,75 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
     );
   }
 
-  Widget _actionTile(IconData icon, String label, VoidCallback onTap, bool isDark) {
+  Widget _actionTile(
+    IconData icon,
+    String label,
+    VoidCallback onTap,
+    bool isDark,
+  ) {
     return ListTile(
       visualDensity: VisualDensity.compact,
       contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 0),
       leading: Container(
-        width: 34, height: 34,
-        decoration: BoxDecoration(color: AppColors.darkGreen.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(8)),
+        width: 34,
+        height: 34,
+        decoration: BoxDecoration(
+          color: AppColors.darkGreen.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(8),
+        ),
         child: Icon(icon, color: AppColors.darkGreen, size: 18),
       ),
-      title: Text(label, style: GoogleFonts.ibmPlexSansArabic(color: isDark ? Colors.white : AppColors.textPrimary, fontSize: 14, fontWeight: FontWeight.w600)),
-      trailing: DirectionalIcon(isBack: false, size: 12, color: isDark ? Colors.white24 : AppColors.gray),
+      title: Text(
+        label,
+        style: GoogleFonts.ibmPlexSansArabic(
+          color: isDark ? Colors.white : AppColors.textPrimary,
+          fontSize: 14,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+      trailing: DirectionalIcon(
+        isBack: false,
+        size: 12,
+        color: isDark ? Colors.white24 : AppColors.gray,
+      ),
       onTap: onTap,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
     );
   }
 
   void _snack(BuildContext context, String msg) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg, style: GoogleFonts.ibmPlexSansArabic()), backgroundColor: AppColors.darkGreen));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(msg, style: GoogleFonts.ibmPlexSansArabic()),
+        backgroundColor: AppColors.darkGreen,
+      ),
+    );
   }
 
-  Future<void> _showTafseer(BuildContext context, int surah, int verse, String edition, String title, bool isDark) async {
+  Future<void> _showTafseer(
+    BuildContext context,
+    int surah,
+    int verse,
+    String edition,
+    String title,
+    bool isDark,
+  ) async {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (c) => const Center(child: CircularProgressIndicator(color: AppColors.darkGreen)),
+      builder: (c) => const Center(
+        child: CircularProgressIndicator(color: AppColors.darkGreen),
+      ),
     );
 
     try {
-      final response = await http.get(Uri.parse('https://api.alquran.cloud/v1/ayah/$surah:$verse/$edition')).timeout(const Duration(seconds: 10));
+      final response = await http
+          .get(
+            Uri.parse(
+              'https://api.alquran.cloud/v1/ayah/$surah:$verse/$edition',
+            ),
+          )
+          .timeout(const Duration(seconds: 10));
       if (!context.mounted) return;
       Navigator.pop(context);
       if (response.statusCode == 200) {
@@ -1836,29 +2421,74 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
     }
   }
 
-  void _showTafseerDialog(BuildContext context, int surah, int verse, String text, String title, bool isDark) {
+  void _showTafseerDialog(
+    BuildContext context,
+    int surah,
+    int verse,
+    String text,
+    String title,
+    bool isDark,
+  ) {
     final surahName = quran.getSurahNameArabic(surah);
     showModalBottomSheet(
       context: context,
       backgroundColor: isDark ? const Color(0xFF111611) : AppColors.cardBg,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
       builder: (ctx) => Directionality(
         textDirection: TextDirection.rtl,
         child: Padding(
-          padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom, left: 20, right: 20, top: 20),
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(ctx).viewInsets.bottom,
+            left: 20,
+            right: 20,
+            top: 20,
+          ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Container(width: 40, height: 4, decoration: BoxDecoration(color: AppColors.darkGreen.withValues(alpha: 0.5), borderRadius: BorderRadius.circular(2))),
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppColors.darkGreen.withValues(alpha: 0.5),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
               const SizedBox(height: 16),
-              Text(title, style: GoogleFonts.ibmPlexSansArabic(color: AppColors.lightGreen, fontSize: 18, fontWeight: FontWeight.bold)),
-              Text('سورة $surahName - آية $verse', style: GoogleFonts.ibmPlexSansArabic(color: isDark ? Colors.white70 : AppColors.textSecondary, fontSize: 13)),
+              Text(
+                title,
+                style: GoogleFonts.ibmPlexSansArabic(
+                  color: AppColors.lightGreen,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              Text(
+                'سورة $surahName - آية $verse',
+                style: GoogleFonts.ibmPlexSansArabic(
+                  color: isDark ? Colors.white70 : AppColors.textSecondary,
+                  fontSize: 13,
+                ),
+              ),
               const SizedBox(height: 16),
               Container(
-                constraints: BoxConstraints(maxHeight: MediaQuery.of(ctx).size.height * 0.5),
+                constraints: BoxConstraints(
+                  maxHeight: MediaQuery.of(ctx).size.height * 0.5,
+                ),
                 child: SingleChildScrollView(
-                  child: Text(text, style: TextStyle(fontFamily: 'KFGQPC Uthmanic Script Hafs', color: isDark ? Colors.white : AppColors.textPrimary, fontSize: 20, height: 1.8), textAlign: TextAlign.justify),
+                  child: Text(
+                    text,
+                    style: TextStyle(
+                      fontFamily: 'KFGQPC Uthmanic Script Hafs',
+                      color: isDark ? Colors.white : AppColors.textPrimary,
+                      fontSize: 20,
+                      height: 1.8,
+                    ),
+                    textAlign: TextAlign.justify,
+                  ),
                 ),
               ),
               const SizedBox(height: 24),
@@ -1875,10 +2505,18 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
       child: Container(
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
-          color: enabled ? AppColors.darkGreen.withValues(alpha: 0.10) : Colors.transparent,
+          color: enabled
+              ? AppColors.darkGreen.withValues(alpha: 0.10)
+              : Colors.transparent,
           borderRadius: BorderRadius.circular(10),
         ),
-        child: Icon(icon, size: 22, color: enabled ? AppColors.darkGreen : (isDark ? Colors.white12 : Colors.black12)),
+        child: Icon(
+          icon,
+          size: 22,
+          color: enabled
+              ? AppColors.darkGreen
+              : (isDark ? Colors.white12 : Colors.black12),
+        ),
       ),
     );
   }
@@ -1916,7 +2554,8 @@ class _MushafPageWidget extends StatefulWidget {
   State<_MushafPageWidget> createState() => _MushafPageWidgetState();
 }
 
-class _MushafPageWidgetState extends State<_MushafPageWidget> with AutomaticKeepAliveClientMixin {
+class _MushafPageWidgetState extends State<_MushafPageWidget>
+    with AutomaticKeepAliveClientMixin {
   // Cache the computed font size so it doesn't recompute during swipe animation
   double? _cachedFontSize;
   double? _cachedWidth;
@@ -1937,7 +2576,9 @@ class _MushafPageWidgetState extends State<_MushafPageWidget> with AutomaticKeep
 
   double _computeFontSize(List pageData, double availableW, double availableH) {
     // Return cached if dimensions haven't changed
-    if (_cachedFontSize != null && _cachedWidth == availableW && _cachedHeight == availableH) {
+    if (_cachedFontSize != null &&
+        _cachedWidth == availableW &&
+        _cachedHeight == availableH) {
       return _cachedFontSize!;
     }
 
@@ -1971,7 +2612,9 @@ class _MushafPageWidgetState extends State<_MushafPageWidget> with AutomaticKeep
           builder: (context, constraints) {
             final availableW = constraints.maxWidth;
             final availableH = constraints.maxHeight;
-            final effectiveFontSize = widget.verticalScroll ? widget.readerFontSize : _computeFontSize(pageData, availableW, availableH);
+            final effectiveFontSize = widget.verticalScroll
+                ? widget.readerFontSize
+                : _computeFontSize(pageData, availableW, availableH);
 
             // Build the list of surah blocks
             final blocks = <Widget>[];
@@ -1979,16 +2622,24 @@ class _MushafPageWidgetState extends State<_MushafPageWidget> with AutomaticKeep
               final data = pageData[i];
               final surah = data['surah'] as int;
               final start = data['start'] as int;
-              final end   = data['end']   as int;
+              final end = data['end'] as int;
               final isLast = i == pageData.length - 1;
 
               final block = Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  if (start == 1) _buildSurahHeader(context, surah, effectiveFontSize),
-                  if (start == 1 && surah != 1 && surah != 9) _buildBasmala(effectiveFontSize),
-                  _buildVersesBlock(context, surah, start, end, effectiveFontSize),
+                  if (start == 1)
+                    _buildSurahHeader(context, surah, effectiveFontSize),
+                  if (start == 1 && surah != 1 && surah != 9)
+                    _buildBasmala(effectiveFontSize),
+                  _buildVersesBlock(
+                    context,
+                    surah,
+                    start,
+                    end,
+                    effectiveFontSize,
+                  ),
                 ],
               );
 
@@ -2004,7 +2655,10 @@ class _MushafPageWidgetState extends State<_MushafPageWidget> with AutomaticKeep
             if (widget.verticalScroll) {
               return SingleChildScrollView(
                 physics: const BouncingScrollPhysics(),
-                padding: const EdgeInsets.symmetric(horizontal: _hPad, vertical: _vPad),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: _hPad,
+                  vertical: _vPad,
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: blocks,
@@ -2017,7 +2671,9 @@ class _MushafPageWidgetState extends State<_MushafPageWidget> with AutomaticKeep
               height: availableH,
               child: Padding(
                 padding: const EdgeInsets.symmetric(
-                    horizontal: _hPad, vertical: _vPad),
+                  horizontal: _hPad,
+                  vertical: _vPad,
+                ),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -2040,7 +2696,7 @@ class _MushafPageWidgetState extends State<_MushafPageWidget> with AutomaticKeep
     for (final data in pageData) {
       final surah = data['surah'] as int;
       final start = data['start'] as int;
-      final end   = data['end']   as int;
+      final end = data['end'] as int;
 
       if (start == 1) {
         total += _measureHeaderHeight(fontSize);
@@ -2054,25 +2710,31 @@ class _MushafPageWidgetState extends State<_MushafPageWidget> with AutomaticKeep
   }
 
   double _measureHeaderHeight(double fontSize) {
-    final marginV  = fontSize * 0.15 * 2;
-    final paddingV = fontSize * 0.4  * 2;
-    const border   = 3.0; // 1.5 * 2
-    final titleFS  = (fontSize * 1.4).clamp(16.0, 28.0);
+    final marginV = fontSize * 0.15 * 2;
+    final paddingV = fontSize * 0.4 * 2;
+    const border = 3.0; // 1.5 * 2
+    final titleFS = (fontSize * 1.4).clamp(16.0, 28.0);
     // Line height for Arabic display font is ~1.35 of em.
     final contentH = titleFS * 1.35;
     return marginV + paddingV + border + contentH;
   }
 
   double _measureBasmalaHeight(double fontSize) {
-    final marginV  = fontSize * 0.3 + fontSize * 0.1;
+    final marginV = fontSize * 0.3 + fontSize * 0.1;
     final paddingV = fontSize * 0.2 * 2;
-    const border   = 2.0;
-    final textFS   = (fontSize * 1.3).clamp(14.0, 30.0);
+    const border = 2.0;
+    final textFS = (fontSize * 1.3).clamp(14.0, 30.0);
     final contentH = textFS * 1.35;
     return marginV + paddingV + border + contentH;
   }
 
-  double _measureVersesHeight(int surah, int start, int end, double fontSize, double width) {
+  double _measureVersesHeight(
+    int surah,
+    int start,
+    int end,
+    double fontSize,
+    double width,
+  ) {
     // Build the same inline spans used in the real render, so TextPainter
     // produces the same line count and height.
     final spans = <InlineSpan>[];
@@ -2090,23 +2752,29 @@ class _MushafPageWidgetState extends State<_MushafPageWidget> with AutomaticKeep
           if (words.length > 4) t = words.skip(4).join(' ').trim();
         }
       }
-      spans.add(TextSpan(
-        text: t,
-        style: TextStyle(
-          fontFamily: 'KFGQPC Uthmanic Script Hafs',
-          fontSize: fontSize,
-          height: _lineHeight,
+      spans.add(
+        TextSpan(
+          text: t,
+          style: TextStyle(
+            fontFamily: 'KFGQPC Uthmanic Script Hafs',
+            fontSize: fontSize,
+            height: _lineHeight,
+          ),
         ),
-      ));
-      spans.add(const WidgetSpan(child: SizedBox())); // placeholder (dims set below)
-      spans.add(TextSpan(
-        text: ' ',
-        style: TextStyle(
-          fontFamily: 'KFGQPC Uthmanic Script Hafs',
-          fontSize: fontSize,
-          height: _lineHeight,
+      );
+      spans.add(
+        const WidgetSpan(child: SizedBox()),
+      ); // placeholder (dims set below)
+      spans.add(
+        TextSpan(
+          text: ' ',
+          style: TextStyle(
+            fontFamily: 'KFGQPC Uthmanic Script Hafs',
+            fontSize: fontSize,
+            height: _lineHeight,
+          ),
         ),
-      ));
+      );
     }
 
     final verseCount = end - start + 1;
@@ -2115,13 +2783,15 @@ class _MushafPageWidgetState extends State<_MushafPageWidget> with AutomaticKeep
       textDirection: TextDirection.rtl,
       textAlign: TextAlign.justify,
     );
-    tp.setPlaceholderDimensions(List.generate(
-      verseCount,
-      (_) => PlaceholderDimensions(
-        size: Size(markBoxW, markSize),
-        alignment: PlaceholderAlignment.middle,
+    tp.setPlaceholderDimensions(
+      List.generate(
+        verseCount,
+        (_) => PlaceholderDimensions(
+          size: Size(markBoxW, markSize),
+          alignment: PlaceholderAlignment.middle,
+        ),
       ),
-    ));
+    );
     tp.layout(maxWidth: width);
     final h = tp.height;
     tp.dispose();
@@ -2130,26 +2800,41 @@ class _MushafPageWidgetState extends State<_MushafPageWidget> with AutomaticKeep
 
   Widget _buildSurahHeader(BuildContext context, int surah, double fontSize) {
     final verseCount = quran.getVerseCount(surah);
-    final place = quran.getPlaceOfRevelation(surah) == "Makkah" ? "مكية" : "مدنية";
+    final place = quran.getPlaceOfRevelation(surah) == "Makkah"
+        ? "مكية"
+        : "مدنية";
     return Container(
       width: double.infinity,
       margin: EdgeInsets.symmetric(vertical: fontSize * 0.15),
-      padding: EdgeInsets.symmetric(horizontal: fontSize * 0.8, vertical: fontSize * 0.4),
+      padding: EdgeInsets.symmetric(
+        horizontal: fontSize * 0.8,
+        vertical: fontSize * 0.4,
+      ),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [AppColors.darkGreen.withValues(alpha: 0.25), AppColors.darkGreen.withValues(alpha: 0.10)],
-          begin: Alignment.centerRight, end: Alignment.centerLeft,
+          colors: [
+            AppColors.darkGreen.withValues(alpha: 0.25),
+            AppColors.darkGreen.withValues(alpha: 0.10),
+          ],
+          begin: Alignment.centerRight,
+          end: Alignment.centerLeft,
         ),
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: AppColors.darkGreen.withValues(alpha: 0.4), width: 1.5),
+        border: Border.all(
+          color: AppColors.darkGreen.withValues(alpha: 0.4),
+          width: 1.5,
+        ),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text('$place • $verseCount آية',
-              style: GoogleFonts.ibmPlexSansArabic(
-                  color: isDark ? Colors.white60 : AppColors.textSecondary,
-                  fontSize: (fontSize * 0.6).clamp(9.0, 13.0))),
+          Text(
+            '$place • $verseCount آية',
+            style: GoogleFonts.ibmPlexSansArabic(
+              color: isDark ? Colors.white60 : AppColors.textSecondary,
+              fontSize: (fontSize * 0.6).clamp(9.0, 13.0),
+            ),
+          ),
           Text(
             'سورة ${quran.getSurahNameArabic(surah)}',
             style: TextStyle(
@@ -2168,14 +2853,27 @@ class _MushafPageWidgetState extends State<_MushafPageWidget> with AutomaticKeep
   Widget _buildBasmala(double fontSize) {
     return Container(
       margin: EdgeInsets.only(bottom: fontSize * 0.3, top: fontSize * 0.1),
-      padding: EdgeInsets.symmetric(horizontal: fontSize * 0.5, vertical: fontSize * 0.2),
+      padding: EdgeInsets.symmetric(
+        horizontal: fontSize * 0.5,
+        vertical: fontSize * 0.2,
+      ),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [Colors.transparent, AppColors.darkGreen.withValues(alpha: 0.15), Colors.transparent],
+          colors: [
+            Colors.transparent,
+            AppColors.darkGreen.withValues(alpha: 0.15),
+            Colors.transparent,
+          ],
         ),
         border: Border(
-          bottom: BorderSide(color: AppColors.darkGreen.withValues(alpha: 0.3), width: 1),
-          top: BorderSide(color: AppColors.darkGreen.withValues(alpha: 0.3), width: 1),
+          bottom: BorderSide(
+            color: AppColors.darkGreen.withValues(alpha: 0.3),
+            width: 1,
+          ),
+          top: BorderSide(
+            color: AppColors.darkGreen.withValues(alpha: 0.3),
+            width: 1,
+          ),
         ),
       ),
       child: FittedBox(
@@ -2184,7 +2882,11 @@ class _MushafPageWidgetState extends State<_MushafPageWidget> with AutomaticKeep
           mainAxisAlignment: MainAxisAlignment.center,
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.auto_awesome_outlined, color: AppColors.darkGreen.withValues(alpha: 0.8), size: fontSize * 0.9),
+            Icon(
+              Icons.auto_awesome_outlined,
+              color: AppColors.darkGreen.withValues(alpha: 0.8),
+              size: fontSize * 0.9,
+            ),
             SizedBox(width: fontSize * 0.4),
             Text(
               quran.basmala,
@@ -2192,19 +2894,37 @@ class _MushafPageWidgetState extends State<_MushafPageWidget> with AutomaticKeep
                 fontFamily: 'KFGQPC Uthmanic Script Hafs',
                 fontSize: (fontSize * 1.3).clamp(14.0, 30.0),
                 color: isDark ? Colors.white : AppColors.textPrimary,
-                shadows: isDark ? [const Shadow(color: Colors.black45, blurRadius: 4, offset: Offset(0, 2))] : null,
+                shadows: isDark
+                    ? [
+                        const Shadow(
+                          color: Colors.black45,
+                          blurRadius: 4,
+                          offset: Offset(0, 2),
+                        ),
+                      ]
+                    : null,
               ),
               textAlign: TextAlign.center,
             ),
             SizedBox(width: fontSize * 0.4),
-            Icon(Icons.auto_awesome_outlined, color: AppColors.darkGreen.withValues(alpha: 0.8), size: fontSize * 0.9),
+            Icon(
+              Icons.auto_awesome_outlined,
+              color: AppColors.darkGreen.withValues(alpha: 0.8),
+              size: fontSize * 0.9,
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildVersesBlock(BuildContext context, int surah, int start, int end, double fontSize) {
+  Widget _buildVersesBlock(
+    BuildContext context,
+    int surah,
+    int start,
+    int end,
+    double fontSize,
+  ) {
     // Build verse ranges to map character offsets to verse numbers
     final List<_VerseRange> verseRanges = [];
     final spans = <InlineSpan>[];
@@ -2225,33 +2945,52 @@ class _MushafPageWidgetState extends State<_MushafPageWidget> with AutomaticKeep
       final startOffset = charOffset;
       charOffset += verseText.length;
 
-      final bool isHighlighted = (highlightSurah != null && highlightVerse != null &&
-          highlightSurah == surah && highlightVerse == v);
+      final bool isHighlighted =
+          (highlightSurah != null &&
+          highlightVerse != null &&
+          highlightSurah == surah &&
+          highlightVerse == v);
 
-      spans.add(TextSpan(
-        text: verseText,
-        style: TextStyle(
-          fontFamily: 'KFGQPC Uthmanic Script Hafs',
-          fontSize: fontSize,
-          fontWeight: (widget.verticalScroll && widget.boldFont) ? FontWeight.bold : FontWeight.normal,
-          height: 1.8,
-          color: isHighlighted ? Colors.black : (isDark ? const Color(0xFFF5F0E8) : AppColors.textPrimary),
-          backgroundColor: isHighlighted ? Colors.yellow.withValues(alpha: 0.18) : null,
+      spans.add(
+        TextSpan(
+          text: verseText,
+          style: TextStyle(
+            fontFamily: 'KFGQPC Uthmanic Script Hafs',
+            fontSize: fontSize,
+            fontWeight: (widget.verticalScroll && widget.boldFont)
+                ? FontWeight.bold
+                : FontWeight.normal,
+            height: 1.8,
+            color: isHighlighted
+                ? Colors.black
+                : (isDark ? const Color(0xFFF5F0E8) : AppColors.textPrimary),
+            backgroundColor: isHighlighted
+                ? Colors.yellow.withValues(alpha: 0.18)
+                : null,
+          ),
         ),
-      ));
-      spans.add(WidgetSpan(
-        alignment: PlaceholderAlignment.middle,
-        child: _AyahEndMark(number: v, isDark: isDark, size: (fontSize * 1.5).clamp(24.0, 38.0)),
-      ));
+      );
+      spans.add(
+        WidgetSpan(
+          alignment: PlaceholderAlignment.middle,
+          child: _AyahEndMark(
+            number: v,
+            isDark: isDark,
+            size: (fontSize * 1.5).clamp(24.0, 38.0),
+          ),
+        ),
+      );
       // Space character after mark
-      spans.add(TextSpan(
-        text: ' ',
-        style: TextStyle(
-          fontFamily: 'KFGQPC Uthmanic Script Hafs',
-          fontSize: fontSize,
-          height: 1.8,
+      spans.add(
+        TextSpan(
+          text: ' ',
+          style: TextStyle(
+            fontFamily: 'KFGQPC Uthmanic Script Hafs',
+            fontSize: fontSize,
+            height: 1.8,
+          ),
         ),
-      ));
+      );
       charOffset += 1; // for the space
 
       verseRanges.add(_VerseRange(startOffset, charOffset, v));
@@ -2274,52 +3013,125 @@ class _MushafPageWidgetState extends State<_MushafPageWidget> with AutomaticKeep
       context: context,
       backgroundColor: isDark ? const Color(0xFF111611) : AppColors.cardBg,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
       builder: (ctx) => Directionality(
         textDirection: TextDirection.rtl,
         child: SingleChildScrollView(
           child: Padding(
-            padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom + 20, left: 20, right: 20, top: 20),
-            child: Column(mainAxisSize: MainAxisSize.min, children: [
-            Container(width: 40, height: 4, decoration: BoxDecoration(color: AppColors.darkGreen.withValues(alpha: 0.5), borderRadius: BorderRadius.circular(2))),
-            const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: AppColors.darkGreen.withValues(alpha: 0.08),
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: AppColors.darkGreen.withValues(alpha: 0.2)),
-              ),
-              child: Text(verseText, style: TextStyle(fontFamily: 'KFGQPC Uthmanic Script Hafs', color: isDark ? Colors.white : AppColors.textPrimary, fontSize: 18, height: 1.8), textAlign: TextAlign.center, maxLines: 3, overflow: TextOverflow.ellipsis),
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.of(ctx).viewInsets.bottom + 20,
+              left: 20,
+              right: 20,
+              top: 20,
             ),
-            const SizedBox(height: 6),
-            Text('سورة $surahName - آية $verse', style: GoogleFonts.ibmPlexSansArabic(color: AppColors.darkGreen, fontSize: 13, fontWeight: FontWeight.w600)),
-            const SizedBox(height: 16),
-            _actionTile(Icons.copy_rounded, 'نسخ الآية', () { Navigator.pop(ctx); Clipboard.setData(ClipboardData(text: verseText)); _snack(context, 'تم نسخ الآية'); }),
-            _actionTile(Icons.menu_book_rounded, 'التفسير الميسر', () { Navigator.pop(ctx); _showTafseer(context, surah, verse, 'ar.muyassar', 'التفسير الميسر'); }),
-            _actionTile(Icons.auto_stories_rounded, 'تفسير الجلالين', () { Navigator.pop(ctx); _showTafseer(context, surah, verse, 'ar.jalalayn', 'تفسير الجلالين'); }),
-            _actionTile(Icons.share_rounded, 'مشاركة نص', () { Navigator.pop(ctx); Share.share('﴿$verse﴾ $verseText\n\n- سورة $surahName -\n\nبصائر'); }),
-            _actionTile(Icons.image_rounded, 'مشاركة كصورة', () { Navigator.pop(ctx); _shareAsImage(context, surah, verse); }),
-            _actionTile(Icons.bookmark_border_rounded, 'إضافة علامة', () async { 
-              Navigator.pop(ctx); 
-              final box = await Hive.openBox('quran_bookmarks');
-              final key = '$surah-$verse';
-              if (box.containsKey(key)) {
-                if (context.mounted) _snack(context, 'الآية موجودة بالفعل في المحفوظات');
-              } else {
-                await box.put(key, {
-                  'surah': surah,
-                  'verse': verse,
-                  'surahName': surahName,
-                  'timestamp': DateTime.now().millisecondsSinceEpoch,
-                });
-                if (context.mounted) _snack(context, 'تم إضافة العلامة للمحفوظات');
-              }
-            }),
-            const SizedBox(height: 8),
-          ]),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: AppColors.darkGreen.withValues(alpha: 0.5),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: AppColors.darkGreen.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                      color: AppColors.darkGreen.withValues(alpha: 0.2),
+                    ),
+                  ),
+                  child: Text(
+                    verseText,
+                    style: TextStyle(
+                      fontFamily: 'KFGQPC Uthmanic Script Hafs',
+                      color: isDark ? Colors.white : AppColors.textPrimary,
+                      fontSize: 18,
+                      height: 1.8,
+                    ),
+                    textAlign: TextAlign.center,
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'سورة $surahName - آية $verse',
+                  style: GoogleFonts.ibmPlexSansArabic(
+                    color: AppColors.darkGreen,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                _actionTile(Icons.copy_rounded, 'نسخ الآية', () {
+                  Navigator.pop(ctx);
+                  Clipboard.setData(ClipboardData(text: verseText));
+                  _snack(context, 'تم نسخ الآية');
+                }),
+                _actionTile(Icons.menu_book_rounded, 'التفسير الميسر', () {
+                  Navigator.pop(ctx);
+                  _showTafseer(
+                    context,
+                    surah,
+                    verse,
+                    'ar.muyassar',
+                    'التفسير الميسر',
+                  );
+                }),
+                _actionTile(Icons.auto_stories_rounded, 'تفسير الجلالين', () {
+                  Navigator.pop(ctx);
+                  _showTafseer(
+                    context,
+                    surah,
+                    verse,
+                    'ar.jalalayn',
+                    'تفسير الجلالين',
+                  );
+                }),
+                _actionTile(Icons.share_rounded, 'مشاركة نص', () {
+                  Navigator.pop(ctx);
+                  Share.share(
+                    '﴿$verse﴾ $verseText\n\n- سورة $surahName -\n\nبصائر',
+                  );
+                }),
+                _actionTile(Icons.image_rounded, 'مشاركة كصورة', () {
+                  Navigator.pop(ctx);
+                  _shareAsImage(context, surah, verse);
+                }),
+                _actionTile(
+                  Icons.bookmark_border_rounded,
+                  'إضافة علامة',
+                  () async {
+                    Navigator.pop(ctx);
+                    final box = await Hive.openBox('quran_bookmarks');
+                    final key = '$surah-$verse';
+                    if (box.containsKey(key)) {
+                      if (context.mounted)
+                        _snack(context, 'الآية موجودة بالفعل في المحفوظات');
+                    } else {
+                      await box.put(key, {
+                        'surah': surah,
+                        'verse': verse,
+                        'surahName': surahName,
+                        'timestamp': DateTime.now().millisecondsSinceEpoch,
+                      });
+                      if (context.mounted)
+                        _snack(context, 'تم إضافة العلامة للمحفوظات');
+                    }
+                  },
+                ),
+                const SizedBox(height: 8),
+              ],
+            ),
+          ),
         ),
-      ),
       ),
     );
   }
@@ -2329,32 +3141,66 @@ class _MushafPageWidgetState extends State<_MushafPageWidget> with AutomaticKeep
       visualDensity: VisualDensity.compact,
       contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 0),
       leading: Container(
-        width: 34, height: 34,
-        decoration: BoxDecoration(color: AppColors.darkGreen.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(8)),
+        width: 34,
+        height: 34,
+        decoration: BoxDecoration(
+          color: AppColors.darkGreen.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(8),
+        ),
         child: Icon(icon, color: AppColors.darkGreen, size: 18),
       ),
-      title: Text(label, style: GoogleFonts.ibmPlexSansArabic(color: isDark ? Colors.white : AppColors.textPrimary, fontSize: 14, fontWeight: FontWeight.w600)),
-      trailing: DirectionalIcon(isBack: false, size: 12, color: isDark ? Colors.white24 : AppColors.gray),
+      title: Text(
+        label,
+        style: GoogleFonts.ibmPlexSansArabic(
+          color: isDark ? Colors.white : AppColors.textPrimary,
+          fontSize: 14,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+      trailing: DirectionalIcon(
+        isBack: false,
+        size: 12,
+        color: isDark ? Colors.white24 : AppColors.gray,
+      ),
       onTap: onTap,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
     );
   }
 
   void _snack(BuildContext context, String msg) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg, style: GoogleFonts.ibmPlexSansArabic()), backgroundColor: AppColors.darkGreen));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(msg, style: GoogleFonts.ibmPlexSansArabic()),
+        backgroundColor: AppColors.darkGreen,
+      ),
+    );
   }
 
-  Future<void> _showTafseer(BuildContext context, int surah, int verse, String edition, String title) async {
+  Future<void> _showTafseer(
+    BuildContext context,
+    int surah,
+    int verse,
+    String edition,
+    String title,
+  ) async {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (c) => const Center(child: CircularProgressIndicator(color: AppColors.darkGreen)),
+      builder: (c) => const Center(
+        child: CircularProgressIndicator(color: AppColors.darkGreen),
+      ),
     );
 
     try {
-      final response = await http.get(Uri.parse('https://api.alquran.cloud/v1/ayah/$surah:$verse/$edition')).timeout(const Duration(seconds: 10));
+      final response = await http
+          .get(
+            Uri.parse(
+              'https://api.alquran.cloud/v1/ayah/$surah:$verse/$edition',
+            ),
+          )
+          .timeout(const Duration(seconds: 10));
       if (!context.mounted) return;
-      Navigator.pop(context); 
+      Navigator.pop(context);
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         final tafseerText = data['data']['text'];
@@ -2369,29 +3215,73 @@ class _MushafPageWidgetState extends State<_MushafPageWidget> with AutomaticKeep
     }
   }
 
-  void _showTafseerDialog(BuildContext context, int surah, int verse, String text, String title) {
+  void _showTafseerDialog(
+    BuildContext context,
+    int surah,
+    int verse,
+    String text,
+    String title,
+  ) {
     final surahName = quran.getSurahNameArabic(surah);
     showModalBottomSheet(
       context: context,
       backgroundColor: isDark ? const Color(0xFF111611) : AppColors.cardBg,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
       builder: (ctx) => Directionality(
         textDirection: TextDirection.rtl,
         child: Padding(
-          padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom, left: 20, right: 20, top: 20),
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(ctx).viewInsets.bottom,
+            left: 20,
+            right: 20,
+            top: 20,
+          ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Container(width: 40, height: 4, decoration: BoxDecoration(color: AppColors.darkGreen.withValues(alpha: 0.5), borderRadius: BorderRadius.circular(2))),
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppColors.darkGreen.withValues(alpha: 0.5),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
               const SizedBox(height: 16),
-              Text(title, style: GoogleFonts.ibmPlexSansArabic(color: AppColors.lightGreen, fontSize: 18, fontWeight: FontWeight.bold)),
-              Text('سورة $surahName - آية $verse', style: GoogleFonts.ibmPlexSansArabic(color: isDark ? Colors.white70 : AppColors.textSecondary, fontSize: 13)),
+              Text(
+                title,
+                style: GoogleFonts.ibmPlexSansArabic(
+                  color: AppColors.lightGreen,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              Text(
+                'سورة $surahName - آية $verse',
+                style: GoogleFonts.ibmPlexSansArabic(
+                  color: isDark ? Colors.white70 : AppColors.textSecondary,
+                  fontSize: 13,
+                ),
+              ),
               const SizedBox(height: 16),
               Container(
-                constraints: BoxConstraints(maxHeight: MediaQuery.of(ctx).size.height * 0.5),
+                constraints: BoxConstraints(
+                  maxHeight: MediaQuery.of(ctx).size.height * 0.5,
+                ),
                 child: SingleChildScrollView(
-                  child: Text(text, style: TextStyle(fontFamily: 'KFGQPC Uthmanic Script Hafs', color: isDark ? Colors.white : AppColors.textPrimary, fontSize: 20, height: 1.8), textAlign: TextAlign.justify),
+                  child: Text(
+                    text,
+                    style: TextStyle(
+                      fontFamily: 'KFGQPC Uthmanic Script Hafs',
+                      color: isDark ? Colors.white : AppColors.textPrimary,
+                      fontSize: 20,
+                      height: 1.8,
+                    ),
+                    textAlign: TextAlign.justify,
+                  ),
                 ),
               ),
               const SizedBox(height: 24),
@@ -2413,204 +3303,339 @@ class _MushafPageWidgetState extends State<_MushafPageWidget> with AutomaticKeep
         textDirection: TextDirection.rtl,
         child: AlertDialog(
           backgroundColor: isDark ? const Color(0xFF111611) : AppColors.cardBg,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
           contentPadding: EdgeInsets.zero,
-          content: Column(mainAxisSize: MainAxisSize.min, children: [
-            RepaintBoundary(
-              key: key,
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(24),
-                child: Container(
-                  width: 340,
-                  padding: const EdgeInsets.all(0),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        const Color(0xFF0B301D).withValues(alpha: 0.94),
-                        const Color(0xFF13482E).withValues(alpha: 0.88),
-                        const Color(0xFF1E5E3D).withValues(alpha: 0.82),
-                        const Color(0xFF0E2819).withValues(alpha: 0.96),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              RepaintBoundary(
+                key: key,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(24),
+                  child: Container(
+                    width: 340,
+                    padding: const EdgeInsets.all(0),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          const Color(0xFF0B301D).withValues(alpha: 0.94),
+                          const Color(0xFF13482E).withValues(alpha: 0.88),
+                          const Color(0xFF1E5E3D).withValues(alpha: 0.82),
+                          const Color(0xFF0E2819).withValues(alpha: 0.96),
+                        ],
+                      ),
+                      borderRadius: BorderRadius.circular(24),
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.35),
+                        width: 1.5,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF1B7A4E).withValues(alpha: 0.3),
+                          blurRadius: 30,
+                          spreadRadius: 2,
+                        ),
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.5),
+                          blurRadius: 24,
+                          offset: const Offset(0, 10),
+                        ),
                       ],
                     ),
-                    borderRadius: BorderRadius.circular(24),
-                    border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.35),
-                      width: 1.5,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: const Color(0xFF1B7A4E).withValues(alpha: 0.3),
-                        blurRadius: 30,
-                        spreadRadius: 2,
-                      ),
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.5),
-                        blurRadius: 24,
-                        offset: const Offset(0, 10),
-                      ),
-                    ],
-                  ),
-                child: CustomPaint(
-                  painter: _ArabesqueWatermarkPainter(),
-                  child: Stack(
-                    children: [
-                      // Gold geometric border
-                      Positioned.fill(
-                        child: Container(
-                          margin: const EdgeInsets.all(6),
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(18),
-                            border: Border.all(color: const Color(0xFFD4A843).withValues(alpha: 0.6), width: 1.2),
-                          ),
-                          child: Container(
-                            margin: const EdgeInsets.all(4),
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(14),
-                              border: Border.all(color: const Color(0xFFD4A843).withValues(alpha: 0.25), width: 0.8),
-                            ),
-                          ),
-                        ),
-                      ),
-                      // Content
-                      Padding(
-                        padding: const EdgeInsets.all(26),
-                        child: Column(mainAxisSize: MainAxisSize.min, children: [
-                          // Top: App branding
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    child: CustomPaint(
+                      painter: _ArabesqueWatermarkPainter(),
+                      child: Stack(
+                        children: [
+                          // Gold geometric border
+                          Positioned.fill(
+                            child: Container(
+                              margin: const EdgeInsets.all(6),
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(18),
+                                border: Border.all(
+                                  color: const Color(
+                                    0xFFD4A843,
+                                  ).withValues(alpha: 0.6),
+                                  width: 1.2,
+                                ),
+                              ),
+                              child: Container(
+                                margin: const EdgeInsets.all(4),
                                 decoration: BoxDecoration(
-                                  color: const Color(0xFFD4A843).withValues(alpha: 0.15),
-                                  borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(color: const Color(0xFFD4A843).withValues(alpha: 0.35)),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    const Icon(Icons.auto_awesome_rounded, color: Color(0xFFD4A843), size: 14),
-                                    const SizedBox(width: 5),
-                                    Text('آية كريمة', style: GoogleFonts.ibmPlexSansArabic(color: const Color(0xFFD4A843), fontSize: 12, fontWeight: FontWeight.w700)),
-                                  ],
-                                ),
-                              ),
-                              Row(
-                                children: [
-                                  Text('بصائر', style: GoogleFonts.amiri(color: const Color(0xFFD4A843), fontSize: 18, fontWeight: FontWeight.bold)),
-                                  const SizedBox(width: 6),
-                                  Container(
-                                    width: 22, height: 22,
-                                    decoration: BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      border: Border.all(color: const Color(0xFFD4A843).withValues(alpha: 0.6), width: 1),
-                                    ),
-                                    child: const Icon(Icons.eco_rounded, color: Color(0xFFD4A843), size: 13),
+                                  borderRadius: BorderRadius.circular(14),
+                                  border: Border.all(
+                                    color: const Color(
+                                      0xFFD4A843,
+                                    ).withValues(alpha: 0.25),
+                                    width: 0.8,
                                   ),
-                                ],
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 24),
-                          // Verse text in elegant font
-                          Text(
-                            verseText,
-                            style: const TextStyle(
-                              fontFamily: 'KFGQPC Uthmanic Script Hafs',
-                              color: Color(0xFFFBF8F1),
-                              fontSize: 22,
-                              height: 1.95,
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                          const SizedBox(height: 24),
-                          // Ornamental gold frame for surah name + verse number
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                            decoration: BoxDecoration(
-                              border: Border.all(color: const Color(0xFFD4A843).withValues(alpha: 0.5), width: 1),
-                              borderRadius: BorderRadius.circular(24),
-                              gradient: LinearGradient(
-                                colors: [
-                                  const Color(0xFFD4A843).withValues(alpha: 0.1),
-                                  const Color(0xFFD4A843).withValues(alpha: 0.2),
-                                  const Color(0xFFD4A843).withValues(alpha: 0.1),
-                                ],
+                                ),
                               ),
                             ),
-                            child: Row(
+                          ),
+                          // Content
+                          Padding(
+                            padding: const EdgeInsets.all(26),
+                            child: Column(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Text('◈', style: GoogleFonts.amiri(color: const Color(0xFFD4A843), fontSize: 12)),
-                                const SizedBox(width: 8),
-                                Text('سورة $surahName', style: GoogleFonts.amiri(color: const Color(0xFFD4A843), fontSize: 15, fontWeight: FontWeight.bold)),
-                                const SizedBox(width: 6),
-                                Text('﴿ $verse ﴾', style: GoogleFonts.amiri(color: const Color(0xFFD4A843).withValues(alpha: 0.85), fontSize: 14)),
-                                const SizedBox(width: 8),
-                                Text('◈', style: GoogleFonts.amiri(color: const Color(0xFFD4A843), fontSize: 12)),
+                                // Top: App branding
+                                Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 10,
+                                        vertical: 4,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: const Color(
+                                          0xFFD4A843,
+                                        ).withValues(alpha: 0.15),
+                                        borderRadius: BorderRadius.circular(12),
+                                        border: Border.all(
+                                          color: const Color(
+                                            0xFFD4A843,
+                                          ).withValues(alpha: 0.35),
+                                        ),
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          const Icon(
+                                            Icons.auto_awesome_rounded,
+                                            color: Color(0xFFD4A843),
+                                            size: 14,
+                                          ),
+                                          const SizedBox(width: 5),
+                                          Text(
+                                            'آية كريمة',
+                                            style:
+                                                GoogleFonts.ibmPlexSansArabic(
+                                                  color: const Color(
+                                                    0xFFD4A843,
+                                                  ),
+                                                  fontSize: 12,
+                                                  fontWeight: FontWeight.w700,
+                                                ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    Row(
+                                      children: [
+                                        Text(
+                                          'بصائر',
+                                          style: GoogleFonts.amiri(
+                                            color: const Color(0xFFD4A843),
+                                            fontSize: 18,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 6),
+                                        Container(
+                                          width: 22,
+                                          height: 22,
+                                          decoration: BoxDecoration(
+                                            shape: BoxShape.circle,
+                                            border: Border.all(
+                                              color: const Color(
+                                                0xFFD4A843,
+                                              ).withValues(alpha: 0.6),
+                                              width: 1,
+                                            ),
+                                          ),
+                                          child: const Icon(
+                                            Icons.eco_rounded,
+                                            color: Color(0xFFD4A843),
+                                            size: 13,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 24),
+                                // Verse text in elegant font
+                                Text(
+                                  verseText,
+                                  style: const TextStyle(
+                                    fontFamily: 'KFGQPC Uthmanic Script Hafs',
+                                    color: Color(0xFFFBF8F1),
+                                    fontSize: 22,
+                                    height: 1.95,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                                const SizedBox(height: 24),
+                                // Ornamental gold frame for surah name + verse number
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 20,
+                                    vertical: 8,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    border: Border.all(
+                                      color: const Color(
+                                        0xFFD4A843,
+                                      ).withValues(alpha: 0.5),
+                                      width: 1,
+                                    ),
+                                    borderRadius: BorderRadius.circular(24),
+                                    gradient: LinearGradient(
+                                      colors: [
+                                        const Color(
+                                          0xFFD4A843,
+                                        ).withValues(alpha: 0.1),
+                                        const Color(
+                                          0xFFD4A843,
+                                        ).withValues(alpha: 0.2),
+                                        const Color(
+                                          0xFFD4A843,
+                                        ).withValues(alpha: 0.1),
+                                      ],
+                                    ),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Text(
+                                        '◈',
+                                        style: GoogleFonts.amiri(
+                                          color: const Color(0xFFD4A843),
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        'سورة $surahName',
+                                        style: GoogleFonts.amiri(
+                                          color: const Color(0xFFD4A843),
+                                          fontSize: 15,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 6),
+                                      Text(
+                                        '﴿ $verse ﴾',
+                                        style: GoogleFonts.amiri(
+                                          color: const Color(
+                                            0xFFD4A843,
+                                          ).withValues(alpha: 0.85),
+                                          fontSize: 14,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        '◈',
+                                        style: GoogleFonts.amiri(
+                                          color: const Color(0xFFD4A843),
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(height: 20),
+                                Divider(
+                                  color: Colors.white.withValues(alpha: 0.15),
+                                ),
+                                const SizedBox(height: 6),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Text(
+                                      'تطبيق بصائر للقرآن الكريم والعبادات',
+                                      style: GoogleFonts.ibmPlexSansArabic(
+                                        color: Colors.white54,
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ],
                             ),
                           ),
-                          const SizedBox(height: 20),
-                          Divider(color: Colors.white.withValues(alpha: 0.15)),
-                          const SizedBox(height: 6),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Text(
-                                'تطبيق بصائر للقرآن الكريم والعبادات',
-                                style: GoogleFonts.ibmPlexSansArabic(
-                                  color: Colors.white54,
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ]),
+                        ],
                       ),
-                    ],
+                    ),
                   ),
                 ),
               ),
-            ),
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: TextButton(
+                        onPressed: () => Navigator.pop(ctx),
+                        child: Text(
+                          'إلغاء',
+                          style: GoogleFonts.ibmPlexSansArabic(
+                            color: isDark
+                                ? Colors.white60
+                                : AppColors.textSecondary,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.darkGreen,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        onPressed: () async {
+                          try {
+                            final boundary =
+                                key.currentContext!.findRenderObject()
+                                    as RenderRepaintBoundary;
+                            final image = await boundary.toImage(
+                              pixelRatio: 3.0,
+                            );
+                            final byteData = await image.toByteData(
+                              format: ui.ImageByteFormat.png,
+                            );
+                            final bytes = byteData!.buffer.asUint8List();
+                            final dir = await getTemporaryDirectory();
+                            final file = File(
+                              '${dir.path}/ayah_${surah}_$verse.png',
+                            );
+                            await file.writeAsBytes(bytes);
+                            if (!ctx.mounted) return;
+                            Navigator.pop(ctx);
+                            await Share.shareXFiles([
+                              XFile(file.path),
+                            ], text: 'سورة $surahName - آية $verse\nبصائر');
+                          } catch (e) {
+                            if (!ctx.mounted) return;
+                            Navigator.pop(ctx);
+                            _snack(context, 'حدث خطأ في المشاركة');
+                          }
+                        },
+                        child: Text(
+                          'مشاركة',
+                          style: GoogleFonts.ibmPlexSansArabic(
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Row(children: [
-                Expanded(
-                  child: TextButton(onPressed: () => Navigator.pop(ctx), child: Text('إلغاء', style: GoogleFonts.ibmPlexSansArabic(color: isDark ? Colors.white60 : AppColors.textSecondary))),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(backgroundColor: AppColors.darkGreen, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
-                    onPressed: () async {
-                      try {
-                        final boundary = key.currentContext!.findRenderObject() as RenderRepaintBoundary;
-                        final image = await boundary.toImage(pixelRatio: 3.0);
-                        final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
-                        final bytes = byteData!.buffer.asUint8List();
-                        final dir = await getTemporaryDirectory();
-                        final file = File('${dir.path}/ayah_${surah}_$verse.png');
-                        await file.writeAsBytes(bytes);
-                        if (!ctx.mounted) return;
-                        Navigator.pop(ctx);
-                        await Share.shareXFiles([XFile(file.path)], text: 'سورة $surahName - آية $verse\nبصائر');
-                      } catch (e) {
-                        if (!ctx.mounted) return;
-                        Navigator.pop(ctx);
-                        _snack(context, 'حدث خطأ في المشاركة');
-                      }
-                    },
-                    child: Text('مشاركة', style: GoogleFonts.ibmPlexSansArabic(fontWeight: FontWeight.bold)),
-                  ),
-                ),
-              ]),
-            ),
-          ]),
         ),
       ),
     );
@@ -2622,29 +3647,43 @@ class _AyahEndMark extends StatelessWidget {
   final int number;
   final bool isDark;
   final double size;
-  const _AyahEndMark({required this.number, required this.isDark, this.size = 32});
+  const _AyahEndMark({
+    required this.number,
+    required this.isDark,
+    this.size = 32,
+  });
   String _toArabic(int n) {
-    const ar = ['٠','١','٢','٣','٤','٥','٦','٧','٨','٩'];
+    const ar = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'];
     return n.toString().split('').map((e) => ar[int.parse(e)]).join('');
   }
+
   @override
   Widget build(BuildContext context) {
     return Container(
       margin: EdgeInsets.symmetric(horizontal: size * 0.08),
-      width: size, height: size,
-      child: Stack(alignment: Alignment.center, children: [
-        Icon(Icons.circle_outlined, size: size, color: AppColors.darkGreen.withValues(alpha: 0.7)),
-        Text(_toArabic(number), style: TextStyle(
-          fontSize: size * 0.34,
-          fontWeight: FontWeight.bold,
-          color: isDark ? Colors.white : AppColors.textPrimary,
-        )),
-      ]),
+      width: size,
+      height: size,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          Icon(
+            Icons.circle_outlined,
+            size: size,
+            color: AppColors.darkGreen.withValues(alpha: 0.7),
+          ),
+          Text(
+            _toArabic(number),
+            style: TextStyle(
+              fontSize: size * 0.34,
+              fontWeight: FontWeight.bold,
+              color: isDark ? Colors.white : AppColors.textPrimary,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
-
-
 
 // ─── Decorated Mushaf Frame ──────────────────────────────────────────────────
 // Provides an ornamental double-border around each mushaf page,
@@ -2667,9 +3706,7 @@ class _DecoratedMushafFrame extends StatelessWidget {
     final fillStart = isDark
         ? const Color(0xFF0E1B13)
         : const Color(0xFFF4F9F5);
-    final fillEnd = isDark
-        ? const Color(0xFF081209)
-        : const Color(0xFFE8F2EC);
+    final fillEnd = isDark ? const Color(0xFF081209) : const Color(0xFFE8F2EC);
 
     return Container(
       decoration: BoxDecoration(
@@ -2701,20 +3738,30 @@ class _DecoratedMushafFrame extends StatelessWidget {
             Padding(padding: const EdgeInsets.all(2), child: child),
             // Decorative corners
             Positioned(
-              top: 4, right: 4,
+              top: 4,
+              right: 4,
               child: _Corner(color: cornerColor, alignment: Alignment.topRight),
             ),
             Positioned(
-              top: 4, left: 4,
+              top: 4,
+              left: 4,
               child: _Corner(color: cornerColor, alignment: Alignment.topLeft),
             ),
             Positioned(
-              bottom: 4, right: 4,
-              child: _Corner(color: cornerColor, alignment: Alignment.bottomRight),
+              bottom: 4,
+              right: 4,
+              child: _Corner(
+                color: cornerColor,
+                alignment: Alignment.bottomRight,
+              ),
             ),
             Positioned(
-              bottom: 4, left: 4,
-              child: _Corner(color: cornerColor, alignment: Alignment.bottomLeft),
+              bottom: 4,
+              left: 4,
+              child: _Corner(
+                color: cornerColor,
+                alignment: Alignment.bottomLeft,
+              ),
             ),
           ],
         ),
@@ -2809,16 +3856,19 @@ class _SinglePagePhysics extends ScrollPhysics {
     } else {
       target = base;
     }
-    final maxIndex =
-        (position.maxScrollExtent / position.viewportDimension).round();
+    final maxIndex = (position.maxScrollExtent / position.viewportDimension)
+        .round();
     target = target.clamp(0.0, maxIndex.toDouble());
     return target * position.viewportDimension;
   }
 
   @override
   Simulation? createBallisticSimulation(
-      ScrollMetrics position, double velocity) {
-    if (position is! ScrollPosition) return super.createBallisticSimulation(position, velocity);
+    ScrollMetrics position,
+    double velocity,
+  ) {
+    if (position is! ScrollPosition)
+      return super.createBallisticSimulation(position, velocity);
     final tolerance = toleranceFor(position);
 
     final target = _targetPixels(position, velocity);

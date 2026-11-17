@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'dart:io';
-import 'dart:math';
+import 'dart:math' as math;
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
@@ -52,7 +52,7 @@ import '../../models/study_track_model.dart';
 import '../../services/study_track_service.dart';
 import '../badges/badges_page.dart';
 import '../../widgets/closest_badge_widget.dart';
-
+import '../../widgets/ramadan_countdown_card.dart';
 
 TextStyle _f({
   double sz = 14,
@@ -75,9 +75,7 @@ class DashboardPage extends StatefulWidget {
 
 class _DashboardPageState extends State<DashboardPage>
     with WidgetsBindingObserver {
-  static const String _showAzkarPrefKey = 'show_dashboard_azkar';
   int _currentIndex = 0;
-  bool _showAzkar = true;
   bool _fajrChecked = false;
   bool _charityChecked = false;
   bool _quranChecked = false;
@@ -101,6 +99,7 @@ class _DashboardPageState extends State<DashboardPage>
   bool _loadingDawri = false;
   // Next prayer state
   String _nextPrayerName = '';
+  String _nextPrayerKey = '';
   DateTime? _nextPrayerTime;
   String _afterPrayerName = '';
   DateTime? _afterPrayerTime;
@@ -116,7 +115,6 @@ class _DashboardPageState extends State<DashboardPage>
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _preloadPrayerTimesSync();
-    _loadAzkarPref();
     _checkTodayAccountability();
     _loadTodaySummary();
     _loadWirdData();
@@ -133,36 +131,12 @@ class _DashboardPageState extends State<DashboardPage>
       final next = twoInfo['next']!;
       final after = twoInfo['after']!;
       _nextPrayerName = next['name'] as String? ?? '';
+      _nextPrayerKey = next['key'] as String? ?? '';
       _nextPrayerTime = next['time'] as DateTime?;
       _afterPrayerName = after['name'] as String? ?? '';
       _afterPrayerTime = after['time'] as DateTime?;
       _allPrayerTimes = allTimes;
       _loadingPrayer = false;
-    } catch (_) {}
-  }
-
-  Future<void> _loadAzkarPref() async {
-    try {
-      final box = Hive.isBoxOpen('user_preferences')
-          ? Hive.box('user_preferences')
-          : await Hive.openBox('user_preferences');
-      if (mounted) {
-        setState(() {
-          _showAzkar = box.get(_showAzkarPrefKey, defaultValue: true) as bool;
-        });
-      }
-    } catch (_) {
-      // Fall back to default true if Hive isn't ready
-    }
-  }
-
-  Future<void> _setShowAzkar(bool value) async {
-    setState(() => _showAzkar = value);
-    try {
-      final box = Hive.isBoxOpen('user_preferences')
-          ? Hive.box('user_preferences')
-          : await Hive.openBox('user_preferences');
-      await box.put(_showAzkarPrefKey, value);
     } catch (_) {}
   }
 
@@ -231,17 +205,28 @@ class _DashboardPageState extends State<DashboardPage>
     try {
       final list = await _dawriService.getUserDawriList(userId);
       if (list.isEmpty) {
-        if (mounted) setState(() { _featuredDawri = null; _loadingDawri = false; });
+        if (mounted)
+          setState(() {
+            _featuredDawri = null;
+            _loadingDawri = false;
+          });
         return;
       }
       // Pick first active league as featured
-      final dawri = list.firstWhere((d) => d.isActive, orElse: () => list.first);
-      final board = await _dawriService.getLeaderboard(dawri: dawri, period: 'today');
-      if (mounted) setState(() {
-        _featuredDawri = dawri;
-        _featuredLeaderboard = board;
-        _loadingDawri = false;
-      });
+      final dawri = list.firstWhere(
+        (d) => d.isActive,
+        orElse: () => list.first,
+      );
+      final board = await _dawriService.getLeaderboard(
+        dawri: dawri,
+        period: 'today',
+      );
+      if (mounted)
+        setState(() {
+          _featuredDawri = dawri;
+          _featuredLeaderboard = board;
+          _loadingDawri = false;
+        });
     } catch (_) {
       if (mounted) setState(() => _loadingDawri = false);
     }
@@ -259,15 +244,16 @@ class _DashboardPageState extends State<DashboardPage>
       if (mounted) {
         final twoInfo = results[0] as Map<String, Map<String, dynamic>>;
         final allTimes = results[1] as List<Map<String, dynamic>>;
-        final next  = twoInfo['next']!;
+        final next = twoInfo['next']!;
         final after = twoInfo['after']!;
         setState(() {
-          _nextPrayerName  = next['name']  as String? ?? '';
-          _nextPrayerTime  = next['time']  as DateTime?;
+          _nextPrayerName = next['name'] as String? ?? '';
+          _nextPrayerKey = next['key'] as String? ?? '';
+          _nextPrayerTime = next['time'] as DateTime?;
           _afterPrayerName = after['name'] as String? ?? '';
           _afterPrayerTime = after['time'] as DateTime?;
-          _allPrayerTimes  = allTimes;
-          _loadingPrayer   = false;
+          _allPrayerTimes = allTimes;
+          _loadingPrayer = false;
         });
       }
       // Refresh dynamic wird notifications with latest prayer times
@@ -284,8 +270,11 @@ class _DashboardPageState extends State<DashboardPage>
     final today = DateTime.now();
     // Week starts on Saturday (weekday == 6 in Dart, Mon=1…Sun=7)
     // We show 7 days ending today
-    final weekStart = DateTime(today.year, today.month, today.day)
-        .subtract(const Duration(days: 6));
+    final weekStart = DateTime(
+      today.year,
+      today.month,
+      today.day,
+    ).subtract(const Duration(days: 6));
 
     try {
       // One query covers the week view and a streak that crosses months.
@@ -301,7 +290,8 @@ class _DashboardPageState extends State<DashboardPage>
 
       final days = List.generate(
         7,
-        (i) => prayedKeys.contains(fajrDayKey(weekStart.add(Duration(days: i)))),
+        (i) =>
+            prayedKeys.contains(fajrDayKey(weekStart.add(Duration(days: i)))),
       );
 
       if (mounted) {
@@ -349,7 +339,8 @@ class _DashboardPageState extends State<DashboardPage>
           _quranChecked = today.worships['quran_read'] == true;
           _azkarChecked = today.worships['azkar_done'] == true;
           _istighfarChecked = today.worships['istighfar_done'] == true;
-          _isAccountabilityDone = _fajrChecked &&
+          _isAccountabilityDone =
+              _fajrChecked &&
               _charityChecked &&
               _quranChecked &&
               _azkarChecked &&
@@ -364,11 +355,9 @@ class _DashboardPageState extends State<DashboardPage>
     }
   }
 
-  Future<void> _saveQuickAccountability() async {
+  Future<void> _persistAccountability() async {
     final userId = context.read<AppAuthProvider>().userId;
     if (userId.isEmpty) return;
-
-    setState(() => _isLoadingAccountability = true);
 
     try {
       final worships = await _firebaseService.getDailyWorshipByDate(
@@ -383,7 +372,9 @@ class _DashboardPageState extends State<DashboardPage>
         id: docId,
         date: DateTime.now(),
         prayerCount: db_model.DailyWorship.prayerCountAfterFajr(
-            worships.firstOrNull, _fajrChecked),
+          worships.firstOrNull,
+          _fajrChecked,
+        ),
         quranPages: worships.isNotEmpty ? worships.first.quranPages : 0,
         notes: worships.firstOrNull?.notes ?? '',
         worships: {
@@ -398,7 +389,12 @@ class _DashboardPageState extends State<DashboardPage>
 
       await _firebaseService.saveDailyWorship(userId, data);
       setState(() {
-        _isAccountabilityDone = true;
+        _isAccountabilityDone =
+            _fajrChecked &&
+            _charityChecked &&
+            _quranChecked &&
+            _azkarChecked &&
+            _istighfarChecked;
         _isLoadingAccountability = false;
       });
       // Reload summary after saving accountability
@@ -458,225 +454,9 @@ class _DashboardPageState extends State<DashboardPage>
             ),
             slivers: [
               // ── Modern Enhanced Header ──
+              // ── Glass Prayer Arch Header ──
               SliverToBoxAdapter(
-                child: Container(
-                  padding: EdgeInsets.only(
-                    top: MediaQuery.of(context).padding.top + 14,
-                    bottom: 26,
-                    left: 20,
-                    right: 20,
-                  ),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topRight,
-                      end: Alignment.bottomLeft,
-                      colors: isDark
-                          ? [
-                              const Color(0xFF0E2E1D),
-                              const Color(0xFF091E13),
-                              const Color(0xFF051109),
-                            ]
-                          : [
-                              const Color(0xFF0F4C31),
-                              const Color(0xFF176B45),
-                              const Color(0xFF218B5B),
-                            ],
-                    ),
-                    borderRadius: const BorderRadius.only(
-                      bottomLeft: Radius.circular(36),
-                      bottomRight: Radius.circular(36),
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: const Color(0xFF0D2818).withValues(alpha: 0.28),
-                        blurRadius: 24,
-                        offset: const Offset(0, 10),
-                      ),
-                    ],
-                  ),
-                  child: Column(
-                    children: [
-                      // Top Greeting & Action Bar
-                      Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(2.5),
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              gradient: LinearGradient(
-                                colors: [
-                                  AppColors.gold,
-                                  AppColors.gold.withValues(alpha: 0.35),
-                                ],
-                              ),
-                            ),
-                            child: CircleAvatar(
-                              radius: 24,
-                              backgroundColor:
-                                  const Color(0xFF0D2818).withValues(alpha: 0.65),
-                              child: Text(
-                                userName.isNotEmpty
-                                    ? userName[0].toUpperCase()
-                                    : '؟',
-                                style: _f(
-                                  sz: 19,
-                                  fw: FontWeight.w800,
-                                  c: Colors.white,
-                                ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    Text(
-                                      'السلام عليكم، ${userName.split(' ').first}',
-                                      style: _f(
-                                        sz: 13,
-                                        fw: FontWeight.w600,
-                                        c: Colors.white.withValues(alpha: 0.85),
-                                      ),
-                                    ),
-                                    const SizedBox(width: 6),
-                                    const Icon(
-                                      Icons.verified_rounded,
-                                      size: 14,
-                                      color: AppColors.gold,
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  'مرحباً بك في بصائر',
-                                  style: _f(
-                                    sz: 20,
-                                    fw: FontWeight.w900,
-                                    c: Colors.white,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          _IconButton(
-                            icon: Icons.explore_outlined,
-                            onTap: () => _to(const QiblaPage()),
-                          ),
-                          const SizedBox(width: 8),
-                          if (isGuest)
-                            GestureDetector(
-                              onTap: () => Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => const LoginPage(),
-                                ),
-                              ),
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 14,
-                                  vertical: 9,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: AppColors.gold,
-                                  borderRadius: BorderRadius.circular(18),
-                                ),
-                                child: Text(
-                                  'دخول',
-                                  style: _f(
-                                    sz: 12,
-                                    fw: FontWeight.bold,
-                                    c: Colors.white,
-                                  ),
-                                ),
-                              ),
-                            )
-                          else
-                            _IconButton(
-                              icon: Icons.notifications_none_rounded,
-                              onTap: () => Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) =>
-                                      const NotificationSettingsPage(),
-                                ),
-                              ),
-                            ),
-                        ],
-                      ),
-                      const SizedBox(height: 14),
-                      // Quick Status Strip (Date + Next Prayer Quick Pill)
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 14,
-                          vertical: 8,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.black.withValues(alpha: 0.18),
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color: Colors.white.withValues(alpha: 0.1),
-                          ),
-                        ),
-                        child: Row(
-                          children: [
-                            const Icon(
-                              Icons.calendar_today_rounded,
-                              size: 14,
-                              color: AppColors.gold,
-                            ),
-                            const SizedBox(width: 6),
-                            Expanded(
-                              child: Text(
-                                _getArabicDate(),
-                                style: _f(
-                                  sz: 11.5,
-                                  fw: FontWeight.w600,
-                                  c: Colors.white.withValues(alpha: 0.9),
-                                ),
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                            if (_nextPrayerName.isNotEmpty) ...[
-                              Container(
-                                width: 1,
-                                height: 14,
-                                margin: const EdgeInsets.symmetric(horizontal: 10),
-                                color: Colors.white24,
-                              ),
-                              GestureDetector(
-                                onTap: () => _to(const PrayerTimesPage()),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    const Icon(
-                                      Icons.mosque_rounded,
-                                      size: 14,
-                                      color: AppColors.gold,
-                                    ),
-                                    const SizedBox(width: 5),
-                                    Text(
-                                      'القادمة: $_nextPrayerName',
-                                      style: _f(
-                                        sz: 11.5,
-                                        fw: FontWeight.w700,
-                                        c: AppColors.gold,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      _QuoteCarousel(date: _getArabicDate()),
-                    ],
-                  ),
-                ),
+                child: _buildArchHeader(isDark, userName, isGuest),
               ),
 
               // ── Last Read Quran Progress Card (متابعة القراءة) ──
@@ -704,18 +484,6 @@ class _DashboardPageState extends State<DashboardPage>
                 ),
               ),
 
-              // ── Rotating Azkar Section ──
-              if (_showAzkar) ...[
-                SliverToBoxAdapter(
-                  child: _SectionTitle(
-                    title: 'ذكر اليوم',
-                    icon: Icons.auto_awesome_rounded,
-                  ),
-                ),
-                SliverToBoxAdapter(child: _buildRotatingAzkar(isDark)),
-              ] else
-                SliverToBoxAdapter(child: _buildAzkarSettingsButton(isDark)),
-
               // ── Today's Focus Section (only for logged-in users) ──
               if (!isGuest) ...[
                 SliverToBoxAdapter(
@@ -726,6 +494,14 @@ class _DashboardPageState extends State<DashboardPage>
                 ),
                 SliverToBoxAdapter(child: _buildDailyAccountability(isDark)),
               ],
+
+              // ── Ramadan Coming Soon ──
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 18, 20, 4),
+                  child: const RamadanCountdownCard(),
+                ),
+              ),
 
               // ── Daily Summary Section ──
               if (!isGuest && _todaySummary['hasData'] == true) ...[
@@ -773,8 +549,7 @@ class _DashboardPageState extends State<DashboardPage>
                   onTap: () async {
                     await Navigator.push(
                       context,
-                      MaterialPageRoute(
-                          builder: (_) => const FajrStreakPage()),
+                      MaterialPageRoute(builder: (_) => const FajrStreakPage()),
                     );
                     // Refresh fajr data when returning
                     _loadFajrWeekly();
@@ -791,9 +566,7 @@ class _DashboardPageState extends State<DashboardPage>
                     icon: Icons.military_tech_rounded,
                   ),
                 ),
-                SliverToBoxAdapter(
-                  child: ClosestBadgeWidget(isDark: isDark),
-                ),
+                SliverToBoxAdapter(child: ClosestBadgeWidget(isDark: isDark)),
               ],
 
               // ── Daily Wird Section ──
@@ -824,9 +597,7 @@ class _DashboardPageState extends State<DashboardPage>
                     icon: Icons.emoji_events_rounded,
                   ),
                 ),
-                SliverToBoxAdapter(
-                  child: _buildDawriWidget(isDark),
-                ),
+                SliverToBoxAdapter(child: _buildDawriWidget(isDark)),
               ],
 
               // ── Quick Access Section ──
@@ -1122,182 +893,6 @@ class _DashboardPageState extends State<DashboardPage>
               ),
             ],
           ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildAzkarSettingsButton(bool isDark) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-        decoration: BoxDecoration(
-          color: isDark
-              ? Colors.white.withValues(alpha: 0.05)
-              : AppColors.paleGreen.withValues(alpha: 0.5),
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-            color: AppColors.gold.withValues(alpha: 0.35),
-            width: 1,
-          ),
-        ),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: AppColors.gold.withValues(alpha: 0.15),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.auto_awesome_rounded,
-                color: AppColors.gold,
-                size: 18,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'ذكر اليوم مخفي',
-                    style: _f(
-                      sz: 14,
-                      fw: FontWeight.w800,
-                      c: isDark ? Colors.white : AppColors.darkGreen,
-                    ),
-                  ),
-                  Text(
-                    'يمكنك إظهار الأذكار المقترحة في الصفحة الرئيسية',
-                    style: _f(
-                      sz: 11,
-                      c: isDark ? Colors.white60 : AppColors.gray,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            TextButton.icon(
-              onPressed: () => _setShowAzkar(true),
-              icon: const Icon(Icons.visibility_rounded, size: 16),
-              label: Text(
-                'إظهار',
-                style: _f(sz: 13, fw: FontWeight.w700, c: AppColors.darkGreen),
-              ),
-              style: TextButton.styleFrom(foregroundColor: AppColors.darkGreen),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildRotatingAzkar(bool isDark) {
-    // Pick random azkar that change on each app open
-    final allAzkar = <Dhikr>[
-      ...azkarCategories['أذكار الصباح']!.items.take(10),
-      ...azkarCategories['أذكار المساء']!.items.take(10),
-      ...azkarCategories['أدعية نبوية']!.items,
-    ];
-    final random = Random(DateTime.now().day * 100 + DateTime.now().hour ~/ 6);
-    final shuffled = List<Dhikr>.from(allAzkar)..shuffle(random);
-    final selected = shuffled.take(3).toList();
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: Container(
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: isDark
-                ? [const Color(0xFF1A2F23), const Color(0xFF0D2818)]
-                : [const Color(0xFFE8F5E9), const Color(0xFFC8E6C9)],
-          ),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: AppColors.gold.withOpacity(0.3)),
-        ),
-        child: Stack(
-          children: [
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const SizedBox(height: 10), // spacing for the close button
-                ...selected.map(
-                  (dhikr) => Padding(
-                    padding: const EdgeInsets.only(bottom: 14),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          dhikr.text.length > 120
-                              ? '${dhikr.text.substring(0, 120)}...'
-                              : dhikr.text,
-                          style: _f(
-                            sz: 15,
-                            fw: FontWeight.w700,
-                            c: isDark ? Colors.white : AppColors.darkGreen,
-                            h: 1.8,
-                          ),
-                          textAlign: TextAlign.right,
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          dhikr.reward,
-                          style: _f(
-                            sz: 11,
-                            c: AppColors.gold,
-                            fw: FontWeight.w600,
-                          ),
-                        ),
-                        if (selected.last != dhikr)
-                          Divider(
-                            height: 20,
-                            color: AppColors.gold.withOpacity(0.2),
-                          ),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 4),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    onPressed: () => _to(const AzkarLibraryPage()),
-                    icon: const Icon(Icons.import_contacts_rounded, size: 18),
-                    label: Text(
-                      'مكتبة الأذكار',
-                      style: _f(sz: 14, fw: FontWeight.bold, c: Colors.white),
-                    ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.darkGreen,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            Positioned(
-              top: -10,
-              left: -10,
-              child: IconButton(
-                icon: Icon(
-                  Icons.close_rounded,
-                  size: 20,
-                  color: isDark
-                      ? Colors.white54
-                      : AppColors.darkGreen.withOpacity(0.5),
-                ),
-                onPressed: () => _setShowAzkar(false),
-                splashRadius: 20,
-              ),
-            ),
-          ],
         ),
       ),
     );
@@ -1928,6 +1523,7 @@ class _DashboardPageState extends State<DashboardPage>
       ],
     );
   }
+
   // ── Dawri (Leagues) Dashboard Widget ──────────────────────────────────────
   Widget _buildDawriWidget(bool isDark) {
     final cardBg = isDark ? const Color(0xFF151C17) : Colors.white;
@@ -1944,7 +1540,9 @@ class _DashboardPageState extends State<DashboardPage>
           ),
           child: const Center(
             child: CircularProgressIndicator(
-                color: AppColors.darkGreen, strokeWidth: 2),
+              color: AppColors.darkGreen,
+              strokeWidth: 2,
+            ),
           ),
         ),
       );
@@ -1967,9 +1565,7 @@ class _DashboardPageState extends State<DashboardPage>
             decoration: BoxDecoration(
               color: cardBg,
               borderRadius: BorderRadius.circular(18),
-              border: Border.all(
-                color: AppColors.gold.withOpacity(0.3),
-              ),
+              border: Border.all(color: AppColors.gold.withOpacity(0.3)),
             ),
             child: Row(
               children: [
@@ -1979,8 +1575,11 @@ class _DashboardPageState extends State<DashboardPage>
                     color: AppColors.gold.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(14),
                   ),
-                  child: const Icon(Icons.emoji_events_rounded,
-                      color: AppColors.gold, size: 26),
+                  child: const Icon(
+                    Icons.emoji_events_rounded,
+                    color: AppColors.gold,
+                    size: 26,
+                  ),
                 ),
                 const SizedBox(width: 14),
                 Expanded(
@@ -2008,8 +1607,11 @@ class _DashboardPageState extends State<DashboardPage>
                     color: AppColors.gold,
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: const Icon(Icons.add_rounded,
-                      color: Colors.white, size: 18),
+                  child: const Icon(
+                    Icons.add_rounded,
+                    color: Colors.white,
+                    size: 18,
+                  ),
                 ),
               ],
             ),
@@ -2093,20 +1695,24 @@ class _DashboardPageState extends State<DashboardPage>
                       child: ListView.separated(
                         scrollDirection: Axis.horizontal,
                         physics: const BouncingScrollPhysics(),
-                        itemCount:
-                            board.length > 6 ? 6 : board.length,
-                        separatorBuilder: (_, __) =>
-                            const SizedBox(width: 14),
+                        itemCount: board.length > 6 ? 6 : board.length,
+                        separatorBuilder: (_, __) => const SizedBox(width: 14),
                         itemBuilder: (ctx, i) {
                           final stat = board[i];
                           final isMe = stat.userId == me;
                           final avatarColors = [
-                            AppColors.darkGreen, AppColors.midGreen,
-                            Colors.purple, Colors.blue,
-                            Colors.orange, Colors.pink,
+                            AppColors.darkGreen,
+                            AppColors.midGreen,
+                            Colors.purple,
+                            Colors.blue,
+                            Colors.orange,
+                            Colors.pink,
                           ];
-                          final color = avatarColors[
-                              stat.name.codeUnits.fold(0, (a, b) => a + b) %
+                          final color =
+                              avatarColors[stat.name.codeUnits.fold(
+                                    0,
+                                    (a, b) => a + b,
+                                  ) %
                                   avatarColors.length];
                           return Column(
                             mainAxisSize: MainAxisSize.min,
@@ -2141,9 +1747,10 @@ class _DashboardPageState extends State<DashboardPage>
                                             ? stat.name[0].toUpperCase()
                                             : '؟',
                                         style: _f(
-                                            sz: 16,
-                                            fw: FontWeight.bold,
-                                            c: Colors.white),
+                                          sz: 16,
+                                          fw: FontWeight.bold,
+                                          c: Colors.white,
+                                        ),
                                       ),
                                     ),
                                   ),
@@ -2156,10 +1763,9 @@ class _DashboardPageState extends State<DashboardPage>
                                         i == 0
                                             ? '🥇'
                                             : i == 1
-                                                ? '🥈'
-                                                : '🥉',
-                                        style:
-                                            const TextStyle(fontSize: 14),
+                                            ? '🥈'
+                                            : '🥉',
+                                        style: const TextStyle(fontSize: 14),
                                       ),
                                     )
                                   else
@@ -2173,15 +1779,18 @@ class _DashboardPageState extends State<DashboardPage>
                                           color: AppColors.gray,
                                           shape: BoxShape.circle,
                                           border: Border.all(
-                                              color: cardBg, width: 1.5),
+                                            color: cardBg,
+                                            width: 1.5,
+                                          ),
                                         ),
                                         child: Center(
                                           child: Text(
                                             '${i + 1}',
                                             style: _f(
-                                                sz: 9,
-                                                fw: FontWeight.w900,
-                                                c: Colors.white),
+                                              sz: 9,
+                                              fw: FontWeight.w900,
+                                              c: Colors.white,
+                                            ),
                                           ),
                                         ),
                                       ),
@@ -2200,8 +1809,8 @@ class _DashboardPageState extends State<DashboardPage>
                                     c: isMe
                                         ? AppColors.gold
                                         : isDark
-                                            ? Colors.white70
-                                            : AppColors.textPrimary,
+                                        ? Colors.white70
+                                        : AppColors.textPrimary,
                                   ),
                                   textAlign: TextAlign.center,
                                   overflow: TextOverflow.ellipsis,
@@ -2213,9 +1822,7 @@ class _DashboardPageState extends State<DashboardPage>
                                 style: _f(
                                   sz: 11,
                                   fw: FontWeight.w900,
-                                  c: isDark
-                                      ? Colors.white54
-                                      : AppColors.gray,
+                                  c: isDark ? Colors.white54 : AppColors.gray,
                                 ),
                               ),
                             ],
@@ -2229,14 +1836,13 @@ class _DashboardPageState extends State<DashboardPage>
               // Footer: today's date label
               Row(
                 children: [
-                  Icon(Icons.calendar_today_rounded,
-                      size: 12,
-                      color: AppColors.gray.withOpacity(0.6)),
-                  const SizedBox(width: 5),
-                  Text(
-                    _getArabicDate(),
-                    style: _f(sz: 11, c: AppColors.gray),
+                  Icon(
+                    Icons.calendar_today_rounded,
+                    size: 12,
+                    color: AppColors.gray.withOpacity(0.6),
                   ),
+                  const SizedBox(width: 5),
+                  Text(_getArabicDate(), style: _f(sz: 11, c: AppColors.gray)),
                   const Spacer(),
                   Text(
                     'اليوم • بالنقاط',
@@ -2322,18 +1928,11 @@ class _DashboardPageState extends State<DashboardPage>
                     children: [
                       Text(
                         'ملخص عبادات اليوم',
-                        style: _f(
-                          sz: 16,
-                          fw: FontWeight.w800,
-                          c: Colors.white,
-                        ),
+                        style: _f(sz: 16, fw: FontWeight.w800, c: Colors.white),
                       ),
                       Text(
                         'إنجازاتك الروحية لهذا اليوم 🤍',
-                        style: _f(
-                          sz: 12,
-                          c: Colors.white70,
-                        ),
+                        style: _f(sz: 12, c: Colors.white70),
                       ),
                     ],
                   ),
@@ -2380,11 +1979,7 @@ class _DashboardPageState extends State<DashboardPage>
               const SizedBox(height: 12),
               Text(
                 'العبادات الأخرى:',
-                style: _f(
-                  sz: 12,
-                  fw: FontWeight.w600,
-                  c: Colors.white70,
-                ),
+                style: _f(sz: 12, fw: FontWeight.w600, c: Colors.white70),
               ),
               const SizedBox(height: 8),
               Wrap(
@@ -2431,10 +2026,7 @@ class _DashboardPageState extends State<DashboardPage>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  title,
-                  style: _f(sz: 11, c: Colors.white70),
-                ),
+                Text(title, style: _f(sz: 11, c: Colors.white70)),
                 Text(
                   value,
                   style: _f(sz: 14, fw: FontWeight.bold, c: Colors.white),
@@ -2478,131 +2070,93 @@ class _DashboardPageState extends State<DashboardPage>
   }
 
   Widget _buildDailyAccountability(bool isDark) {
-    if (_isLoadingAccountability)
+    if (_isLoadingAccountability) {
       return const Center(
         child: Padding(
           padding: EdgeInsets.all(20),
           child: CircularProgressIndicator(strokeWidth: 2),
         ),
       );
-
-    if (_isAccountabilityDone) {
-      return Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 20),
-        child: _SuccessCard(isDark: isDark),
-      );
     }
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: _AccountabilityCard(
-        isDark: isDark,
-        onAdd: () => _showAccountabilityDialog(isDark),
+    final items = <_AccountabilityChipData>[
+      _AccountabilityChipData(
+        label: 'الفجر',
+        icon: Icons.wb_twilight_rounded,
+        checked: _fajrChecked,
+        color: const Color(0xFF1A237E),
+        onTap: () => _toggleAccountabilityItem('fajr'),
+      ),
+      _AccountabilityChipData(
+        label: 'الورد',
+        icon: Icons.menu_book_rounded,
+        checked: _quranChecked,
+        color: AppColors.darkGreen,
+        onTap: () => _toggleAccountabilityItem('quran'),
+      ),
+      _AccountabilityChipData(
+        label: 'الأذكار',
+        icon: Icons.spa_rounded,
+        checked: _azkarChecked,
+        color: const Color(0xFF6A1B9A),
+        onTap: () => _toggleAccountabilityItem('azkar'),
+      ),
+      _AccountabilityChipData(
+        label: 'الاستغفار',
+        icon: Icons.favorite_rounded,
+        checked: _istighfarChecked,
+        color: const Color(0xFFE65100),
+        onTap: () => _toggleAccountabilityItem('istighfar'),
+      ),
+      _AccountabilityChipData(
+        label: 'الصدقة',
+        icon: Icons.volunteer_activism_rounded,
+        checked: _charityChecked,
+        color: const Color(0xFFF9A825),
+        onTap: () => _toggleAccountabilityItem('charity'),
+      ),
+    ];
+
+    return SizedBox(
+      height: 96,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        itemCount: items.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 10),
+        itemBuilder: (context, i) =>
+            _AccountabilityChip(data: items[i], isDark: isDark),
       ),
     );
   }
 
-  void _showAccountabilityDialog(bool isDark) {
-    showDialog(
-      context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (context, setDialogState) => Directionality(
-          textDirection: TextDirection.rtl,
-          child: AlertDialog(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(24),
-            ),
-            title: Text(
-              'المحاسبة اليومية',
-              style: _f(sz: 18, fw: FontWeight.w800),
-            ),
-            content: SingleChildScrollView(
-              child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                _CheckItem(
-                  title: 'صلاة الفجر',
-                  subtitle: 'في وقتها',
-                  icon: Icons.wb_twilight_rounded,
-                  value: _fajrChecked,
-                  onChanged: (v) {
-                    setDialogState(() => _fajrChecked = v ?? false);
-                    setState(() {});
-                  },
-                ),
-                const SizedBox(height: 12),
-                _CheckItem(
-                  title: 'وردك من القرآن',
-                  subtitle: 'ولو صفحة واحدة',
-                  icon: Icons.menu_book_rounded,
-                  value: _quranChecked,
-                  onChanged: (v) {
-                    setDialogState(() => _quranChecked = v ?? false);
-                    setState(() {});
-                  },
-                ),
-                const SizedBox(height: 12),
-                _CheckItem(
-                  title: 'أذكار الصباح والمساء',
-                  subtitle: 'حصِّن نفسك',
-                  icon: Icons.spa_rounded,
-                  value: _azkarChecked,
-                  onChanged: (v) {
-                    setDialogState(() => _azkarChecked = v ?? false);
-                    setState(() {});
-                  },
-                ),
-                const SizedBox(height: 12),
-                _CheckItem(
-                  title: 'الاستغفار والتسبيح',
-                  subtitle: 'أكثِر منه اليوم',
-                  icon: Icons.favorite_rounded,
-                  value: _istighfarChecked,
-                  onChanged: (v) {
-                    setDialogState(() => _istighfarChecked = v ?? false);
-                    setState(() {});
-                  },
-                ),
-                const SizedBox(height: 12),
-                _CheckItem(
-                  title: 'الصدقة',
-                  subtitle: 'ولو بالقليل',
-                  icon: Icons.volunteer_activism_rounded,
-                  value: _charityChecked,
-                  onChanged: (v) {
-                    setDialogState(() => _charityChecked = v ?? false);
-                    setState(() {});
-                  },
-                ),
-              ],
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: Text('إلغاء', style: _f(c: Colors.grey)),
-              ),
-              ElevatedButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                  _saveQuickAccountability();
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.darkGreen,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                child: const Text(
-                  'حفظ الإنجاز',
-                  style: TextStyle(color: Colors.white),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
+  void _toggleAccountabilityItem(String key) {
+    setState(() {
+      switch (key) {
+        case 'fajr':
+          _fajrChecked = !_fajrChecked;
+          break;
+        case 'quran':
+          _quranChecked = !_quranChecked;
+          break;
+        case 'azkar':
+          _azkarChecked = !_azkarChecked;
+          break;
+        case 'istighfar':
+          _istighfarChecked = !_istighfarChecked;
+          break;
+        case 'charity':
+          _charityChecked = !_charityChecked;
+          break;
+      }
+      _isAccountabilityDone =
+          _fajrChecked &&
+          _charityChecked &&
+          _quranChecked &&
+          _azkarChecked &&
+          _istighfarChecked;
+    });
+    _persistAccountability();
   }
 
   Widget _buildLastReadQuranCard(bool isDark) {
@@ -2610,11 +2164,15 @@ class _DashboardPageState extends State<DashboardPage>
       return const SizedBox.shrink();
     }
     return ValueListenableBuilder<Box>(
-      valueListenable: Hive.box('quran_progress').listenable(keys: ['last_read']),
+      valueListenable: Hive.box(
+        'quran_progress',
+      ).listenable(keys: ['last_read']),
       builder: (context, box, _) {
         final raw = box.get('last_read');
         final hasSaved = raw is Map;
-        final int surahNumber = hasSaved ? ((raw['surahNumber'] as int?) ?? 1) : 1;
+        final int surahNumber = hasSaved
+            ? ((raw['surahNumber'] as int?) ?? 1)
+            : 1;
         final String surahName = hasSaved
             ? ((raw['surahName'] as String?) ?? 'الفاتحة')
             : 'الفاتحة';
@@ -2685,11 +2243,15 @@ class _DashboardPageState extends State<DashboardPage>
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: Text(
-                                hasSaved ? 'آخر موضع قراءة محفوظ' : 'ابدأ ختمتك اليوم',
+                                hasSaved
+                                    ? 'آخر موضع قراءة محفوظ'
+                                    : 'ابدأ ختمتك اليوم',
                                 style: _f(
                                   sz: 10.5,
                                   fw: FontWeight.w800,
-                                  c: isDark ? AppColors.gold : const Color(0xFF8C6218),
+                                  c: isDark
+                                      ? AppColors.gold
+                                      : const Color(0xFF8C6218),
                                 ),
                               ),
                             ),
@@ -2699,7 +2261,9 @@ class _DashboardPageState extends State<DashboardPage>
                               style: _f(
                                 sz: 11,
                                 fw: FontWeight.w700,
-                                c: isDark ? Colors.white60 : const Color(0xFF4A6B5D),
+                                c: isDark
+                                    ? Colors.white60
+                                    : const Color(0xFF4A6B5D),
                               ),
                             ),
                           ],
@@ -2710,7 +2274,9 @@ class _DashboardPageState extends State<DashboardPage>
                           style: GoogleFonts.amiri(
                             fontSize: 22,
                             fontWeight: FontWeight.w700,
-                            color: isDark ? Colors.white : const Color(0xFF103B27),
+                            color: isDark
+                                ? Colors.white
+                                : const Color(0xFF103B27),
                           ),
                         ),
                         Text(
@@ -2720,7 +2286,9 @@ class _DashboardPageState extends State<DashboardPage>
                           style: _f(
                             sz: 12,
                             fw: FontWeight.w600,
-                            c: isDark ? Colors.white70 : const Color(0xFF3E6153),
+                            c: isDark
+                                ? Colors.white70
+                                : const Color(0xFF3E6153),
                           ),
                         ),
                       ],
@@ -2757,7 +2325,10 @@ class _DashboardPageState extends State<DashboardPage>
                   TextButton(
                     onPressed: () => _to(const QuranPage()),
                     style: TextButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 6,
+                      ),
                       minimumSize: Size.zero,
                       tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     ),
@@ -2841,26 +2412,14 @@ class _HomeDhikrCounterCardState extends State<_HomeDhikrCounterCard> {
       'target': 100,
       'reward': 'من لزم الاستغفار جعل الله له من كل هم فرجاً',
     },
-    {
-      'text': 'سبحان الله',
-      'target': 33,
-      'reward': 'تملأ ميزان الحسنات',
-    },
-    {
-      'text': 'الحمد لله',
-      'target': 33,
-      'reward': 'الحمد لله تملأ الميزان',
-    },
+    {'text': 'سبحان الله', 'target': 33, 'reward': 'تملأ ميزان الحسنات'},
+    {'text': 'الحمد لله', 'target': 33, 'reward': 'الحمد لله تملأ الميزان'},
     {
       'text': 'لا إله إلا الله',
       'target': 100,
       'reward': 'أفضل الذكر لا إله إلا الله',
     },
-    {
-      'text': 'الله أكبر',
-      'target': 34,
-      'reward': 'تملأ ما بين السماء والأرض',
-    },
+    {'text': 'الله أكبر', 'target': 34, 'reward': 'تملأ ما بين السماء والأرض'},
     {
       'text': 'اللهم صلِّ وسلم على نبينا محمد',
       'target': 10,
@@ -2890,8 +2449,10 @@ class _HomeDhikrCounterCardState extends State<_HomeDhikrCounterCard> {
       final savedDay = box.get('daily_date') as String?;
       final today = _todayKey();
       setState(() {
-        _selectedIndex = ((box.get('selected_index') as int?) ?? 0)
-            .clamp(0, _dhikrOptions.length - 1);
+        _selectedIndex = ((box.get('selected_index') as int?) ?? 0).clamp(
+          0,
+          _dhikrOptions.length - 1,
+        );
         _count = (box.get('count_$_selectedIndex') as int?) ?? 0;
         _dailyTotal = (savedDay == today)
             ? ((box.get('daily_total') as int?) ?? 0)
@@ -2958,8 +2519,9 @@ class _HomeDhikrCounterCardState extends State<_HomeDhikrCounterCard> {
     final int target = item['target'] as int;
     final String reward = item['reward'] as String;
     final int cycleCount = _count % target;
-    final double progress =
-        _count > 0 && cycleCount == 0 ? 1.0 : (cycleCount / target);
+    final double progress = _count > 0 && cycleCount == 0
+        ? 1.0
+        : (cycleCount / target);
 
     return Container(
       padding: const EdgeInsets.all(18),
@@ -3005,8 +2567,8 @@ class _HomeDhikrCounterCardState extends State<_HomeDhikrCounterCard> {
                       color: selected
                           ? AppColors.darkGreen
                           : (isDark
-                              ? Colors.white.withValues(alpha: 0.06)
-                              : const Color(0xFFF0F6F3)),
+                                ? Colors.white.withValues(alpha: 0.06)
+                                : const Color(0xFFF0F6F3)),
                       borderRadius: BorderRadius.circular(18),
                       border: Border.all(
                         color: selected
@@ -3068,8 +2630,9 @@ class _HomeDhikrCounterCardState extends State<_HomeDhikrCounterCard> {
                           ),
                           boxShadow: [
                             BoxShadow(
-                              color: const Color(0xFF145A3A)
-                                  .withValues(alpha: 0.35),
+                              color: const Color(
+                                0xFF145A3A,
+                              ).withValues(alpha: 0.35),
                               blurRadius: 10,
                               offset: const Offset(0, 4),
                             ),
@@ -3144,7 +2707,9 @@ class _HomeDhikrCounterCardState extends State<_HomeDhikrCounterCard> {
                             style: _f(
                               sz: 11,
                               fw: FontWeight.w800,
-                              c: isDark ? AppColors.gold : const Color(0xFF8C6218),
+                              c: isDark
+                                  ? AppColors.gold
+                                  : const Color(0xFF8C6218),
                             ),
                           ),
                         ),
@@ -3162,7 +2727,9 @@ class _HomeDhikrCounterCardState extends State<_HomeDhikrCounterCard> {
                                 Icon(
                                   Icons.refresh_rounded,
                                   size: 15,
-                                  color: isDark ? Colors.white54 : AppColors.gray,
+                                  color: isDark
+                                      ? Colors.white54
+                                      : AppColors.gray,
                                 ),
                                 const SizedBox(width: 3),
                                 Text(
@@ -3255,52 +2822,129 @@ class _QuoteCarouselState extends State<_QuoteCarousel> {
   static const Map<int, List<Map<String, String>>> _weeklyQuotesByWeekday = {
     // Monday (1)
     1: [
-      {'text': 'تُعْرَضُ الأَعْمَالُ يَوْمَ الاِثْنَيْنِ وَالْخَمِيسِ فَأُحِبُّ أَنْ يُعْرَضَ عَمَلِي وَأَنَا صَائِمٌ', 'source': 'حديث شريف • إشراقة الاثنين'},
-      {'text': 'وَمَن يَتَّقِ اللَّهَ يَجْعَل لَّهُ مَخْرَجًا وَيَرْزُقْهُ مِنْ حَيْثُ لَا يَحْتَسِبُ', 'source': 'سورة الطلاق'},
-      {'text': 'إنّما الأعمالُ بالنيّات وإنّما لكلِّ امرئٍ ما نوى', 'source': 'حديث شريف'},
+      {
+        'text':
+            'تُعْرَضُ الأَعْمَالُ يَوْمَ الاِثْنَيْنِ وَالْخَمِيسِ فَأُحِبُّ أَنْ يُعْرَضَ عَمَلِي وَأَنَا صَائِمٌ',
+        'source': 'حديث شريف • إشراقة الاثنين',
+      },
+      {
+        'text':
+            'وَمَن يَتَّقِ اللَّهَ يَجْعَل لَّهُ مَخْرَجًا وَيَرْزُقْهُ مِنْ حَيْثُ لَا يَحْتَسِبُ',
+        'source': 'سورة الطلاق',
+      },
+      {
+        'text': 'إنّما الأعمالُ بالنيّات وإنّما لكلِّ امرئٍ ما نوى',
+        'source': 'حديث شريف',
+      },
       {'text': 'وقُل ربِّ زِدني عِلمًا', 'source': 'سورة طه'},
     ],
     // Tuesday (2)
     2: [
-      {'text': 'فَاذْكُرُونِي أَذْكُرْكُمْ وَاشْكُرُوا لِي وَلَا تَكْفُرُونِ', 'source': 'سورة البقرة • إشراقة الثلاثاء'},
-      {'text': 'أَحَبُّ الأعمالِ إلى اللهِ أدْوَمُها وإنْ قَلَّ', 'source': 'حديث شريف'},
+      {
+        'text': 'فَاذْكُرُونِي أَذْكُرْكُمْ وَاشْكُرُوا لِي وَلَا تَكْفُرُونِ',
+        'source': 'سورة البقرة • إشراقة الثلاثاء',
+      },
+      {
+        'text': 'أَحَبُّ الأعمالِ إلى اللهِ أدْوَمُها وإنْ قَلَّ',
+        'source': 'حديث شريف',
+      },
       {'text': 'إِنَّ اللَّهَ مَعَ الصَّابِرِينَ', 'source': 'سورة البقرة'},
-      {'text': 'ما نقصت صدقة من مال، وما زاد الله عبداً بعفو إلا عزاً', 'source': 'حديث شريف'},
+      {
+        'text': 'ما نقصت صدقة من مال، وما زاد الله عبداً بعفو إلا عزاً',
+        'source': 'حديث شريف',
+      },
     ],
     // Wednesday (3)
     3: [
-      {'text': 'أَلَا بِذِكْرِ اللَّهِ تَطْمَئِنُّ الْقُلُوبُ', 'source': 'سورة الرعد • إشراقة الأربعاء'},
-      {'text': 'وَهُوَ مَعَكُمْ أَيْنَ مَا كُنتُمْ وَاللَّهُ بِمَا تَعْمَلُونَ بَصِيرٌ', 'source': 'سورة الحديد'},
+      {
+        'text': 'أَلَا بِذِكْرِ اللَّهِ تَطْمَئِنُّ الْقُلُوبُ',
+        'source': 'سورة الرعد • إشراقة الأربعاء',
+      },
+      {
+        'text':
+            'وَهُوَ مَعَكُمْ أَيْنَ مَا كُنتُمْ وَاللَّهُ بِمَا تَعْمَلُونَ بَصِيرٌ',
+        'source': 'سورة الحديد',
+      },
       {'text': 'الكلمةُ الطيبةُ صدقة', 'source': 'حديث شريف'},
-      {'text': 'رَبَّنَا آتِنَا مِن لَّدُنكَ رَحْمَةً وَهَيِّئْ لَنَا مِنْ أَمْرِنَا رَشَدًا', 'source': 'سورة الكهف'},
+      {
+        'text':
+            'رَبَّنَا آتِنَا مِن لَّدُنكَ رَحْمَةً وَهَيِّئْ لَنَا مِنْ أَمْرِنَا رَشَدًا',
+        'source': 'سورة الكهف',
+      },
     ],
     // Thursday (4)
     4: [
-      {'text': 'وَإِذَا سَأَلَكَ عِبَادِي عَنِّي فَإِنِّي قَرِيبٌ أُجِيبُ دَعْوَةَ الدَّاعِ إِذَا دَعَانِ', 'source': 'سورة البقرة • إشراقة الخميس'},
-      {'text': 'اقرؤوا القرآن فإنه يأتي يوم القيامة شفيعاً لأصحابه', 'source': 'حديث شريف'},
-      {'text': 'وَلَسَوْفَ يُعْطِيكَ رَبُّكَ فَتَرْضَىٰ', 'source': 'سورة الضحى'},
+      {
+        'text':
+            'وَإِذَا سَأَلَكَ عِبَادِي عَنِّي فَإِنِّي قَرِيبٌ أُجِيبُ دَعْوَةَ الدَّاعِ إِذَا دَعَانِ',
+        'source': 'سورة البقرة • إشراقة الخميس',
+      },
+      {
+        'text': 'اقرؤوا القرآن فإنه يأتي يوم القيامة شفيعاً لأصحابه',
+        'source': 'حديث شريف',
+      },
+      {
+        'text': 'وَلَسَوْفَ يُعْطِيكَ رَبُّكَ فَتَرْضَىٰ',
+        'source': 'سورة الضحى',
+      },
       {'text': 'الدعاءُ هو العبادة', 'source': 'حديث شريف'},
     ],
     // Friday (5)
     5: [
-      {'text': 'إِنَّ اللَّهَ وَمَلَائِكَتَهُ يُصَلُّونَ عَلَى النَّبِيِّ يَا أَيُّهَا الَّذِينَ آمَنُوا صَلُّوا عَلَيْهِ وَسَلِّمُوا تَسْلِيمًا', 'source': 'سورة الأحزاب • نور الجمعة'},
-      {'text': 'من قرأ سورة الكهف في يوم الجمعة أضاء له من النور ما بين الجمعتين', 'source': 'حديث شريف'},
-      {'text': 'في يوم الجمعة ساعة لا يوافقها عبد مسلم يسأل الله خيراً إلا أعطاه إياه', 'source': 'حديث شريف'},
+      {
+        'text':
+            'إِنَّ اللَّهَ وَمَلَائِكَتَهُ يُصَلُّونَ عَلَى النَّبِيِّ يَا أَيُّهَا الَّذِينَ آمَنُوا صَلُّوا عَلَيْهِ وَسَلِّمُوا تَسْلِيمًا',
+        'source': 'سورة الأحزاب • نور الجمعة',
+      },
+      {
+        'text':
+            'من قرأ سورة الكهف في يوم الجمعة أضاء له من النور ما بين الجمعتين',
+        'source': 'حديث شريف',
+      },
+      {
+        'text':
+            'في يوم الجمعة ساعة لا يوافقها عبد مسلم يسأل الله خيراً إلا أعطاه إياه',
+        'source': 'حديث شريف',
+      },
       {'text': 'ربِّ اشرح لي صدري ويسِّر لي أمري', 'source': 'سورة طه'},
     ],
     // Saturday (6)
     6: [
-      {'text': 'فَمَنْ أَبْصَرَ فَلِنَفْسِهِ وَمَنْ عَمِيَ فَعَلَيْهَا', 'source': 'سورة الأنعام • إشراقة السبت'},
-      {'text': 'إنّ مع العُسرِ يُسراً • فإنّ مع العُسرِ يُسراً', 'source': 'سورة الشرح'},
+      {
+        'text': 'فَمَنْ أَبْصَرَ فَلِنَفْسِهِ وَمَنْ عَمِيَ فَعَلَيْهَا',
+        'source': 'سورة الأنعام • إشراقة السبت',
+      },
+      {
+        'text': 'إنّ مع العُسرِ يُسراً • فإنّ مع العُسرِ يُسراً',
+        'source': 'سورة الشرح',
+      },
       {'text': 'خيرُكم من تعلّم القرآن وعلّمه', 'source': 'حديث شريف'},
-      {'text': 'وَمَا تَوْفِيقِي إِلَّا بِاللَّهِ عَلَيْهِ تَوَكَّلْتُ وَإِلَيْهِ أُنِيبُ', 'source': 'سورة هود'},
+      {
+        'text':
+            'وَمَا تَوْفِيقِي إِلَّا بِاللَّهِ عَلَيْهِ تَوَكَّلْتُ وَإِلَيْهِ أُنِيبُ',
+        'source': 'سورة هود',
+      },
     ],
     // Sunday (7)
     7: [
-      {'text': 'وَسَارِعُوا إِلَىٰ مَغْفِرَةٍ مِّن رَّبِّكُمْ وَجَنَّةٍ عَرْضُهَا السَّمَاوَاتُ وَالْأَرْضُ', 'source': 'سورة آل عمران • إشراقة الأحد'},
-      {'text': 'من سلك طريقاً يلتمس فيه علماً سهّل الله له به طريقاً إلى الجنة', 'source': 'حديث شريف'},
-      {'text': 'لَا يُكَلِّفُ اللَّهُ نَفْسًا إِلَّا وُسْعَهَا', 'source': 'سورة البقرة'},
-      {'text': 'الطهور شطر الإيمان، والحمد لله تملأ الميزان', 'source': 'حديث شريف'},
+      {
+        'text':
+            'وَسَارِعُوا إِلَىٰ مَغْفِرَةٍ مِّن رَّبِّكُمْ وَجَنَّةٍ عَرْضُهَا السَّمَاوَاتُ وَالْأَرْضُ',
+        'source': 'سورة آل عمران • إشراقة الأحد',
+      },
+      {
+        'text':
+            'من سلك طريقاً يلتمس فيه علماً سهّل الله له به طريقاً إلى الجنة',
+        'source': 'حديث شريف',
+      },
+      {
+        'text': 'لَا يُكَلِّفُ اللَّهُ نَفْسًا إِلَّا وُسْعَهَا',
+        'source': 'سورة البقرة',
+      },
+      {
+        'text': 'الطهور شطر الإيمان، والحمد لله تملأ الميزان',
+        'source': 'حديث شريف',
+      },
     ],
   };
 
@@ -3498,27 +3142,28 @@ class _QuoteCarouselState extends State<_QuoteCarousel> {
                   ElevatedButton.icon(
                     onPressed: () async {
                       try {
-                        final boundary = repaintKey.currentContext
-                            ?.findRenderObject() as RenderRepaintBoundary?;
+                        final boundary =
+                            repaintKey.currentContext?.findRenderObject()
+                                as RenderRepaintBoundary?;
                         if (boundary == null) return;
-                        final ui.Image image =
-                            await boundary.toImage(pixelRatio: 3.0);
+                        final ui.Image image = await boundary.toImage(
+                          pixelRatio: 3.0,
+                        );
                         final ByteData? byteData = await image.toByteData(
                           format: ui.ImageByteFormat.png,
                         );
                         if (byteData == null) return;
-                        final Uint8List pngBytes =
-                            byteData.buffer.asUint8List();
+                        final Uint8List pngBytes = byteData.buffer
+                            .asUint8List();
                         final tempDir = await getTemporaryDirectory();
                         final file = File(
                           '${tempDir.path}/nur_wa_basirah_${DateTime.now().millisecondsSinceEpoch}.png',
                         );
                         await file.writeAsBytes(pngBytes);
                         if (ctx.mounted) Navigator.pop(ctx);
-                        await Share.shareXFiles(
-                          [XFile(file.path)],
-                          text: _formattedText(q),
-                        );
+                        await Share.shareXFiles([
+                          XFile(file.path),
+                        ], text: _formattedText(q));
                       } catch (_) {
                         if (ctx.mounted) Navigator.pop(ctx);
                         await Share.share(_formattedText(q));
@@ -3595,18 +3240,6 @@ class _QuoteCarouselState extends State<_QuoteCarousel> {
               Text(
                 'نورٌ وبصيرة',
                 style: _f(sz: 12.5, fw: FontWeight.w800, c: AppColors.gold),
-              ),
-              const SizedBox(width: 6),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Text(
-                  'متجدد أسبوعياً',
-                  style: _f(sz: 9.5, fw: FontWeight.w600, c: Colors.white70),
-                ),
               ),
               const Spacer(),
               // Copy Text Button
@@ -3789,143 +3422,6 @@ class _SectionTitle extends StatelessWidget {
           ),
         ),
       ],
-    ),
-  );
-}
-
-class _SuccessCard extends StatelessWidget {
-  final bool isDark;
-  const _SuccessCard({required this.isDark});
-  @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.all(18),
-    decoration: BoxDecoration(
-      color: isDark ? const Color(0xFF1A1F1C) : Colors.white,
-      borderRadius: BorderRadius.circular(22),
-      border: Border.all(color: AppColors.lightGreen.withOpacity(0.3)),
-      boxShadow: [
-        if (!isDark)
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-      ],
-    ),
-    child: Row(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(8),
-          decoration: const BoxDecoration(
-            color: AppColors.paleGreen,
-            shape: BoxShape.circle,
-          ),
-          child: const Icon(
-            Icons.check_circle_rounded,
-            color: AppColors.darkGreen,
-            size: 24,
-          ),
-        ),
-        const SizedBox(width: 14),
-        Expanded(
-          child: Text(
-            'تقبل الله طاعتك! أتممت محاسبة اليوم بنجاح 🤍',
-            style: _f(
-              sz: 14,
-              fw: FontWeight.w700,
-              c: isDark ? Colors.white : AppColors.darkGreen,
-            ),
-          ),
-        ),
-      ],
-    ),
-  );
-}
-
-class _AccountabilityCard extends StatelessWidget {
-  final bool isDark;
-  final VoidCallback onAdd;
-  const _AccountabilityCard({required this.isDark, required this.onAdd});
-  @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.all(20),
-    decoration: BoxDecoration(
-      color: isDark ? const Color(0xFF1A1F1C) : Colors.white,
-      borderRadius: BorderRadius.circular(22),
-      border: Border.all(
-        color: isDark
-            ? Colors.white.withOpacity(0.05)
-            : Colors.black.withOpacity(0.03),
-      ),
-      boxShadow: [
-        if (!isDark)
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-      ],
-    ),
-    child: Row(
-      children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'ابدأ محاسبتك اليومية',
-                style: _f(sz: 16, fw: FontWeight.w800),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'سجل إنجازاتك الروحية لليوم',
-                style: _f(sz: 12, c: AppColors.gray),
-              ),
-            ],
-          ),
-        ),
-        ElevatedButton(
-          onPressed: onAdd,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: AppColors.darkGreen,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-          ),
-          child: const Icon(Icons.add_rounded, color: Colors.white),
-        ),
-      ],
-    ),
-  );
-}
-
-class _CheckItem extends StatelessWidget {
-  final String title, subtitle;
-  final IconData icon;
-  final bool value;
-  final ValueChanged<bool?> onChanged;
-  const _CheckItem({
-    required this.title,
-    required this.subtitle,
-    required this.icon,
-    required this.value,
-    required this.onChanged,
-  });
-  @override
-  Widget build(BuildContext context) => Container(
-    decoration: BoxDecoration(
-      color: Colors.grey.withOpacity(0.05),
-      borderRadius: BorderRadius.circular(16),
-    ),
-    child: CheckboxListTile(
-      value: value,
-      onChanged: onChanged,
-      title: Text(title, style: _f(fw: FontWeight.w700, sz: 14)),
-      subtitle: Text(subtitle, style: _f(sz: 11)),
-      secondary: Icon(icon, color: AppColors.darkGreen),
-      activeColor: AppColors.darkGreen,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
     ),
   );
 }
@@ -4153,4 +3649,497 @@ class _NavButton extends StatelessWidget {
       ),
     ),
   );
+}
+
+// ════════════════════════════════════════════════════════════════
+//  Glass Prayer Arch Header — added as extension of page state
+// ════════════════════════════════════════════════════════════════
+
+extension _ArchHeader on _DashboardPageState {
+  Widget _buildArchHeader(bool isDark, String userName, bool isGuest) {
+    final sky = _skyColorsFor(_nextPrayerKey);
+    final accent = sky.last;
+
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topRight,
+          end: Alignment.bottomLeft,
+          colors: sky,
+        ),
+        borderRadius: const BorderRadius.vertical(bottom: Radius.circular(38)),
+        boxShadow: [
+          BoxShadow(
+            color: accent.withValues(alpha: 0.30),
+            blurRadius: 26,
+            offset: const Offset(0, 12),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: const BorderRadius.vertical(bottom: Radius.circular(38)),
+        child: BackdropFilter(
+          filter: ui.ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+          child: Container(
+            padding: EdgeInsets.only(
+              top: MediaQuery.of(context).padding.top + 14,
+              bottom: 30,
+              left: 20,
+              right: 20,
+            ),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topRight,
+                end: Alignment.bottomLeft,
+                colors: [
+                  Colors.white.withValues(alpha: 0.18),
+                  AppColors.gold.withValues(alpha: 0.08),
+                ],
+              ),
+              border: Border.all(
+                color: Colors.white.withValues(alpha: 0.25),
+                width: 1,
+              ),
+            ),
+            child: Column(
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(2.5),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: LinearGradient(
+                          colors: [
+                            AppColors.gold,
+                            AppColors.gold.withValues(alpha: 0.35),
+                          ],
+                        ),
+                      ),
+                      child: CircleAvatar(
+                        radius: 24,
+                        backgroundColor: const Color(
+                          0xFF0D2818,
+                        ).withValues(alpha: 0.65),
+                        child: Text(
+                          userName.isNotEmpty ? userName[0].toUpperCase() : '؟',
+                          style: _f(
+                            sz: 19,
+                            fw: FontWeight.w800,
+                            c: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Text(
+                                'السلام عليكم، ${userName.split(' ').first}',
+                                style: _f(
+                                  sz: 13,
+                                  fw: FontWeight.w600,
+                                  c: Colors.white.withValues(alpha: 0.85),
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              const Icon(
+                                Icons.verified_rounded,
+                                size: 14,
+                                color: AppColors.gold,
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            'مرحباً بك في بصائر',
+                            style: _f(
+                              sz: 20,
+                              fw: FontWeight.w900,
+                              c: Colors.white,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (isGuest)
+                      GestureDetector(
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const LoginPage()),
+                        ),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 9,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppColors.gold,
+                            borderRadius: BorderRadius.circular(18),
+                          ),
+                          child: Text(
+                            'دخول',
+                            style: _f(
+                              sz: 12,
+                              fw: FontWeight.bold,
+                              c: Colors.white,
+                            ),
+                          ),
+                        ),
+                      )
+                    else
+                      _IconButton(
+                        icon: Icons.notifications_none_rounded,
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const NotificationSettingsPage(),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+
+                _buildPrayerArch(accent),
+                const SizedBox(height: 18),
+                _QuoteCarousel(date: _getArabicDate()),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPrayerArch(Color accent) {
+    final progress = _archProgress();
+    final nextTime = _nextPrayerTime;
+    final timeStr = nextTime != null
+        ? '${nextTime.hour.toString().padLeft(2, '0')}:${nextTime.minute.toString().padLeft(2, '0')}'
+        : '--:--';
+    final left = nextTime != null
+        ? nextTime.difference(DateTime.now())
+        : Duration.zero;
+    final countdown = left.isNegative
+        ? 'حان الآن'
+        : 'تبقّى ${left.inHours}س ${left.inMinutes.remainder(60)}د';
+
+    return SizedBox(
+      height: 252,
+      child: Stack(
+        alignment: Alignment.bottomCenter,
+        children: [
+          Positioned.fill(
+            child: CustomPaint(painter: _PrayerArchPainter(progress: progress)),
+          ),
+          Positioned(
+            top: 6,
+            child: Container(
+              width: 52,
+              height: 52,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white.withValues(alpha: 0.92),
+                border: Border.all(
+                  color: AppColors.gold.withValues(alpha: 0.9),
+                  width: 2,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.18),
+                    blurRadius: 10,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
+              ),
+              child: const Icon(
+                Icons.mosque_rounded,
+                size: 26,
+                color: Color(0xFF0D2818),
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.only(bottom: 14),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.22),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.16),
+                    ),
+                  ),
+                  child: Text(
+                    'الصلاة القادمة',
+                    style: _f(
+                      sz: 10.5,
+                      fw: FontWeight.w700,
+                      c: Colors.white.withValues(alpha: 0.85),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  _nextPrayerName.isEmpty ? '—' : _nextPrayerName,
+                  style: _f(sz: 26, fw: FontWeight.w900, c: Colors.white),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  timeStr,
+                  style: _f(
+                    sz: 15,
+                    fw: FontWeight.w800,
+                    c: AppColors.goldLight,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  _spiritualTagline(_nextPrayerKey),
+                  textAlign: TextAlign.center,
+                  style: _f(
+                    sz: 11.5,
+                    fw: FontWeight.w600,
+                    c: Colors.white.withValues(alpha: 0.85),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.14),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.2),
+                    ),
+                  ),
+                  child: Text(
+                    countdown,
+                    style: _f(sz: 11, fw: FontWeight.w800, c: Colors.white),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  double _archProgress() {
+    final next = _nextPrayerTime;
+    if (next == null || _allPrayerTimes.isEmpty) return 0.5;
+    final idx = _allPrayerTimes.indexWhere((e) => e['name'] == _nextPrayerName);
+    DateTime prev;
+    if (idx > 0) {
+      prev =
+          _allPrayerTimes[idx - 1]['time'] as DateTime? ??
+          next.subtract(const Duration(hours: 1));
+    } else {
+      final last = _allPrayerTimes.last['time'] as DateTime?;
+      prev = last != null
+          ? last.subtract(const Duration(days: 1))
+          : next.subtract(const Duration(hours: 1));
+    }
+    final total = next.difference(prev).inSeconds;
+    if (total <= 0) return 0.5;
+    final elapsed = DateTime.now().difference(prev).inSeconds;
+    return (elapsed / total).clamp(0.05, 0.95);
+  }
+
+  List<Color> _skyColorsFor(String key) {
+    switch (key) {
+      case 'fajr':
+        return const [Color(0xFF1F3B64), Color(0xFF5A5D8D), Color(0xFFD68A6C)];
+      case 'sunrise':
+        return const [Color(0xFF2E5984), Color(0xFF9C7A65), Color(0xFFE7A95B)];
+      case 'dhuhr':
+        return const [Color(0xFF28587B), Color(0xFF5386A6), Color(0xFFD9A66C)];
+      case 'asr':
+        return const [
+          Color(0xFF33597E),
+          Color(0xFF90745A),
+          Color(0xFFD77A49),
+          Color(0xFFC8995B),
+        ];
+      case 'maghrib':
+        return const [Color(0xFF282E54), Color(0xFF8C495C), Color(0xFFD97248)];
+      case 'isha':
+        return const [Color(0xFF0E1B2E), Color(0xFF1C354D), Color(0xFF3B4D5E)];
+      default:
+        return const [Color(0xFF0F4C31), Color(0xFF176B45), Color(0xFF218B5B)];
+    }
+  }
+
+  String _spiritualTagline(String key) {
+    switch (key) {
+      case 'fajr':
+        return 'مع نسيم الفجر 🌅، أقبِل على صلاتك في خشوع';
+      case 'sunrise':
+        return 'أشرقت الشمس ☀️، وقت صلاة الضحى وذكر الله';
+      case 'dhuhr':
+        return 'في منتصف النهار 🌤️، استرح بصلاتك مع الله';
+      case 'asr':
+        return 'حين تمتد الظلال ⛅، حافظوا على الصلاة الوسطى';
+      case 'maghrib':
+        return 'مع غروب الشمس 🌇، اختم نهارك بطاعة الله';
+      case 'isha':
+        return 'في سكون الليل 🌙، نورٌ وطمأنينة لقلبك';
+      default:
+        return 'حيّ على الصلاة، حيّ على الفلاح';
+    }
+  }
+}
+
+class _PrayerArchPainter extends CustomPainter {
+  final double progress;
+
+  _PrayerArchPainter({required this.progress});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height - 8);
+    final radius = size.width * 0.5 - 6;
+    if (radius <= 0) return;
+    final rect = Rect.fromCircle(center: center, radius: radius);
+
+    final trackPaint = Paint()
+      ..color = Colors.white.withValues(alpha: 0.22)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.0
+      ..strokeCap = StrokeCap.round;
+    canvas.drawArc(rect, math.pi, math.pi, false, trackPaint);
+
+    final activePaint = Paint()
+      ..color = Colors.white.withValues(alpha: 0.9)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.8
+      ..strokeCap = StrokeCap.round;
+    canvas.drawArc(rect, math.pi, math.pi * progress, false, activePaint);
+
+    final sunAngle = math.pi + math.pi * progress;
+    final sunPos = Offset(
+      center.dx + radius * math.cos(sunAngle),
+      center.dy + radius * math.sin(sunAngle),
+    );
+
+    final glowPaint = Paint()
+      ..color = const Color(0xFFFFB347).withValues(alpha: 0.4)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 9);
+    canvas.drawCircle(sunPos, 11, glowPaint);
+
+    final sunFill = Paint()..color = const Color(0xFFE58C3A);
+    final sunBorder = Paint()
+      ..color = Colors.white
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.2;
+    canvas.drawCircle(sunPos, 8.5, sunFill);
+    canvas.drawCircle(sunPos, 8.5, sunBorder);
+  }
+
+  @override
+  bool shouldRepaint(covariant _PrayerArchPainter old) =>
+      old.progress != progress;
+}
+
+class _AccountabilityChipData {
+  final String label;
+  final IconData icon;
+  final bool checked;
+  final Color color;
+  final VoidCallback onTap;
+
+  const _AccountabilityChipData({
+    required this.label,
+    required this.icon,
+    required this.checked,
+    required this.color,
+    required this.onTap,
+  });
+}
+
+class _AccountabilityChip extends StatelessWidget {
+  final _AccountabilityChipData data;
+  final bool isDark;
+
+  const _AccountabilityChip({required this.data, required this.isDark});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: data.onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 250),
+        width: 92,
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+        decoration: BoxDecoration(
+          color: data.checked
+              ? data.color.withValues(alpha: 0.16)
+              : (isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white),
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(
+            color: data.checked
+                ? data.color.withValues(alpha: 0.55)
+                : (isDark
+                      ? Colors.white.withValues(alpha: 0.08)
+                      : Colors.black.withValues(alpha: 0.06)),
+            width: data.checked ? 1.6 : 1,
+          ),
+          boxShadow: data.checked
+              ? [
+                  BoxShadow(
+                    color: data.color.withValues(alpha: 0.22),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ]
+              : null,
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(7),
+              decoration: BoxDecoration(
+                color: data.checked
+                    ? data.color
+                    : data.color.withValues(alpha: 0.14),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                data.checked ? Icons.check_rounded : data.icon,
+                size: 17,
+                color: data.checked ? Colors.white : data.color,
+              ),
+            ),
+            const SizedBox(height: 7),
+            Text(
+              data.label,
+              style: _f(
+                sz: 11.5,
+                fw: FontWeight.w800,
+                c: data.checked
+                    ? data.color
+                    : (isDark ? Colors.white70 : AppColors.darkGreen),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
