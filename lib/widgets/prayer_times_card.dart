@@ -1,10 +1,8 @@
 import 'dart:async';
-import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../core/app_colors.dart';
 import '../core/hijri_utils.dart';
-import 'glass_card.dart';
 
 TextStyle _f({double sz = 13, FontWeight fw = FontWeight.w400, Color? c}) =>
     GoogleFonts.ibmPlexSansArabic(fontSize: sz, fontWeight: fw, color: c);
@@ -158,95 +156,195 @@ class _PrayerTimesCardState extends State<PrayerTimesCard>
   Widget build(BuildContext context) {
     final isDark = widget.isDark;
     final now = DateTime.now();
+    const gold = Color(0xFFE9A824);
     final subCol = isDark ? Colors.white54 : AppColors.textSecondary;
     final textCol = isDark ? Colors.white : AppColors.textPrimary;
-    final divCol = isDark
-        ? Colors.white.withValues(alpha: 0.06)
-        : Colors.black.withValues(alpha: 0.06);
-
-    // Translucent frosted-glass fill so the backdrop blur reads through.
-    final glassBg = isDark
-        ? const Color(0xFF111B14).withValues(alpha: 0.55)
-        : Colors.white.withValues(alpha: 0.55);
 
     return GestureDetector(
       onTap: widget.onTap,
       child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 16),
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(24),
+          borderRadius: BorderRadius.circular(28),
+          gradient: LinearGradient(
+            begin: Alignment.topRight,
+            end: Alignment.bottomLeft,
+            colors: isDark
+                ? const [Color(0xFF152219), Color(0xFF0E1713)]
+                : const [Color(0xFFFFFFFF), Color(0xFFF3F7F4)],
+          ),
+          border: Border.all(
+            color: isDark
+                ? gold.withValues(alpha: 0.22)
+                : const Color(0xFFD8E4DD),
+            width: 1,
+          ),
           boxShadow: [
+            // Deep ambient shadow — lifts the card off the page
             BoxShadow(
-              color: isDark
-                  ? Colors.black.withValues(alpha: 0.35)
-                  : Colors.black.withValues(alpha: 0.07),
-              blurRadius: 18,
-              offset: const Offset(0, 5),
+              color: Colors.black.withValues(alpha: isDark ? 0.45 : 0.10),
+              blurRadius: 30,
+              offset: const Offset(0, 14),
+            ),
+            // Soft gold under-glow for a premium edge
+            BoxShadow(
+              color: gold.withValues(alpha: isDark ? 0.10 : 0.14),
+              blurRadius: 26,
+              offset: const Offset(0, 4),
             ),
           ],
         ),
-        child: GlassCard(
-          borderRadius: 24,
-          blurSigma: 12,
-          isDark: isDark,
-          color: glassBg,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(28),
+          child: Stack(
             children: [
-              // ── Header ──────────────────────────────────────────────────────
-              Padding(
-                padding: const EdgeInsets.fromLTRB(18, 16, 18, 0),
-                child: Row(
-                  children: [
-                    Text('مواقيت الصلاة',
-                        style: _f(sz: 15, fw: FontWeight.w800, c: textCol)),
-                    const SizedBox(width: 5),
-                    Text('(حسب توقيتك المحلي)',
-                        style: _f(sz: 10, c: subCol)),
-                  ],
+              // Top sheen — subtle glass highlight across the upper edge
+              Positioned(
+                top: 0,
+                left: 0,
+                right: 0,
+                height: 90,
+                child: IgnorePointer(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          Colors.white.withValues(
+                              alpha: isDark ? 0.05 : 0.55),
+                          Colors.transparent,
+                        ],
+                      ),
+                    ),
+                  ),
                 ),
               ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // ── Header ────────────────────────────────────────────────
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(18, 18, 18, 0),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              begin: Alignment.topRight,
+                              end: Alignment.bottomLeft,
+                              colors: [AppColors.midGreen, AppColors.darkGreen],
+                            ),
+                            borderRadius: BorderRadius.circular(13),
+                            boxShadow: [
+                              BoxShadow(
+                                color: AppColors.darkGreen.withValues(
+                                    alpha: isDark ? 0.45 : 0.30),
+                                blurRadius: 12,
+                                offset: const Offset(0, 5),
+                              ),
+                            ],
+                          ),
+                          child: const Icon(
+                            Icons.access_time_filled_rounded,
+                            size: 20,
+                            color: Colors.white,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              
+                              Text('(حسب توقيتك المحلي)',
+                                  style: _f(sz: 10.5, c: subCol)),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
 
-              // ── Date row ────────────────────────────────────────────────────
-              Padding(
-                padding: const EdgeInsets.fromLTRB(18, 6, 18, 0),
-                child: Row(
-                  children: [
-                    Text(_hijriDate(now), style: _f(sz: 11, c: subCol)),
-                    const Spacer(),
-                    Text(_arabicDay(now),
-                        style: _f(sz: 13, fw: FontWeight.w800,
-                            c: AppColors.darkGreen)),
-                    const SizedBox(width: 8),
-                    Text(_arabicDate(now), style: _f(sz: 11, c: subCol)),
-                  ],
-                ),
+                  // ── Date pill ──────────────────────────────────────────────
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(18, 12, 18, 0),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 7),
+                      decoration: BoxDecoration(
+                        color: isDark
+                            ? Colors.white.withValues(alpha: 0.05)
+                            : Colors.white.withValues(alpha: 0.65),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: isDark
+                              ? Colors.white.withValues(alpha: 0.07)
+                              : Colors.black.withValues(alpha: 0.04),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.calendar_month_rounded,
+                              size: 13, color: subCol),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(_hijriDate(now),
+                                style: _f(sz: 11, fw: FontWeight.w600, c: subCol)),
+                          ),
+                          Text(_arabicDay(now),
+                              style: _f(
+                                  sz: 12,
+                                  fw: FontWeight.w800,
+                                  c: AppColors.darkGreen)),
+                          const SizedBox(width: 8),
+                          Text(_arabicDate(now),
+                              style: _f(sz: 11, c: subCol)),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  // ── Gold hairline divider ─────────────────────────────────
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(18, 14, 18, 0),
+                    child: Container(
+                      height: 1,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            Colors.transparent,
+                            gold.withValues(alpha: isDark ? 0.5 : 0.45),
+                            Colors.transparent,
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 14),
+
+                  // ── Prayer chips ───────────────────────────────────────────
+                  if (widget.loading)
+                    _LoadingSkeleton(isDark: isDark)
+                  else
+                    _PrayerScroll(
+                      prayers: widget.allPrayers,
+                      nextPrayerName: widget.nextPrayerName,
+                      timeLeft: _timeLeft,
+                      ringProgress: _ringProgress,
+                      ringAnim: _ringAnim,
+                      isDark: isDark,
+                      fmtTime: _fmtTime,
+                      fmtCountdown: _fmtCountdown,
+                      iconOf: _icon,
+                    ),
+
+                  const SizedBox(height: 16),
+                ],
               ),
-
-              Padding(
-                padding: const EdgeInsets.fromLTRB(18, 12, 18, 0),
-                child: Divider(height: 1, color: divCol),
-              ),
-
-              const SizedBox(height: 12),
-
-              // ── Prayer chips ─────────────────────────────────────────────────
-              if (widget.loading)
-                _LoadingSkeleton(isDark: isDark)
-              else
-                _PrayerScroll(
-                  prayers: widget.allPrayers,
-                  nextPrayerName: widget.nextPrayerName,
-                  timeLeft: _timeLeft,
-                  ringProgress: _ringProgress,
-                  ringAnim: _ringAnim,
-                  isDark: isDark,
-                  fmtTime: _fmtTime,
-                  fmtCountdown: _fmtCountdown,
-                  iconOf: _icon,
-                ),
-
-              const SizedBox(height: 14),
             ],
           ),
         ),
@@ -283,12 +381,12 @@ class _PrayerScroll extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 140,
+      height: 148,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 16),
         itemCount: prayers.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 10),
+        separatorBuilder: (_, __) => const SizedBox(width: 12),
         itemBuilder: (ctx, i) {
           final p = prayers[i];
           final name = p['name'] as String;
@@ -346,46 +444,80 @@ class _PrayerChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const gold = Color(0xFFE9A824);
-    const goldBg = Color(0xFFFFF8E7);
-    const goldBgDark = Color(0xFF2A2210);
+    const bronze = Color(0xFF6E4E00);
 
-    final bg = isActive
-        ? (isDark ? goldBgDark : goldBg)
-        : (isDark ? const Color(0xFF1A1F1C) : const Color(0xFFF8FAF9));
+    final gradient = isActive
+        ? const LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [Color(0xFFF8CE55), Color(0xFFE8A91F)],
+          )
+        : LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: isDark
+                ? const [Color(0xFF1E2924), Color(0xFF141D18)]
+                : const [Color(0xFFFEFEFE), Color(0xFFEDF2EE)],
+          );
 
-    final border = isActive
-        ? gold.withValues(alpha: 0.6)
+    final borderColor = isActive
+        ? const Color(0xFFF3D488)
         : (isDark
-            ? Colors.white.withValues(alpha: 0.06)
-            : Colors.black.withValues(alpha: 0.06));
+            ? Colors.white.withValues(alpha: 0.08)
+            : Colors.black.withValues(alpha: 0.05));
 
     final nameColor = isActive
-        ? (isDark ? gold : const Color(0xFF8B6200))
+        ? bronze
         : (isDark ? Colors.white : AppColors.textPrimary);
 
     final timeColor = isActive
-        ? (isDark ? Colors.white : AppColors.textPrimary)
+        ? const Color(0xFF7A5B12)
         : (isDark ? Colors.white54 : AppColors.textSecondary);
 
     final iconColor = isActive
-        ? gold
+        ? bronze
         : (isDark ? Colors.white38 : AppColors.textSecondary);
 
     return AnimatedContainer(
       duration: const Duration(milliseconds: 300),
-      width: isActive ? 110 : 86,
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+      curve: Curves.easeOutCubic,
+      width: isActive ? 116 : 88,
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
       decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: border, width: isActive ? 1.5 : 1),
+        gradient: gradient,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: borderColor, width: isActive ? 1.2 : 1),
         boxShadow: isActive
-            ? [BoxShadow(
-                color: gold.withValues(alpha: 0.18),
-                blurRadius: 12,
-                offset: const Offset(0, 4),
-              )]
-            : null,
+            ? [
+                // Gold halo — the hero chip glows
+                BoxShadow(
+                  color: gold.withValues(alpha: isDark ? 0.35 : 0.30),
+                  blurRadius: 20,
+                  spreadRadius: 1,
+                  offset: const Offset(0, 6),
+                ),
+                // Dark drop shadow underneath for depth
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.28),
+                  blurRadius: 14,
+                  offset: const Offset(0, 8),
+                ),
+              ]
+            : [
+                // Raised-edge shadow: light source from top
+                BoxShadow(
+                  color: Colors.black.withValues(
+                      alpha: isDark ? 0.35 : 0.08),
+                  blurRadius: 10,
+                  offset: const Offset(0, 5),
+                ),
+                BoxShadow(
+                  color: Colors.white.withValues(
+                      alpha: isDark ? 0.04 : 0.7),
+                  blurRadius: 2,
+                  offset: const Offset(0, -1),
+                ),
+              ],
       ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -398,42 +530,68 @@ class _PrayerChip extends StatelessWidget {
                 alignment: Alignment.center,
                 children: [
                   SizedBox(
-                    width: 44,
-                    height: 44,
+                    width: 46,
+                    height: 46,
                     child: CircularProgressIndicator(
                       value: ringProgress ?? 0.5,
                       strokeWidth: 3.5,
-                      backgroundColor: gold.withValues(alpha: 0.18),
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                        gold.withValues(
-                            alpha: 0.55 + (ringAnim!.value) * 0.45),
-                      ),
+                      backgroundColor: bronze.withValues(alpha: 0.20),
+                      valueColor: const AlwaysStoppedAnimation<Color>(bronze),
                       strokeCap: StrokeCap.round,
                     ),
                   ),
-                  Icon(iconOf(key_), size: 18, color: gold),
+                  Container(
+                    width: 34,
+                    height: 34,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.white.withValues(alpha: 0.35),
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.65),
+                        width: 1,
+                      ),
+                    ),
+                    child: Icon(iconOf(key_), size: 16, color: bronze),
+                  ),
                 ],
               ),
             )
           else
             Container(
-              width: 36,
-              height: 36,
+              width: 38,
+              height: 38,
               decoration: BoxDecoration(
-                color: isDark
-                    ? Colors.white.withValues(alpha: 0.07)
-                    : Colors.black.withValues(alpha: 0.04),
                 shape: BoxShape.circle,
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: isDark
+                      ? const [Color(0xFF242F29), Color(0xFF1A231E)]
+                      : const [Color(0xFFFFFFFF), Color(0xFFE3EAE5)],
+                ),
+                border: Border.all(
+                  color: isDark
+                      ? Colors.white.withValues(alpha: 0.08)
+                      : Colors.black.withValues(alpha: 0.05),
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(
+                        alpha: isDark ? 0.3 : 0.06),
+                    blurRadius: 6,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
               ),
               child: Icon(iconOf(key_), size: 17, color: iconColor),
             ),
 
-          const SizedBox(height: 7),
+          const SizedBox(height: 8),
 
           // Prayer name
           Text(name,
               style: _f(
-                  sz: isActive ? 12 : 11,
+                  sz: isActive ? 12.5 : 11,
                   fw: isActive ? FontWeight.w800 : FontWeight.w600,
                   c: nameColor),
               textAlign: TextAlign.center),
@@ -447,7 +605,7 @@ class _PrayerChip extends StatelessWidget {
               style: GoogleFonts.ibmPlexMono(
                 fontSize: 9.5,
                 fontWeight: FontWeight.w700,
-                color: isDark ? Colors.white60 : AppColors.textSecondary,
+                color: const Color(0xFF7A5B12),
               ),
               textAlign: TextAlign.center,
             )
@@ -491,16 +649,16 @@ class _LoadingSkeletonState extends State<_LoadingSkeleton>
     return AnimatedBuilder(
       animation: _anim,
       builder: (_, __) {
-        // Pulsing alpha so the frosted chips shimmer like the real ones do.
+        // Pulsing alpha so the chips shimmer like the real ones do.
         final goldAlpha = 0.10 + _anim.value * 0.18;   // 0.10 → 0.28
         final neutralAlpha = 0.05 + _anim.value * 0.10; // 0.05 → 0.15
         return SizedBox(
-          height: 110,
+          height: 116,
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 16),
             itemCount: 6,
-            separatorBuilder: (_, __) => const SizedBox(width: 10),
+            separatorBuilder: (_, __) => const SizedBox(width: 12),
             itemBuilder: (_, i) {
               final isFirst = i == 0;
               final tint = isFirst
@@ -513,10 +671,10 @@ class _LoadingSkeletonState extends State<_LoadingSkeleton>
                   : Colors.white.withValues(
                       alpha: widget.isDark ? 0.10 : 0.60);
               return Container(
-                width: i == 0 ? 110 : 86,
+                width: i == 0 ? 116 : 88,
                 decoration: BoxDecoration(
                     color: tint,
-                    borderRadius: BorderRadius.circular(18),
+                    borderRadius: BorderRadius.circular(20),
                     border:
                         Border.all(color: border, width: 1)),
               );

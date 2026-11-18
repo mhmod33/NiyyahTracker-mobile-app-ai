@@ -72,8 +72,8 @@ class _QuranPageState extends State<QuranPage> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     // App default colors: clean ivory/off-white background in light mode, deep charcoal-green in dark
-    final pageBg = isDark ? const Color(0xFF0B120D) : AppColors.background;
-    final headerBtnBg = isDark ? const Color(0xFF16241D) : Colors.white;
+    final pageBg = isDark ? const Color(0xFF0A0A0A) : AppColors.background;
+    final headerBtnBg = isDark ? const Color(0xFF1A1F1C) : Colors.white;
     final titleColor = isDark ? Colors.white : AppColors.darkGreen;
 
     return Directionality(
@@ -164,7 +164,7 @@ class _QuranPageState extends State<QuranPage> {
                   height: 50,
                   decoration: BoxDecoration(
                     color: isDark
-                        ? const Color(0xFF16241D)
+                        ? const Color(0xFF1A1F1C)
                         : AppColors.surfaceLight,
                     borderRadius: BorderRadius.circular(26),
                     boxShadow: [
@@ -256,7 +256,7 @@ class _QuranPageState extends State<QuranPage> {
                   padding: const EdgeInsets.all(4),
                   decoration: BoxDecoration(
                     color: isDark
-                        ? const Color(0xFF16241D)
+                        ? const Color(0xFF1A1F1C)
                         : AppColors.surfaceLight,
                     borderRadius: BorderRadius.circular(24),
                   ),
@@ -326,7 +326,7 @@ class _QuranPageState extends State<QuranPage> {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
               decoration: BoxDecoration(
-                color: isDark ? const Color(0xFF1D352C) : AppColors.darkGreen,
+                color: isDark ? const Color(0xFF1A3A28) : AppColors.darkGreen,
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Row(
@@ -443,7 +443,7 @@ class _QuranPageState extends State<QuranPage> {
                           margin: const EdgeInsets.only(bottom: 10),
                           decoration: BoxDecoration(
                             color: isDark
-                                ? const Color(0xFF16241D)
+                                ? const Color(0xFF1A1F1C)
                                 : Colors.white,
                             borderRadius: BorderRadius.circular(16),
                             border: Border.all(
@@ -808,7 +808,7 @@ class _QuranPageState extends State<QuranPage> {
                 ),
                 decoration: BoxDecoration(
                   color: isDark
-                      ? const Color(0xFF16241D)
+                      ? const Color(0xFF1A1F1C)
                       : AppColors.surfaceLight,
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(
@@ -1011,7 +1011,7 @@ class _QuranPageState extends State<QuranPage> {
                               margin: const EdgeInsets.only(bottom: 10),
                               decoration: BoxDecoration(
                                 color: isDark
-                                    ? const Color(0xFF16241D)
+                                    ? const Color(0xFF1A1F1C)
                                     : Colors.white,
                                 borderRadius: BorderRadius.circular(16),
                                 border: Border.all(
@@ -1095,7 +1095,7 @@ class _QuranPageState extends State<QuranPage> {
                               margin: const EdgeInsets.only(bottom: 10),
                               decoration: BoxDecoration(
                                 color: isDark
-                                    ? const Color(0xFF16241D)
+                                    ? const Color(0xFF1A1F1C)
                                     : Colors.white,
                                 borderRadius: BorderRadius.circular(16),
                                 border: Border.all(
@@ -1235,7 +1235,7 @@ class _QuranPageState extends State<QuranPage> {
                               margin: const EdgeInsets.only(bottom: 10),
                               decoration: BoxDecoration(
                                 color: isDark
-                                    ? const Color(0xFF16241D)
+                                    ? const Color(0xFF1A1F1C)
                                     : Colors.white,
                                 borderRadius: BorderRadius.circular(16),
                                 border: Border.all(
@@ -1349,8 +1349,8 @@ class _TopBannerActionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cardColor = isDark ? const Color(0xFF16241D) : AppColors.surfaceLight;
-    final badgeBg = isDark ? const Color(0xFF1D352C) : AppColors.paleGreen;
+    final cardColor = isDark ? const Color(0xFF1A1F1C) : AppColors.surfaceLight;
+    final badgeBg = isDark ? const Color(0xFF1A3A28) : AppColors.paleGreen;
     final iconColor = isDark ? AppColors.lightGreen : AppColors.gray;
     final textColor = isDark ? Colors.white : AppColors.darkGreen;
 
@@ -1433,7 +1433,7 @@ class _SegmentPillTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final activeColor = isDark ? const Color(0xFF1D352C) : AppColors.darkGreen;
+    final activeColor = isDark ? const Color(0xFF1A3A28) : AppColors.darkGreen;
     return Expanded(
       child: GestureDetector(
         onTap: onTap,
@@ -1486,8 +1486,8 @@ class _SurahGridCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cardBg = isDark ? const Color(0xFF16241D) : AppColors.surfaceLight;
-    final badgeBg = isDark ? const Color(0xFF1D352C) : AppColors.paleGreen;
+    final cardBg = isDark ? const Color(0xFF1A1F1C) : AppColors.surfaceLight;
+    final badgeBg = isDark ? const Color(0xFF1A3A28) : AppColors.paleGreen;
     final titleColor = isDark ? Colors.white : AppColors.darkGreen;
     final subColor = isDark ? Colors.white60 : AppColors.textSecondary;
 
@@ -1641,7 +1641,7 @@ class _QuranSearchSheetState extends State<_QuranSearchSheet> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final sheetBg = isDark ? const Color(0xFF14261E) : AppColors.surfaceLight;
+    final sheetBg = isDark ? const Color(0xFF1A1F1C) : AppColors.surfaceLight;
     final textCol = isDark ? Colors.white : AppColors.darkGreen;
 
     return Directionality(

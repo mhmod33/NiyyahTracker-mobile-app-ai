@@ -660,66 +660,16 @@ class _PrayerTimesPageState extends State<PrayerTimesPage>
             // ── Prayer Times Rows ──
             SliverPadding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
-              sliver: SliverList(
-                delegate: SliverChildListDelegate([
-                  _PrayerRow(
-                    name: 'الفجر',
-                    time: pt.fajr,
-                    icon: Icons.wb_twilight_rounded,
-                    isCurrent: _nextPrayerName == 'الفجر',
-                    isDark: isDark,
-                    fmt: _fmtTime,
-                    accentColor: const Color(0xFF1A237E), // deep blue / indigo
-                  ),
-                  _PrayerRow(
-                    name: 'الشروق',
-                    time: pt.sunrise,
-                    icon: Icons.wb_sunny_outlined,
-                    isCurrent: _nextPrayerName == 'الشروق',
-                    isDark: isDark,
-                    fmt: _fmtTime,
-                    accentColor: const Color(0xFFFB8C00), // warm amber/gold
-                  ),
-                  _PrayerRow(
-                    name: 'الظهر',
-                    time: pt.dhuhr,
-                    icon: Icons.light_mode_rounded,
-                    isCurrent: _nextPrayerName == 'الظهر',
-                    isDark: isDark,
-                    fmt: _fmtTime,
-                    accentColor: const Color(0xFFF9A825), // amber/gold
-                  ),
-                  _PrayerRow(
-                    name: 'العصر',
-                    time: pt.asr,
-                    icon: Icons.wb_cloudy_outlined,
-                    isCurrent: _nextPrayerName == 'العصر',
-                    isDark: isDark,
-                    fmt: _fmtTime,
-                    accentColor: const Color(0xFFE65100), // orange
-                  ),
-                  _PrayerRow(
-                    name: 'المغرب',
-                    time: pt.maghrib,
-                    icon: Icons.wb_twilight_rounded,
-                    isCurrent: _nextPrayerName == 'المغرب',
-                    isDark: isDark,
-                    fmt: _fmtTime,
-                    accentColor: const Color(0xFF6A1B9A), // deep purple
-                  ),
-                  _PrayerRow(
-                    name: 'العشاء',
-                    time: pt.isha,
-                    icon: Icons.nights_stay_rounded,
-                    isCurrent: _nextPrayerName == 'العشاء',
-                    isDark: isDark,
-                    fmt: _fmtTime,
-                    accentColor: const Color(0xFF0D1B4B), // dark navy
-                  ),
-                  const SizedBox(height: 36),
-                ]),
+              sliver: SliverToBoxAdapter(
+                child: _PrayerScheduleCard(
+                  pt: pt,
+                  nextPrayerName: _nextPrayerName,
+                  isDark: isDark,
+                  fmt: _fmtTime,
+                ),
               ),
             ),
+            const SliverToBoxAdapter(child: SizedBox(height: 36)),
           ],
         ),
       ),
@@ -962,142 +912,193 @@ class _KaabaEmblemPainter extends CustomPainter {
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
-class _PrayerRow extends StatelessWidget {
-  final String name;
-  final DateTime time;
-  final IconData icon;
-  final bool isCurrent;
+/// Elegant grouped schedule — one refined card holding all six prayer
+/// rows separated by hairlines, instead of six floating coloured cards.
+class _PrayerScheduleCard extends StatelessWidget {
+  final PrayerTimes pt;
+  final String nextPrayerName;
   final bool isDark;
   final String Function(DateTime) fmt;
-  final Color accentColor;
 
-  const _PrayerRow({
-    required this.name,
-    required this.time,
-    required this.icon,
-    required this.isCurrent,
+  const _PrayerScheduleCard({
+    required this.pt,
+    required this.nextPrayerName,
     required this.isDark,
     required this.fmt,
-    required this.accentColor,
   });
 
   @override
   Widget build(BuildContext context) {
-    final cardBg = isCurrent
-        ? (isDark
-              ? accentColor.withValues(alpha: 0.22)
-              : accentColor.withValues(alpha: 0.08))
-        : (isDark
-              ? Color.alphaBlend(
-                  accentColor.withValues(alpha: 0.08),
-                  const Color(0xFF151C18),
-                )
-              : Color.alphaBlend(
-                  accentColor.withValues(alpha: 0.05),
-                  Colors.white,
-                ));
+    final prayers = <_ScheduleRowData>[
+      _ScheduleRowData('الفجر', pt.fajr, Icons.wb_twilight_rounded,
+          const Color(0xFF3F51B5)),
+      _ScheduleRowData('الشروق', pt.sunrise, Icons.wb_sunny_outlined,
+          const Color(0xFFFB8C00)),
+      _ScheduleRowData('الظهر', pt.dhuhr, Icons.light_mode_rounded,
+          const Color(0xFFF9A825)),
+      _ScheduleRowData('العصر', pt.asr, Icons.wb_cloudy_outlined,
+          const Color(0xFFFB8C00)),
+      _ScheduleRowData('المغرب', pt.maghrib, Icons.wb_twilight_rounded,
+          const Color(0xFF8E24AA)),
+      _ScheduleRowData('العشاء', pt.isha, Icons.nights_stay_rounded,
+          const Color(0xFF3949AB)),
+    ];
+
+    return Container(
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF151C18) : Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: isDark
+              ? Colors.white.withValues(alpha: 0.06)
+              : Colors.black.withValues(alpha: 0.04),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: isDark ? 0.28 : 0.05),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(24),
+        child: Column(
+          children: [
+            for (int i = 0; i < prayers.length; i++) ...[
+              _ScheduleRow(
+                data: prayers[i],
+                isCurrent: prayers[i].name == nextPrayerName,
+                isDark: isDark,
+                fmt: fmt,
+              ),
+              if (i != prayers.length - 1)
+                Divider(
+                  height: 1,
+                  thickness: 1,
+                  indent: 76,
+                  color: isDark
+                      ? Colors.white.withValues(alpha: 0.05)
+                      : Colors.black.withValues(alpha: 0.05),
+                ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ScheduleRowData {
+  final String name;
+  final DateTime time;
+  final IconData icon;
+  final Color accent;
+  const _ScheduleRowData(this.name, this.time, this.icon, this.accent);
+}
+
+class _ScheduleRow extends StatelessWidget {
+  final _ScheduleRowData data;
+  final bool isCurrent;
+  final bool isDark;
+  final String Function(DateTime) fmt;
+
+  const _ScheduleRow({
+    required this.data,
+    required this.isCurrent,
+    required this.isDark,
+    required this.fmt,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     final textCol = isDark ? Colors.white : AppColors.textPrimary;
-    final subCol = isDark ? Colors.white70 : AppColors.textSecondary;
+    // Lift dark accents toward white so they stay legible on dark surfaces
+    final iconCol = isDark
+        ? Color.lerp(data.accent, Colors.white, 0.35)!
+        : data.accent;
+    final accent = isCurrent ? AppColors.darkGreen : iconCol;
 
     return AnimatedContainer(
       duration: const Duration(milliseconds: 300),
-      margin: const EdgeInsets.only(bottom: 10),
-      decoration: BoxDecoration(
-        color: cardBg,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: isCurrent
-              ? accentColor.withValues(alpha: 0.6)
-              : (isDark
-                    ? Colors.white.withValues(alpha: 0.06)
-                    : Colors.black.withValues(alpha: 0.04)),
-          width: isCurrent ? 1.5 : 1,
-        ),
-        boxShadow: isCurrent
-            ? [
-                BoxShadow(
-                  color: accentColor.withValues(alpha: 0.25),
-                  blurRadius: 14,
-                  offset: const Offset(0, 4),
-                ),
-              ]
-            : null,
-      ),
-      padding: EdgeInsets.zero,
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(20),
-        child: IntrinsicHeight(
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // Left accent stripe
-              Container(
-                width: isCurrent ? 5.0 : 4.0,
-                color: accentColor,
-              ),
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 15),
-                  child: Row(
-                    children: [
+      color: isCurrent
+          ? (isDark
+              ? AppColors.darkGreen.withValues(alpha: 0.14)
+              : AppColors.paleGreen.withValues(alpha: 0.55))
+          : Colors.transparent,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+      child: Row(
+        children: [
           Container(
             width: 44,
             height: 44,
             decoration: BoxDecoration(
-              color: accentColor.withValues(alpha: isDark ? 0.25 : 0.14),
+              color: isCurrent
+                  ? AppColors.darkGreen.withValues(alpha: isDark ? 0.30 : 0.14)
+                  : data.accent.withValues(alpha: isDark ? 0.16 : 0.10),
               borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: isCurrent
+                    ? AppColors.darkGreen.withValues(alpha: 0.35)
+                    : data.accent.withValues(alpha: isDark ? 0.22 : 0.16),
+              ),
             ),
-            child: Icon(icon, color: accentColor, size: 22),
+            child: Icon(data.icon, color: iconCol, size: 21),
           ),
           const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  name,
-                  style: _f(
-                    sz: 17,
-                    fw: isCurrent ? FontWeight.w800 : FontWeight.w600,
-                    c: isCurrent ? accentColor : textCol,
-                  ),
+                Row(
+                  children: [
+                    Text(
+                      data.name,
+                      style: _f(
+                        sz: 15.5,
+                        fw: isCurrent ? FontWeight.w800 : FontWeight.w600,
+                        c: isCurrent ? accent : textCol,
+                      ),
+                    ),
+                    if (isCurrent) ...[
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: AppColors.gold.withValues(alpha: 0.18),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: AppColors.gold.withValues(alpha: 0.45),
+                          ),
+                        ),
+                        child: Text(
+                          'القادمة',
+                          style: _f(
+                            sz: 10,
+                            fw: FontWeight.w800,
+                            c: isDark ? AppColors.gold : const Color(0xFF8C6218),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
-                if (isCurrent)
-                  Text(
-                    'الصلاة القادمة',
-                    style: _f(sz: 11, fw: FontWeight.w700, c: accentColor),
-                  ),
+                
               ],
             ),
           ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
-            decoration: BoxDecoration(
-              color: accentColor.withValues(alpha: 0.14),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: accentColor.withValues(alpha: 0.3)),
-            ),
-            child: Text(
-              fmt(time),
-              style: GoogleFonts.ibmPlexSansArabic(
-                fontSize: 15,
-                fontWeight: FontWeight.w700,
-                color:
-                    isDark &&
-                        (accentColor == const Color(0xFF0D1B4B) ||
-                            accentColor == const Color(0xFF1A237E))
-                    ? Colors.white
-                    : accentColor,
-              ),
+          Text(
+            fmt(data.time),
+            style: _f(
+              sz: 16,
+              fw: FontWeight.w800,
+              c: isCurrent
+                  ? (isDark ? AppColors.lightGreen : AppColors.darkGreen)
+                  : textCol,
             ),
           ),
         ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }
