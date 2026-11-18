@@ -2,145 +2,187 @@
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@drawable/bg_adhan_lockscreen"
-    android:keepScreenOn="true"
-    android:padding="24dp">
+    android:background="@drawable/bg_adhan_luxurious"
+    android:keepScreenOn="true">
 
-    <!-- Top Islamic Header -->
+    <!-- Top Header with Basmala -->
     <LinearLayout
         android:id="@+id/header_layout"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_alignParentTop="true"
-        android:layout_marginTop="32dp"
+        android:layout_marginTop="48dp"
+        android:layout_marginStart="32dp"
+        android:layout_marginEnd="32dp"
         android:gravity="center"
         android:orientation="vertical">
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:fontFamily="sans-serif-medium"
             android:text="بِسْمِ اللَّـهِ الرَّحْمَـٰنِ الرَّحِيمِ"
-            android:textColor="#B3D4AF37"
-            android:textSize="15sp"
-            android:textStyle="bold" />
-
-        <TextView
-            android:id="@+id/tv_takbeer"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:text="اللهُ أَكْبَرُ • اللهُ أَكْبَرُ"
-            android:textColor="#FFFFFF"
-            android:textSize="22sp"
-            android:textStyle="bold" />
+            android:textColor="#E6D4AF37"
+            android:textSize="18sp"
+            android:letterSpacing="0.05"
+            android:shadowColor="#40000000"
+            android:shadowDx="0"
+            android:shadowDy="2"
+            android:shadowRadius="4" />
     </LinearLayout>
 
-    <!-- Center Content: Mosque Icon, Prayer Name, Time -->
+    <!-- Center: Luxurious Prayer Announcement -->
     <LinearLayout
         android:id="@+id/center_layout"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_centerInParent="true"
+        android:layout_marginStart="32dp"
+        android:layout_marginEnd="32dp"
         android:gravity="center"
         android:orientation="vertical">
 
-        <!-- Mosque Glowing Icon -->
+        <!-- Elegant Mosque Icon with Glow -->
         <FrameLayout
             android:id="@+id/icon_container"
-            android:layout_width="120dp"
-            android:layout_height="120dp"
-            android:background="@drawable/bg_mosque_circle">
+            android:layout_width="140dp"
+            android:layout_height="140dp"
+            android:background="@drawable/bg_mosque_luxurious">
 
             <ImageView
                 android:id="@+id/iv_mosque"
-                android:layout_width="64dp"
-                android:layout_height="64dp"
+                android:layout_width="72dp"
+                android:layout_height="72dp"
                 android:layout_gravity="center"
                 android:contentDescription="Mosque"
                 android:src="@drawable/ic_mosque_white" />
         </FrameLayout>
 
-        <!-- Prayer Call Announcement -->
+        <!-- Takbeer (Allahu Akbar) -->
+        <TextView
+            android:id="@+id/tv_takbeer"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="32dp"
+            android:fontFamily="sans-serif-black"
+            android:text="اللهُ أَكْبَرُ ۝ اللهُ أَكْبَرُ"
+            android:textColor="#FFFFFF"
+            android:textSize="24sp"
+            android:letterSpacing="0.08"
+            android:shadowColor="#60000000"
+            android:shadowDx="0"
+            android:shadowDy="3"
+            android:shadowRadius="6" />
+
+        <!-- Prayer Call Announcement (elegant) -->
         <TextView
             android:id="@+id/tv_athan_call"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="24dp"
+            android:fontFamily="sans-serif-medium"
             android:text="حان الآن موعد أذان"
-            android:textColor="#D0FFFFFF"
-            android:textSize="18sp" />
+            android:textColor="#D9FFFFFF"
+            android:textSize="19sp"
+            android:letterSpacing="0.03" />
 
-        <!-- Prayer Name (Big) -->
+        <!-- Prayer Name (LUXURIOUS - Big & Gold) -->
         <TextView
             android:id="@+id/tv_prayer_name"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
+            android:layout_marginTop="8dp"
+            android:fontFamily="sans-serif-black"
             android:text="صلاة المغرب"
             android:textColor="#FFD4AF37"
-            android:textSize="36sp"
-            android:textStyle="bold" />
+            android:textSize="48sp"
+            android:letterSpacing="0.02"
+            android:shadowColor="#80D4AF37"
+            android:shadowDx="0"
+            android:shadowDy="4"
+            android:shadowRadius="12" />
 
-        <!-- Current Prayer Time -->
+        <!-- Current Time (Elegant) -->
         <TextView
             android:id="@+id/tv_prayer_time"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
+            android:layout_marginTop="12dp"
+            android:fontFamily="sans-serif-medium"
             android:text="06:15 م"
-            android:textColor="#FFFFFF"
-            android:textSize="24sp"
-            android:textStyle="bold" />
+            android:textColor="#F2FFFFFF"
+            android:textSize="28sp"
+            android:letterSpacing="0.05"
+            android:shadowColor="#40000000"
+            android:shadowDx="0"
+            android:shadowDy="2"
+            android:shadowRadius="4" />
 
-        <!-- Audio Indicator -->
+        <!-- Audio Status Indicator -->
         <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
+            android:layout_marginTop="20dp"
+            android:background="@drawable/bg_audio_indicator"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp"
+            android:paddingTop="8dp"
+            android:paddingBottom="8dp"
             android:gravity="center"
             android:orientation="horizontal">
+
+            <View
+                android:layout_width="8dp"
+                android:layout_height="8dp"
+                android:layout_marginEnd="8dp"
+                android:background="@drawable/audio_pulse_dot" />
 
             <TextView
                 android:id="@+id/tv_playing_status"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="الأذان يرفع الآن بصوت المؤذن..."
-                android:textColor="#B3FFFFFF"
-                android:textSize="14sp" />
+                android:fontFamily="sans-serif-medium"
+                android:text="الأذان يُرفع الآن بصوت المؤذن"
+                android:textColor="#CCFFFFFF"
+                android:textSize="15sp" />
         </LinearLayout>
     </LinearLayout>
 
-    <!-- Bottom Action Controls -->
+    <!-- Bottom: Luxurious Action Button -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_alignParentBottom="true"
-        android:layout_marginBottom="24dp"
+        android:layout_marginBottom="48dp"
+        android:layout_marginStart="32dp"
+        android:layout_marginEnd="32dp"
         android:gravity="center"
         android:orientation="vertical">
 
-        <!-- Stop Adhan Button -->
+        <!-- Luxurious Stop Button -->
         <Button
             android:id="@+id/btn_stop_adhan"
             android:layout_width="match_parent"
-            android:layout_height="56dp"
-            android:layout_marginStart="24dp"
-            android:layout_marginEnd="24dp"
-            android:background="@drawable/btn_stop_adhan"
-            android:text="إيقاف الأذان ⏹"
+            android:layout_height="64dp"
+            android:background="@drawable/btn_stop_luxurious"
+            android:fontFamily="sans-serif-black"
+            android:text="إيقاف الأذان"
             android:textColor="#FFFFFF"
-            android:textSize="18sp"
-            android:textStyle="bold" />
+            android:textSize="20sp"
+            android:letterSpacing="0.03"
+            android:elevation="8dp" />
 
-        <!-- Unlock to stop hint (requested by user) -->
+        <!-- Subtle Hint -->
         <TextView
             android:id="@+id/tv_unlock_hint"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="14dp"
-            android:text="أو افتح قفل الهاتف لإيقاف الأذان تلقائياً"
-            android:textColor="#80FFFFFF"
-            android:textSize="13sp" />
+            android:layout_marginTop="16dp"
+            android:fontFamily="sans-serif-medium"
+            android:text="أو استخدم زر خفض الصوت للإيقاف"
+            android:textColor="#99FFFFFF"
+            android:textSize="14sp"
+            android:letterSpacing="0.02" />
     </LinearLayout>
 
 </RelativeLayout>

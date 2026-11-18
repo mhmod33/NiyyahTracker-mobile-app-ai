@@ -3142,19 +3142,10 @@ class _MushafPageWidgetState extends State<_MushafPageWidget>
         vertical: fontSize * 0.4,
       ),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            AppColors.darkGreen.withValues(alpha: 0.25),
-            AppColors.darkGreen.withValues(alpha: 0.10),
-          ],
-          begin: Alignment.centerRight,
-          end: Alignment.centerLeft,
-        ),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(
-          color: AppColors.darkGreen.withValues(alpha: 0.4),
-          width: 1.5,
-        ),
+        color: isDark
+            ? Colors.white.withOpacity(0.03)
+            : Colors.black.withOpacity(0.02),
+        borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -3189,23 +3180,9 @@ class _MushafPageWidgetState extends State<_MushafPageWidget>
         vertical: fontSize * 0.2,
       ),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            Colors.transparent,
-            AppColors.darkGreen.withValues(alpha: 0.15),
-            Colors.transparent,
-          ],
-        ),
-        border: Border(
-          bottom: BorderSide(
-            color: AppColors.darkGreen.withValues(alpha: 0.3),
-            width: 1,
-          ),
-          top: BorderSide(
-            color: AppColors.darkGreen.withValues(alpha: 0.3),
-            width: 1,
-          ),
-        ),
+        color: isDark
+            ? Colors.white.withOpacity(0.03)
+            : Colors.black.withOpacity(0.02),
       ),
       child: FittedBox(
         fit: BoxFit.scaleDown,
@@ -3215,7 +3192,7 @@ class _MushafPageWidgetState extends State<_MushafPageWidget>
           children: [
             Icon(
               Icons.auto_awesome_outlined,
-              color: AppColors.darkGreen.withValues(alpha: 0.8),
+              color: isDark ? Colors.white38 : Colors.black38,
               size: fontSize * 0.9,
             ),
             SizedBox(width: fontSize * 0.4),
@@ -3240,7 +3217,7 @@ class _MushafPageWidgetState extends State<_MushafPageWidget>
             SizedBox(width: fontSize * 0.4),
             Icon(
               Icons.auto_awesome_outlined,
-              color: AppColors.darkGreen.withValues(alpha: 0.8),
+              color: isDark ? Colors.white38 : Colors.black38,
               size: fontSize * 0.9,
             ),
           ],

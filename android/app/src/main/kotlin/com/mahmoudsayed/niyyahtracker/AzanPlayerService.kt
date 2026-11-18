@@ -78,7 +78,7 @@ class AzanPlayerService : Service() {
         try {
             val lockIntent = Intent(this, AdhanLockScreenActivity::class.java).apply {
                 putExtra(AdhanLockScreenActivity.EXTRA_PRAYER_NAME, prayerName)
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
             }
             startActivity(lockIntent)
             AzanAlarmReceiver.writeLog(this, "AzanPlayerService: startActivity(AdhanLockScreenActivity) called OK")

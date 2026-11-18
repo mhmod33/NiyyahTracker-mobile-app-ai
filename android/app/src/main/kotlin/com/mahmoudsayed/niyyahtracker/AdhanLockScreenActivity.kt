@@ -12,6 +12,7 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.os.PowerManager
+import android.view.KeyEvent
 import android.view.View
 import android.view.WindowManager
 import android.view.animation.Animation
@@ -97,6 +98,19 @@ class AdhanLockScreenActivity : Activity() {
 
         // 7. Listen for Adhan completion or stop from elsewhere
         registerAdhanStoppedReceiver()
+    }
+
+    // Handle Volume Down button to stop Adhan (works even on lock screen!)
+    override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
+        if (keyCode == KeyEvent.KEYCODE_VOLUME_DOWN) {
+            AzanAlarmReceiver.writeLog(
+                this,
+                "AdhanLockScreenActivity: Volume DOWN pressed -> stopping Adhan"
+            )
+            stopAdhanAndFinish()
+            return true // Consume the event
+        }
+        return super.onKeyDown(keyCode, event)
     }
 
     private fun setupLockScreenWindow() {
