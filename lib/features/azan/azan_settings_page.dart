@@ -4,6 +4,7 @@ import '../../core/app_colors.dart';
 import '../../core/directional_icon.dart';
 import '../../services/azan_service.dart';
 import 'muazzin_selection_page.dart';
+import 'azan_debug_screen.dart';
 
 
 TextStyle _f({
@@ -342,6 +343,114 @@ class _AzanSettingsPageState extends State<AzanSettingsPage> {
                                 setState(() => _showAdhanBanner = v);
                               },
                               isDark: isDark,
+                            ),
+                            ListTile(
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                              leading: Container(
+                                width: 38,
+                                height: 38,
+                                decoration: BoxDecoration(
+                                  color: AppColors.gold.withValues(alpha: 0.15),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: const Icon(
+                                  Icons.screen_lock_portrait_rounded,
+                                  color: AppColors.gold,
+                                  size: 22,
+                                ),
+                              ),
+                              title: Text(
+                                'معاينة شاشة الأذان على شاشة القفل',
+                                style: GoogleFonts.ibmPlexSansArabic(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w600,
+                                  color: isDark ? Colors.white : AppColors.textPrimary,
+                                ),
+                              ),
+                              subtitle: Text(
+                                'شاشة الأذان الكاملة تظهر فوق شاشة القفل مثل تطبيق Prayer Now',
+                                style: GoogleFonts.ibmPlexSansArabic(
+                                  fontSize: 12,
+                                  color: isDark ? Colors.white54 : AppColors.textSecondary,
+                                ),
+                              ),
+                              trailing: ElevatedButton(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppColors.darkGreen,
+                                  foregroundColor: Colors.white,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                ),
+                                onPressed: () {
+                                  _azanService.showLockScreenAdhan(prayerName: 'المغرب');
+                                },
+                                child: Text(
+                                  'معاينة',
+                                  style: GoogleFonts.ibmPlexSansArabic(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            ListTile(
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                              leading: Container(
+                                width: 38,
+                                height: 38,
+                                decoration: BoxDecoration(
+                                  color: Colors.blue.withValues(alpha: 0.15),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: const Icon(
+                                  Icons.bug_report_rounded,
+                                  color: Colors.blue,
+                                  size: 22,
+                                ),
+                              ),
+                              title: Text(
+                                'سجل تشخيص الأذان واختباره',
+                                style: GoogleFonts.ibmPlexSansArabic(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w600,
+                                  color: isDark ? Colors.white : AppColors.textPrimary,
+                                ),
+                              ),
+                              subtitle: Text(
+                                'اختبار الأذان الفوري والأصلي + مراجعة سجلات التشخيص',
+                                style: GoogleFonts.ibmPlexSansArabic(
+                                  fontSize: 12,
+                                  color: isDark ? Colors.white54 : AppColors.textSecondary,
+                                ),
+                              ),
+                              trailing: ElevatedButton(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.blue,
+                                  foregroundColor: Colors.white,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                ),
+                                onPressed: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => const AzanDebugScreen(),
+                                    ),
+                                  );
+                                },
+                                child: Text(
+                                  'فتح',
+                                  style: GoogleFonts.ibmPlexSansArabic(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
                             ),
                           ],
                         ),

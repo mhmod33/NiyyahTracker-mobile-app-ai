@@ -24,6 +24,7 @@ import 'services/admin_notification_service.dart';
 import 'services/admin_background_checker.dart';
 import 'services/azkar_reminder_service.dart';
 import 'widgets/adhan_overlay_widget.dart';
+import 'package:mushaf/mushaf.dart';
 
 final GlobalKey<NavigatorState> appNavigatorKey = GlobalKey<NavigatorState>();
 
@@ -139,6 +140,9 @@ Future<void> _deferredStartupWork() async {
   } catch (_) {}
   try {
     await registerAdminBackgroundCheck();
+  } catch (_) {}
+  try {
+    await Mushaf.initialize();
   } catch (_) {}
 }
 

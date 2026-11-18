@@ -20,6 +20,7 @@ import '../../services/quran_audio_service.dart';
 import '../../services/wird_service.dart';
 import '../../services/wird_notification_service.dart';
 import 'reciter_library_page.dart';
+import 'package:mushaf/mushaf.dart';
 
 class SurahReaderPage extends StatefulWidget {
   final int surahNumber;
@@ -47,6 +48,7 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
   double _fontSize = 22.0;
   bool _boldFont = false;
   bool _verticalScroll = false; // false = horizontal (default)
+  bool _useQcfFont = true; // Ottoman script (QCF) 604 page fonts
 
   // ── Feature 1: Multi-verse selection ──
   final Set<int> _selectedVerses = {};
@@ -102,6 +104,7 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
           _boldFont = box.get('boldFont', defaultValue: false) as bool;
           _verticalScroll =
               box.get('verticalScroll', defaultValue: false) as bool;
+          _useQcfFont = box.get('useQcfFont', defaultValue: true) as bool;
         });
       }
     } catch (_) {}
@@ -115,6 +118,7 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
       await box.put('fontSize', _fontSize);
       await box.put('boldFont', _boldFont);
       await box.put('verticalScroll', _verticalScroll);
+      await box.put('useQcfFont', _useQcfFont);
     } catch (_) {}
   }
 
@@ -646,6 +650,7 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
                   readerFontSize: _fontSize,
                   boldFont: _boldFont,
                   verticalScroll: _verticalScroll,
+                  useQcfFont: _useQcfFont,
                   onVerseTap: (surah, verse) {
                     if (_selectedVerses.isNotEmpty) {
                       setState(() {
@@ -1045,6 +1050,46 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
                   ],
                 ),
                 const SizedBox(height: 20),
+                // QCF 604 Ottoman Script toggle
+                SwitchListTile(
+                  value: _useQcfFont,
+                  activeColor: AppColors.darkGreen,
+                  contentPadding: EdgeInsets.zero,
+                  secondary: Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: AppColors.gold.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(
+                      Icons.auto_stories_rounded,
+                      color: AppColors.gold,
+                      size: 20,
+                    ),
+                  ),
+                  title: Text(
+                    'الخط العثماني لمصحف المدينة (QCF)',
+                    style: GoogleFonts.ibmPlexSansArabic(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      color: isDark ? Colors.white : AppColors.textPrimary,
+                    ),
+                  ),
+                  subtitle: Text(
+                    'خط مجمع الملك فهد (604 خط لكل صفحة خط مخصص يطابق المصحف المطبوع)',
+                    style: GoogleFonts.ibmPlexSansArabic(
+                      fontSize: 11,
+                      color: isDark ? Colors.white54 : AppColors.textSecondary,
+                    ),
+                  ),
+                  onChanged: (v) {
+                    setSheet(() => _useQcfFont = v);
+                    setState(() => _useQcfFont = v);
+                    _saveSettings();
+                  },
+                ),
+                Divider(color: isDark ? Colors.white12 : AppColors.grayLight),
+                const SizedBox(height: 4),
                 // Scroll direction toggle
                 SwitchListTile(
                   value: _verticalScroll,
@@ -2576,6 +2621,107 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
   }
 }
 
+// ─── QCF (King Fahd Complex 604 Page Fonts) Ottoman Page Container ───
+class _QcfPageContainer extends StatefulWidget {
+  final int pageNumber;
+  final bool isDark;
+  final int? highlightSurah;
+  final int? highlightVerse;
+  final void Function(int surah, int verse) onVerseTap;
+  final void Function(int surah, int verse) onVerseLongPress;
+
+  const _QcfPageContainer({
+    required this.pageNumber,
+    required this.isDark,
+    this.highlightSurah,
+    this.highlightVerse,
+    required this.onVerseTap,
+    required this.onVerseLongPress,
+  });
+
+  @override
+  State<_QcfPageContainer> createState() => _QcfPageContainerState();
+}
+
+class _QcfPageContainerState extends State<_QcfPageContainer> {
+  bool _initialized = Mushaf.isInitialized;
+
+  @override
+  void initState() {
+    super.initState();
+    if (!_initialized) {
+      _initMushaf();
+    }
+  }
+
+  Future<void> _initMushaf() async {
+    try {
+      await Mushaf.initialize();
+      if (mounted) setState(() => _initialized = true);
+    } catch (_) {}
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!_initialized) {
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const CircularProgressIndicator(color: AppColors.darkGreen),
+            const SizedBox(height: 12),
+            Text(
+              'جارٍ تحميل الخط العثماني (QCF)...',
+              style: GoogleFonts.ibmPlexSansArabic(
+                fontSize: 13,
+                color: widget.isDark ? Colors.white70 : AppColors.textSecondary,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final bg = widget.isDark ? const Color(0xFF0B120D) : const Color(0xFFFBF8F2);
+    final surahNamesMap = <int, String>{
+      for (int i = 1; i <= 114; i++) i: quran.getSurahNameArabic(i),
+    };
+
+    MushafAyahRef? highRef;
+    if (widget.highlightSurah != null && widget.highlightVerse != null) {
+      highRef = MushafAyahRef(
+        surahId: widget.highlightSurah!,
+        ayahNumber: widget.highlightVerse!,
+      );
+    }
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(12),
+      child: MediaQuery.removePadding(
+        context: context,
+        removeTop: true,
+        removeBottom: true,
+        child: HafsQcf4PageView(
+          page: widget.pageNumber,
+          fontScale: 1.0,
+          surahNames: surahNamesMap,
+          highlightedAyah: highRef,
+          style: MushafStyle(
+            ink: widget.isDark ? Colors.white : AppColors.textPrimary,
+            muted: widget.isDark ? Colors.white70 : AppColors.textSecondary,
+            accent: AppColors.darkGreen,
+            accentContainer: AppColors.gold.withValues(alpha: 0.25),
+            background: bg,
+          ),
+          onAyahLongPress: (ref) {
+            widget.onVerseLongPress(ref.surahId, ref.ayahNumber);
+          },
+        ),
+      ),
+    );
+  }
+}
+
 // ─── Mushaf Page Widget ───
 class _MushafPageWidget extends StatefulWidget {
   final int pageNumber;
@@ -2587,6 +2733,7 @@ class _MushafPageWidget extends StatefulWidget {
   final double readerFontSize;
   final bool boldFont;
   final bool verticalScroll;
+  final bool useQcfFont;
   final void Function(int surah, int verse) onVerseTap;
   final void Function(int surah, int verse) onVerseLongPress;
 
@@ -2600,6 +2747,7 @@ class _MushafPageWidget extends StatefulWidget {
     this.readerFontSize = 22.0,
     this.boldFont = false,
     this.verticalScroll = false,
+    this.useQcfFont = true,
     required this.onVerseTap,
     required this.onVerseLongPress,
   });
@@ -2656,6 +2804,24 @@ class _MushafPageWidgetState extends State<_MushafPageWidget>
   @override
   Widget build(BuildContext context) {
     super.build(context); // required for AutomaticKeepAliveClientMixin
+
+    if (widget.useQcfFont && !widget.verticalScroll) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+        child: _DecoratedMushafFrame(
+          isDark: isDark,
+          child: _QcfPageContainer(
+            pageNumber: pageNumber,
+            isDark: isDark,
+            highlightSurah: highlightSurah,
+            highlightVerse: highlightVerse,
+            onVerseTap: widget.onVerseTap,
+            onVerseLongPress: widget.onVerseLongPress,
+          ),
+        ),
+      );
+    }
+
     final pageData = quran.getPageData(pageNumber);
 
     return Padding(

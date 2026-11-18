@@ -65,6 +65,15 @@ class MainActivity : FlutterActivity() {
                         sp.edit().putBoolean("mute_on_volume_down", enabled).apply()
                         result.success(true)
                     }
+                    "showAdhanLockScreen" -> {
+                        val prayerName = call.argument<String>("prayerName") ?: "المغرب"
+                        val lockScreenIntent = Intent(this, AdhanLockScreenActivity::class.java).apply {
+                            putExtra(AdhanLockScreenActivity.EXTRA_PRAYER_NAME, prayerName)
+                            flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                        }
+                        startActivity(lockScreenIntent)
+                        result.success(true)
+                    }
                     else -> result.notImplemented()
                 }
             }

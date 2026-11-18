@@ -383,6 +383,15 @@ class AzanService {
     await _settingsBox.put(_showAdhanBannerKey, enabled);
   }
 
+  /// Triggers the native full-screen lock screen activity (Prayer Now style)
+  Future<void> showLockScreenAdhan({String prayerName = 'المغرب'}) async {
+    try {
+      if (Platform.isAndroid) {
+        await _azanChannel.invokeMethod('showAdhanLockScreen', {'prayerName': prayerName});
+      }
+    } catch (_) {}
+  }
+
   bool isPrayerAzanEnabled(String prayerName) {
     switch (prayerName) {
       case 'الفجر':
