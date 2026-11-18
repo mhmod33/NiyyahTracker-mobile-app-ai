@@ -1365,54 +1365,6 @@ class AzanService {
     }
   }
 
-  // ── Test / Debug helpers ──
-
-  /// Immediately plays the azan through Flutter's audio player.
-  /// Bypasses the azanEnabled guard so it works even when disabled.
-  Future<void> testFlutterAzan() async {
-    AzanDebugLog.write('TEST: testFlutterAzan() called');
-    try {
-      final muazzin = selectedMuazzin;
-      final filePath = await _getExtractedPath(muazzin, isFajr: false);
-      if (filePath == null) {
-        AzanDebugLog.write('TEST: no file path for muazzin=${muazzin.id}');
-        return;
-      }
-      final exists = await File(filePath).exists();
-      AzanDebugLog.write('TEST: Flutter path=$filePath exists=$exists');
-      if (!exists) return;
-      await _audioPlayer.setFilePath(filePath);
-      await _audioPlayer.setVolume(1.0);
-      await _audioPlayer.play();
-      AzanDebugLog.write('TEST: Flutter audio.play() called OK');
-    } catch (e) {
-      AzanDebugLog.write('TEST: testFlutterAzan EXCEPTION: $e');
-    }
-  }
-
-  /// Schedules a native AlarmManager alarm [delaySeconds] from now.
-  /// Fires the full native chain: BroadcastReceiver → ForegroundService → MediaPlayer.
-  Future<String> testNativeAlarm({int delaySeconds = 15}) async {
-    AzanDebugLog.write('TEST: testNativeAlarm() delay=$delaySeconds');
-    try {
-      final filePath = await _getAzanFilePath(isFajr: false);
-      final exists = await File(filePath).exists();
-      AzanDebugLog.write('TEST: native path=$filePath exists=$exists');
-      final triggerMs = DateTime.now().millisecondsSinceEpoch + (delaySeconds * 1000);
-      await _azanChannel.invokeMethod('scheduleAzan', {
-        'alarmId': 9999,
-        'triggerAtMs': triggerMs,
-        'filePath': filePath,
-        'prayerName': 'اختبار الأذان',
-      });
-      AzanDebugLog.write('TEST: native alarm scheduled for ${delaySeconds}s from now');
-      return 'تم جدولة الأذان الأصلي بعد $delaySeconds ثانية';
-    } catch (e) {
-      AzanDebugLog.write('TEST: testNativeAlarm FAILED: $e');
-      return 'فشل جدولة الأذان الأصلي: $e';
-    }
-  }
-
   /// Dispose resources.
 
   void dispose() {
