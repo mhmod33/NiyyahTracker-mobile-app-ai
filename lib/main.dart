@@ -1,11 +1,13 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:provider/provider.dart';
+import 'package:qcf_quran_plus/qcf_quran_plus.dart';
 import 'core/app_colors.dart';
 import 'core/theme_provider.dart';
 import 'providers/auth_provider.dart';
@@ -24,7 +26,6 @@ import 'services/admin_notification_service.dart';
 import 'services/admin_background_checker.dart';
 import 'services/azkar_reminder_service.dart';
 import 'widgets/adhan_overlay_widget.dart';
-import 'package:mushaf/mushaf.dart';
 
 final GlobalKey<NavigatorState> appNavigatorKey = GlobalKey<NavigatorState>();
 
@@ -113,6 +114,21 @@ void main() async {
 /// Heavy startup work that does not need to block the first frame:
 /// notification scheduling (iterates many alarms) and similar background setup.
 Future<void> _deferredStartupWork() async {
+  // Initialize QCF fonts on Mobile only (Web not supported)
+  if (!kIsWeb) {
+    try {
+      await QcfFontLoader.setupFontsAtStartup(
+        mode: FontStorageMode.permanentDisk, // Mobile: save to disk
+        onProgress: (progress) {
+          debugPrint('QCF Font loading: ${(progress * 100).toStringAsFixed(1)}%');
+        },
+      );
+      debugPrint('QCF Fonts loaded successfully');
+    } catch (e) {
+      debugPrint('QCF Font loading failed: $e');
+    }
+  }
+
   try {
     await AzanService().preloadPrayerTimes();
   } catch (_) {}
@@ -140,9 +156,6 @@ Future<void> _deferredStartupWork() async {
   } catch (_) {}
   try {
     await registerAdminBackgroundCheck();
-  } catch (_) {}
-  try {
-    await Mushaf.initialize();
   } catch (_) {}
 }
 
