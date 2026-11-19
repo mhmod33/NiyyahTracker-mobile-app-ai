@@ -1,7 +1,6 @@
 package com.mahmoudsayed.niyyahtracker
 
 import android.app.Activity
-import android.app.KeyguardManager
 import android.app.NotificationManager
 import android.content.BroadcastReceiver
 import android.content.Context
@@ -9,14 +8,9 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.os.Build
 import android.os.Bundle
-import android.os.Handler
-import android.os.Looper
 import android.os.PowerManager
 import android.view.KeyEvent
-import android.view.View
 import android.view.WindowManager
-import android.view.animation.Animation
-import android.view.animation.ScaleAnimation
 import android.widget.Button
 import android.widget.TextView
 import java.text.SimpleDateFormat
@@ -69,22 +63,9 @@ class AdhanLockScreenActivity : Activity() {
         val tvPrayerName = findViewById<TextView>(R.id.tv_prayer_name)
         val tvPrayerTime = findViewById<TextView>(R.id.tv_prayer_time)
         val btnStopAdhan = findViewById<Button>(R.id.btn_stop_adhan)
-        val iconContainer = findViewById<View>(R.id.icon_container)
 
         tvPrayerName?.text = "صلاة $prayerName"
         tvPrayerTime?.text = prayerTime
-
-        // 4. Subtle pulsing animation on mosque icon
-        val pulse = ScaleAnimation(
-            1.0f, 1.08f, 1.0f, 1.08f,
-            Animation.RELATIVE_TO_SELF, 0.5f,
-            Animation.RELATIVE_TO_SELF, 0.5f
-        ).apply {
-            duration = 1000
-            repeatMode = Animation.REVERSE
-            repeatCount = Animation.INFINITE
-        }
-        iconContainer?.startAnimation(pulse)
 
         // 5. Button "إيقاف الأذان" click listener
         btnStopAdhan?.setOnClickListener {

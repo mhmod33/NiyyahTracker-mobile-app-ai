@@ -353,13 +353,13 @@ class _AzanSettingsPageState extends State<AzanSettingsPage> {
                                   borderRadius: BorderRadius.circular(10),
                                 ),
                                 child: const Icon(
-                                  Icons.screen_lock_portrait_rounded,
+                                  Icons.play_circle_outline_rounded,
                                   color: AppColors.gold,
                                   size: 22,
                                 ),
                               ),
                               title: Text(
-                                'معاينة شاشة الأذان على شاشة القفل',
+                                'تجربة الأذان الكامل',
                                 style: GoogleFonts.ibmPlexSansArabic(
                                   fontSize: 15,
                                   fontWeight: FontWeight.w600,
@@ -367,7 +367,7 @@ class _AzanSettingsPageState extends State<AzanSettingsPage> {
                                 ),
                               ),
                               subtitle: Text(
-                                'شاشة الأذان الكاملة تظهر فوق شاشة القفل مثل تطبيق Prayer Now',
+                                'اختبار كامل للأذان (الصوت + شاشة القفل) مثل الأذان الحقيقي',
                                 style: GoogleFonts.ibmPlexSansArabic(
                                   fontSize: 12,
                                   color: isDark ? Colors.white54 : AppColors.textSecondary,
@@ -382,11 +382,31 @@ class _AzanSettingsPageState extends State<AzanSettingsPage> {
                                   ),
                                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                                 ),
-                                onPressed: () {
-                                  _azanService.showLockScreenAdhan(prayerName: 'المغرب');
+                                onPressed: () async {
+                                  try {
+                                    await _azanService.testNativeAzan(prayerName: 'المغرب', isFajr: false);
+                                    if (mounted) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(
+                                          content: Text('تم تشغيل اختبار الأذان'),
+                                          duration: Duration(seconds: 2),
+                                        ),
+                                      );
+                                    }
+                                  } catch (e) {
+                                    if (mounted) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(
+                                          content: Text('فشل اختبار الأذان: $e'),
+                                          backgroundColor: Colors.red,
+                                          duration: const Duration(seconds: 3),
+                                        ),
+                                      );
+                                    }
+                                  }
                                 },
                                 child: Text(
-                                  'معاينة',
+                                  'تجربة',
                                   style: GoogleFonts.ibmPlexSansArabic(
                                     fontSize: 13,
                                     fontWeight: FontWeight.bold,
@@ -428,43 +448,48 @@ class _SettingsSection extends StatelessWidget {
     final textColor = isDark ? Colors.white : AppColors.textPrimary;
     final sectionBg = isDark ? const Color(0xFF1A1F1C) : Colors.white;
 
-    return Container(
-      decoration: BoxDecoration(
+    // Material is the nearest ancestor that paints the ink splash ListTile
+    // expects. Without it, the colored Container above hides the ripple.
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(16),
+      child: Material(
         color: sectionBg,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: isDark
-              ? Colors.white.withOpacity(0.06)
-              : Colors.black.withOpacity(0.04),
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
-            child: Row(
-              children: [
-                Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: AppColors.darkGreen.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Icon(icon, color: AppColors.darkGreen, size: 20),
-                ),
-                const SizedBox(width: 12),
-                Text(
-                  title,
-                  style: _f(sz: 18, fw: FontWeight.w700, c: textColor),
-                ),
-              ],
-            ),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: BorderSide(
+            color: isDark
+                ? Colors.white.withOpacity(0.06)
+                : Colors.black.withOpacity(0.04),
           ),
-          ...children,
-          const SizedBox(height: 8),
-        ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
+              child: Row(
+                children: [
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: AppColors.darkGreen.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(icon, color: AppColors.darkGreen, size: 20),
+                  ),
+                  const SizedBox(width: 12),
+                  Text(
+                    title,
+                    style: _f(sz: 18, fw: FontWeight.w700, c: textColor),
+                  ),
+                ],
+              ),
+            ),
+            ...children,
+            const SizedBox(height: 8),
+          ],
+        ),
       ),
     );
   }

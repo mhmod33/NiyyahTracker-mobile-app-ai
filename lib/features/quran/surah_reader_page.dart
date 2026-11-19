@@ -57,7 +57,20 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
   DateTime? _readingStartTime;
   int _totalReadingSeconds = 0;
 
-  // ── Feature 1: Multi-verse selection ──
+  // ── Tap-to-toggle nav buttons only (no layout change) ──
+  bool _navVisible = true;
+
+  void _toggleNav() {
+    setState(() => _navVisible = !_navVisible);
+    // Hide/show only the Android system nav bar — never the status bar,
+    // so the layout height never changes.
+    SystemChrome.setEnabledSystemUIMode(
+      _navVisible ? SystemUiMode.edgeToEdge : SystemUiMode.manual,
+      overlays: _navVisible
+          ? [SystemUiOverlay.top, SystemUiOverlay.bottom]
+          : [SystemUiOverlay.top],
+    );
+  }
   final Set<int> _selectedVerses = {};
   int? _selectedSurah; // surah context for the current selection
 
@@ -70,6 +83,7 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
 
     // Keep the screen on while reading.
     WakelockPlus.enable();
+
     final int startPage =
         (widget.initialPage != null &&
             widget.initialPage! >= 1 &&
@@ -216,14 +230,18 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
 
   // ── QCF Rendering ──
   Widget _buildQcfPageView(bool isDark) {
-    // QuranPageView handles font loading internally
     return QuranPageView(
       pageController: _pageController,
       highlights: _buildQcfHighlights(),
+      onPageChanged: (page) {
+        setState(() => _currentPage = page - 1);
+        _saveReadingProgress(_currentPage);
+        _maybeTrackKahf(_currentPage);
+      },
+      // onWordTap handles both toggle-nav (no selection) and multi-select.
       onWordTap: (surahNumber, verseNumber, wordIndex, word) {
-        // Word tap - treat as verse tap for now
         if (_selectedVerses.isNotEmpty) {
-          // If in selection mode, toggle selection
+          // Selection mode: add or remove this ayah.
           setState(() {
             if (_selectedSurah == surahNumber && _selectedVerses.contains(verseNumber)) {
               _selectedVerses.remove(verseNumber);
@@ -234,19 +252,25 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
             }
           });
         } else {
-          // Normal tap - could highlight or do nothing
-          setState(() {
-            _highlightSurah = surahNumber;
-            _highlightVerse = verseNumber;
-          });
+          // No selection: toggle app header/footer and system nav bar.
+          _toggleNav();
         }
       },
       onLongPress: (surahNumber, verseNumber, details) {
-        // Long press - show verse menu
         _showVerseActions(context, surahNumber, verseNumber);
       },
       isDarkMode: isDark,
-      isTajweed: false, // No Tajweed colors - plain QCF
+      isTajweed: false,
+    );
+  }
+
+  void _goToPage(int page) {
+    // Works for both QCF (drives _pageController which QuranPageView is wired to)
+    // and traditional PageView.
+    _pageController.animateToPage(
+      page,
+      duration: const Duration(milliseconds: 250),
+      curve: Curves.easeInOut,
     );
   }
 
@@ -723,6 +747,12 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
     _saveReadingSession();
 
     WakelockPlus.disable();
+
+    // Restore system nav bar when leaving the mushaf
+    SystemChrome.setEnabledSystemUIMode(
+      SystemUiMode.edgeToEdge,
+      overlays: SystemUiOverlay.values,
+    );
     _pageController.dispose();
     _highlightTimer?.cancel();
     // End wird session and check for session completion
@@ -836,26 +866,67 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
         backgroundColor: bgColor,
         body: Column(
           children: [
-            SizedBox(height: MediaQuery.of(context).padding.top),
-            _buildHeader(
-              _currentPage + 1,
-              isDark,
-              headerFooterColor,
-              textColor,
-              subtextColor,
-            ),
-            Expanded(
-              // LTR paging so the next page sits to the right and pages
-              // advance rightward; each page keeps its own RTL content.
-              child: Directionality(
-                textDirection: TextDirection.ltr,
-                child: (_useQcfFont && !kIsWeb) // QCF only on Mobile
-                  ? _buildQcfPageView(isDark)
-                  : _buildTraditionalPageView(isDark),
+            // Header: always occupies its space — Opacity hides it without
+            // collapsing the row, so the page height never changes.
+            Opacity(
+              opacity: _navVisible ? 1.0 : 0.0,
+              child: IgnorePointer(
+                ignoring: !_navVisible,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    SizedBox(height: MediaQuery.of(context).padding.top),
+                    _buildHeader(
+                      _currentPage + 1,
+                      isDark,
+                      headerFooterColor,
+                      textColor,
+                      subtextColor,
+                    ),
+                  ],
+                ),
               ),
             ),
-            if (_selectedVerses.isNotEmpty) _buildSelectionBar(isDark),
-            _buildFooter(isDark, headerFooterColor, subtextColor),
+            Expanded(
+              child: Directionality(
+                textDirection: TextDirection.ltr,
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  child: ColorFiltered(
+                    colorFilter: isDark
+                        ? const ColorFilter.matrix(<double>[
+                            -1,  0,  0, 0, 255,
+                             0, -1,  0, 0, 255,
+                             0,  0, -1, 0, 255,
+                             0,  0,  0, 1,   0,
+                          ])
+                        : const ColorFilter.matrix(<double>[
+                            0.33, 0.33, 0.33, 0, 0,
+                            0.33, 0.33, 0.33, 0, 0,
+                            0.33, 0.33, 0.33, 0, 0,
+                            0,    0,    0,    1, 0,
+                          ]),
+                    child: (_useQcfFont && !kIsWeb)
+                      ? _buildQcfPageView(isDark)
+                      : _buildTraditionalPageView(isDark),
+                  ),
+                ),
+              ),
+            ),
+            // Footer: same approach — always takes space, hidden via Opacity.
+            Opacity(
+              opacity: _navVisible ? 1.0 : 0.0,
+              child: IgnorePointer(
+                ignoring: !_navVisible,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (_selectedVerses.isNotEmpty) _buildSelectionBar(isDark),
+                    _buildFooter(isDark, headerFooterColor, subtextColor),
+                  ],
+                ),
+              ),
+            ),
           ],
         ),
       ),
@@ -1507,11 +1578,7 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
         children: [
           // Right side in RTL: step back toward the start of the mushaf.
           _navBtn(Icons.arrow_forward_rounded, canPrev, isDark, () {
-            _pageController.animateToPage(
-              _currentPage - 1,
-              duration: const Duration(milliseconds: 250),
-              curve: Curves.easeInOut,
-            );
+            _goToPage(_currentPage - 1);
           }),
           // Feature 9: Tap page number to reveal quick navigation slider
           GestureDetector(
@@ -1556,11 +1623,7 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
           ),
           // Left side in RTL: advance toward the later pages.
           _navBtn(Icons.arrow_back_rounded, canNext, isDark, () {
-            _pageController.animateToPage(
-              _currentPage + 1,
-              duration: const Duration(milliseconds: 250),
-              curve: Curves.easeInOut,
-            );
+            _goToPage(_currentPage + 1);
           }),
         ],
       ),

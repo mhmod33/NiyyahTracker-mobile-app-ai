@@ -63,16 +63,7 @@ class AzanAlarmReceiver : BroadcastReceiver() {
             writeLog(context, "AzanAlarmReceiver: startForegroundService FAILED: $e")
         }
 
-        // Launch full-screen lockscreen activity immediately when alarm rings
-        try {
-            val lockScreenIntent = Intent(context, AdhanLockScreenActivity::class.java).apply {
-                putExtra(AdhanLockScreenActivity.EXTRA_PRAYER_NAME, prayerName)
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-            }
-            context.startActivity(lockScreenIntent)
-            writeLog(context, "AzanAlarmReceiver: startActivity(AdhanLockScreenActivity) called OK")
-        } catch (e: Exception) {
-            writeLog(context, "AzanAlarmReceiver: startActivity(AdhanLockScreenActivity) error: $e")
-        }
+        // DO NOT launch activity here - let the service handle it to avoid duplicate launches
+        // The AzanPlayerService will launch the AdhanLockScreenActivity after it starts
     }
 }

@@ -1703,10 +1703,11 @@ class NotificationService {
       // Cancel general periodic dhikr reminders & sleep azkar to reduce notification clutter
       await cancelAzkarReminders();
       await cancelSleepAzkar();
+      await cancelPrayerTimes();
       if (morningAzkarEnabled) await scheduleMorningAzkar();
       if (eveningAzkarEnabled) await scheduleEveningAzkar();
       if (kahfReminderEnabled) await scheduleKahfFridayReminder();
-      if (prayerTimesEnabled) await schedulePrayerTimes();
+      // Prayer time notifications removed — azan handles prayer alerts
       developer.log('✅ Essential schedules initialized', name: 'NotificationService');
     } catch (e, stackTrace) {
       developer.log(

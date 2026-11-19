@@ -1,188 +1,149 @@
 <?xml version="1.0" encoding="utf-8"?>
-<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@drawable/bg_adhan_luxurious"
+    android:background="@drawable/bg_adhan_lockscreen"
     android:keepScreenOn="true">
 
-    <!-- Top Header with Basmala -->
+    <!-- Radial glow behind the glass card -->
+    <View
+        android:layout_width="360dp"
+        android:layout_height="360dp"
+        android:layout_gravity="center"
+        android:background="@drawable/bg_adhan_glow" />
+
+    <!-- Basmala — top, very low contrast -->
+    <TextView
+        android:id="@+id/tv_basmala"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top|center_horizontal"
+        android:layout_marginTop="72dp"
+        android:fontFamily="@font/ibm_plex_sans_arabic"
+        android:letterSpacing="0.06"
+        android:text="بِسْمِ اللَّـهِ الرَّحْمَـٰنِ الرَّحِيمِ"
+        android:textColor="#22FFFFFF"
+        android:textSize="13sp" />
+
+    <!-- Center group: glass card + Takbeer -->
     <LinearLayout
-        android:id="@+id/header_layout"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_alignParentTop="true"
-        android:layout_marginTop="48dp"
-        android:layout_marginStart="32dp"
-        android:layout_marginEnd="32dp"
+        android:layout_gravity="center"
         android:gravity="center"
-        android:orientation="vertical">
+        android:orientation="vertical"
+        android:paddingStart="28dp"
+        android:paddingEnd="28dp">
 
-        <TextView
-            android:layout_width="wrap_content"
+        <!-- Glass card -->
+        <LinearLayout
+            android:id="@+id/center_layout"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:fontFamily="sans-serif-medium"
-            android:text="بِسْمِ اللَّـهِ الرَّحْمَـٰنِ الرَّحِيمِ"
-            android:textColor="#E6D4AF37"
-            android:textSize="18sp"
-            android:letterSpacing="0.05"
-            android:shadowColor="#40000000"
-            android:shadowDx="0"
-            android:shadowDy="2"
-            android:shadowRadius="4" />
-    </LinearLayout>
+            android:background="@drawable/bg_glass_card"
+            android:gravity="center"
+            android:orientation="vertical"
+            android:paddingStart="32dp"
+            android:paddingEnd="32dp"
+            android:paddingTop="40dp"
+            android:paddingBottom="40dp">
 
-    <!-- Center: Luxurious Prayer Announcement -->
-    <LinearLayout
-        android:id="@+id/center_layout"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_centerInParent="true"
-        android:layout_marginStart="32dp"
-        android:layout_marginEnd="32dp"
-        android:gravity="center"
-        android:orientation="vertical">
+            <!-- Label -->
+            <TextView
+                android:id="@+id/tv_athan_call"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:fontFamily="@font/ibm_plex_sans_arabic"
+                android:letterSpacing="0.14"
+                android:text="حَانَ وَقْتُ أَذَان"
+                android:textAllCaps="false"
+                android:textColor="#662DD4A0"
+                android:textSize="12sp" />
 
-        <!-- Elegant Mosque Icon with Glow -->
-        <FrameLayout
-            android:id="@+id/icon_container"
-            android:layout_width="140dp"
-            android:layout_height="140dp"
-            android:background="@drawable/bg_mosque_luxurious">
+            <!-- Prayer name — heavy weight -->
+            <TextView
+                android:id="@+id/tv_prayer_name"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:fontFamily="@font/ibm_plex_sans_arabic_bold"
+                android:letterSpacing="0.0"
+                android:text="صلاة المغرب"
+                android:textColor="#F5F5F5"
+                android:textSize="48sp" />
 
-            <ImageView
-                android:id="@+id/iv_mosque"
-                android:layout_width="72dp"
-                android:layout_height="72dp"
-                android:layout_gravity="center"
-                android:contentDescription="Mosque"
-                android:src="@drawable/ic_mosque_white" />
-        </FrameLayout>
+            <!-- Teal accent divider -->
+            <View
+                android:layout_width="56dp"
+                android:layout_height="1dp"
+                android:layout_marginTop="22dp"
+                android:background="@drawable/divider_teal" />
 
-        <!-- Takbeer (Allahu Akbar) -->
+            <!-- Time — teal accent, light weight -->
+            <TextView
+                android:id="@+id/tv_prayer_time"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="18dp"
+                android:fontFamily="@font/ibm_plex_sans_arabic"
+                android:letterSpacing="0.06"
+                android:text="06:15 م"
+                android:textColor="#2DD4A0"
+                android:textSize="28sp" />
+
+        </LinearLayout>
+
+        <!-- Takbeer — below card, barely visible -->
         <TextView
             android:id="@+id/tv_takbeer"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="32dp"
-            android:fontFamily="sans-serif-black"
-            android:text="اللهُ أَكْبَرُ ۝ اللهُ أَكْبَرُ"
-            android:textColor="#FFFFFF"
-            android:textSize="24sp"
-            android:letterSpacing="0.08"
-            android:shadowColor="#60000000"
-            android:shadowDx="0"
-            android:shadowDy="3"
-            android:shadowRadius="6" />
+            android:layout_marginTop="28dp"
+            android:fontFamily="@font/ibm_plex_sans_arabic"
+            android:letterSpacing="0.1"
+            android:text="اللهُ أَكْبَرُ"
+            android:textColor="#1A2DD4A0"
+            android:textSize="13sp" />
 
-        <!-- Prayer Call Announcement (elegant) -->
-        <TextView
-            android:id="@+id/tv_athan_call"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="24dp"
-            android:fontFamily="sans-serif-medium"
-            android:text="حان الآن موعد أذان"
-            android:textColor="#D9FFFFFF"
-            android:textSize="19sp"
-            android:letterSpacing="0.03" />
-
-        <!-- Prayer Name (LUXURIOUS - Big & Gold) -->
-        <TextView
-            android:id="@+id/tv_prayer_name"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:fontFamily="sans-serif-black"
-            android:text="صلاة المغرب"
-            android:textColor="#FFD4AF37"
-            android:textSize="48sp"
-            android:letterSpacing="0.02"
-            android:shadowColor="#80D4AF37"
-            android:shadowDx="0"
-            android:shadowDy="4"
-            android:shadowRadius="12" />
-
-        <!-- Current Time (Elegant) -->
-        <TextView
-            android:id="@+id/tv_prayer_time"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
-            android:fontFamily="sans-serif-medium"
-            android:text="06:15 م"
-            android:textColor="#F2FFFFFF"
-            android:textSize="28sp"
-            android:letterSpacing="0.05"
-            android:shadowColor="#40000000"
-            android:shadowDx="0"
-            android:shadowDy="2"
-            android:shadowRadius="4" />
-
-        <!-- Audio Status Indicator -->
-        <LinearLayout
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="20dp"
-            android:background="@drawable/bg_audio_indicator"
-            android:paddingStart="16dp"
-            android:paddingEnd="16dp"
-            android:paddingTop="8dp"
-            android:paddingBottom="8dp"
-            android:gravity="center"
-            android:orientation="horizontal">
-
-            <View
-                android:layout_width="8dp"
-                android:layout_height="8dp"
-                android:layout_marginEnd="8dp"
-                android:background="@drawable/audio_pulse_dot" />
-
-            <TextView
-                android:id="@+id/tv_playing_status"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:fontFamily="sans-serif-medium"
-                android:text="الأذان يُرفع الآن بصوت المؤذن"
-                android:textColor="#CCFFFFFF"
-                android:textSize="15sp" />
-        </LinearLayout>
     </LinearLayout>
 
-    <!-- Bottom: Luxurious Action Button -->
+    <!-- Bottom block -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_alignParentBottom="true"
-        android:layout_marginBottom="48dp"
-        android:layout_marginStart="32dp"
-        android:layout_marginEnd="32dp"
+        android:layout_gravity="bottom|center_horizontal"
+        android:layout_marginBottom="52dp"
         android:gravity="center"
-        android:orientation="vertical">
+        android:orientation="vertical"
+        android:paddingStart="36dp"
+        android:paddingEnd="36dp">
 
-        <!-- Luxurious Stop Button -->
+        <!-- Modern pill stop button -->
         <Button
             android:id="@+id/btn_stop_adhan"
             android:layout_width="match_parent"
-            android:layout_height="64dp"
-            android:background="@drawable/btn_stop_luxurious"
-            android:fontFamily="sans-serif-black"
+            android:layout_height="56dp"
+            android:background="@drawable/btn_stop_adhan"
+            android:elevation="4dp"
+            android:fontFamily="@font/ibm_plex_sans_arabic_bold"
+            android:letterSpacing="0.04"
             android:text="إيقاف الأذان"
+            android:textAllCaps="false"
             android:textColor="#FFFFFF"
-            android:textSize="20sp"
-            android:letterSpacing="0.03"
-            android:elevation="8dp" />
+            android:textSize="16sp" />
 
-        <!-- Subtle Hint -->
+        <!-- Hint -->
         <TextView
             android:id="@+id/tv_unlock_hint"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:fontFamily="sans-serif-medium"
-            android:text="أو استخدم زر خفض الصوت للإيقاف"
-            android:textColor="#99FFFFFF"
-            android:textSize="14sp"
-            android:letterSpacing="0.02" />
+            android:layout_marginTop="14dp"
+            android:fontFamily="@font/ibm_plex_sans_arabic"
+            android:letterSpacing="0.05"
+            android:text="أو اضغط زرّ خفض الصوت"
+            android:textColor="#22FFFFFF"
+            android:textSize="12sp" />
+
     </LinearLayout>
 
-</RelativeLayout>
+</FrameLayout>

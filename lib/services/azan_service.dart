@@ -338,37 +338,38 @@ class AzanService {
 
   // ── Getters ──
 
-  bool get azanEnabled => _settingsBox.get(_azanEnabledKey, defaultValue: true);
+  bool get _boxOpen => _settingsBox.isOpen;
+
+  bool get azanEnabled => _boxOpen ? _settingsBox.get(_azanEnabledKey, defaultValue: true) : true;
 
   String get selectedMuazzinId =>
-      _settingsBox.get(_selectedMuazzinKey, defaultValue: 'tobar');
+      _boxOpen ? _settingsBox.get(_selectedMuazzinKey, defaultValue: 'tobar') : 'tobar';
 
   Muazzin get selectedMuazzin => availableMuazzins.firstWhere(
     (m) => m.id == selectedMuazzinId,
-
     orElse: () => availableMuazzins.first,
   );
 
   bool get fajrAzanEnabled =>
-      _settingsBox.get(_fajrAzanEnabledKey, defaultValue: true);
+      _boxOpen ? _settingsBox.get(_fajrAzanEnabledKey, defaultValue: true) : true;
 
   bool get dhuhrAzanEnabled =>
-      _settingsBox.get(_dhuhrAzanEnabledKey, defaultValue: true);
+      _boxOpen ? _settingsBox.get(_dhuhrAzanEnabledKey, defaultValue: true) : true;
 
   bool get asrAzanEnabled =>
-      _settingsBox.get(_asrAzanEnabledKey, defaultValue: true);
+      _boxOpen ? _settingsBox.get(_asrAzanEnabledKey, defaultValue: true) : true;
 
   bool get maghribAzanEnabled =>
-      _settingsBox.get(_maghribAzanEnabledKey, defaultValue: true);
+      _boxOpen ? _settingsBox.get(_maghribAzanEnabledKey, defaultValue: true) : true;
 
   bool get ishaAzanEnabled =>
-      _settingsBox.get(_ishaAzanEnabledKey, defaultValue: true);
+      _boxOpen ? _settingsBox.get(_ishaAzanEnabledKey, defaultValue: true) : true;
 
   bool get muteOnVolumeDown =>
-      _settingsBox.get(_muteOnVolumeDownKey, defaultValue: true);
+      _boxOpen ? _settingsBox.get(_muteOnVolumeDownKey, defaultValue: true) : true;
 
   bool get showAdhanBanner =>
-      _settingsBox.get(_showAdhanBannerKey, defaultValue: true);
+      _boxOpen ? _settingsBox.get(_showAdhanBannerKey, defaultValue: true) : true;
 
   Future<void> setMuteOnVolumeDown(bool enabled) async {
     await _settingsBox.put(_muteOnVolumeDownKey, enabled);
@@ -390,6 +391,55 @@ class AzanService {
         await _azanChannel.invokeMethod('showAdhanLockScreen', {'prayerName': prayerName});
       }
     } catch (_) {}
+  }
+
+  /// Test the complete native azan flow (service + audio + lock screen) like actual azan
+  Future<void> testNativeAzan({String prayerName = 'المغرب', bool isFajr = false}) async {
+    try {
+      developer.log('🧪 testNativeAzan called for $prayerName', name: 'AzanService');
+      AzanDebugLog.write('testNativeAzan: START for $prayerName isFajr=$isFajr');
+
+      if (!Platform.isAndroid) {
+        developer.log('⚠️ Test azan: not Android platform', name: 'AzanService');
+        AzanDebugLog.write('testNativeAzan: SKIPPED (not Android)');
+        throw Exception('Test azan only works on Android');
+      }
+
+      final filePath = await _getAzanFilePath(isFajr: isFajr);
+      developer.log('🧪 Test azan file path: $filePath', name: 'AzanService');
+      AzanDebugLog.write('testNativeAzan: filePath=$filePath');
+
+      final fileExists = await File(filePath).exists();
+      developer.log('🧪 Test azan file exists: $fileExists', name: 'AzanService');
+      AzanDebugLog.write('testNativeAzan: fileExists=$fileExists');
+
+      if (!fileExists) {
+        developer.log('⚠️ Test azan file not found: $filePath', name: 'AzanService');
+        AzanDebugLog.write('testNativeAzan: ABORT (file not found)');
+        throw Exception('ملف الأذان غير موجود: $filePath');
+      }
+
+      // Trigger the native service exactly like actual azan does
+      developer.log('🧪 Calling native testNativeAzan method', name: 'AzanService');
+      AzanDebugLog.write('testNativeAzan: calling native method channel');
+
+      final result = await _azanChannel.invokeMethod('testNativeAzan', {
+        'filePath': filePath,
+        'prayerName': prayerName,
+      });
+
+      developer.log('🧪 Test native azan result: $result', name: 'AzanService');
+      AzanDebugLog.write('testNativeAzan: SUCCESS triggered for $prayerName with file $filePath, result=$result');
+    } catch (e, stackTrace) {
+      developer.log(
+        '⚠️ Test native azan failed: $e',
+        name: 'AzanService',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      AzanDebugLog.write('testNativeAzan: FAILED $e\n$stackTrace');
+      rethrow;
+    }
   }
 
   bool isPrayerAzanEnabled(String prayerName) {
@@ -728,18 +778,6 @@ class AzanService {
     // 2. Refresh coordinates asynchronously
     try {
       final pt = await _getPrayerTimes();
-      final prayers = [
-        {'name': 'الفجر', 'time': pt.fajr},
-        {'name': 'الظهر', 'time': pt.dhuhr},
-        {'name': 'العصر', 'time': pt.asr},
-        {'name': 'المغرب', 'time': pt.maghrib},
-        {'name': 'العشاء', 'time': pt.isha},
-      ];
-      unawaited(
-        NotificationService().schedulePrayerApproachingNotification(
-          prayers: prayers,
-        ),
-      );
       return pt;
     } catch (_) {
       return initial;
@@ -978,16 +1016,9 @@ class AzanService {
             AzanDebugLog.write('_checkAndPlayAzan: MATCH $prayerName diff=${diff}s → playing');
 
             await _showAzanNotification(prayerName);
-
-            // Trigger full-screen Adhan overlay
-            final h = prayerTime.hour > 12
-                ? prayerTime.hour - 12
-                : (prayerTime.hour == 0 ? 12 : prayerTime.hour);
-            final timeStr =
-                '$h:${prayerTime.minute.toString().padLeft(2, '0')} ${prayerTime.hour >= 12 ? 'م' : 'ص'}';
-            triggerAdhanOverlay(prayerName: prayerName, prayerTime: timeStr);
-
-            await playAzan(isFajr: isFajr);
+            // Native AlarmManager handles audio + lock screen activity.
+            // Flutter just_audio removed — it competed with native MediaPlayer
+            // and prevented the native stop button from stopping all audio.
           } else {
             AzanDebugLog.write('_checkAndPlayAzan: $prayerName match but audioPlayer already playing');
           }
@@ -1219,13 +1250,7 @@ class AzanService {
       ];
 
       // Schedule approaching 15-minute notifications & persistent next prayer notification
-      try {
-        await NotificationService().schedulePrayerApproachingNotification(
-          prayers: prayers,
-        );
-      } catch (e) {
-        developer.log('⚠️ Failed to schedule prayer approaching notifications: $e', name: 'AzanService');
-      }
+      // REMOVED: Prayer time notifications removed per user request — azan handles alerts
 
       for (final prayer in prayers) {
         if (!(prayer['enabled'] as bool)) continue;

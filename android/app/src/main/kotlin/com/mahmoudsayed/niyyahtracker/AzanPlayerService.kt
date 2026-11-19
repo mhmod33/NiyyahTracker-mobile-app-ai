@@ -58,8 +58,9 @@ class AzanPlayerService : Service() {
 
         val filePath = intent?.getStringExtra(AzanAlarmReceiver.EXTRA_FILE_PATH)
         val prayerName = intent?.getStringExtra(AzanAlarmReceiver.EXTRA_PRAYER_NAME) ?: "الصلاة"
+        val launchedByActivity = intent?.getBooleanExtra("launched_by_activity", false) ?: false
 
-        AzanAlarmReceiver.writeLog(this, "AzanPlayerService.onStartCommand prayer=$prayerName filePath=$filePath")
+        AzanAlarmReceiver.writeLog(this, "AzanPlayerService.onStartCommand prayer=$prayerName filePath=$filePath launchedByActivity=$launchedByActivity")
 
         if (filePath == null) {
             AzanAlarmReceiver.writeLog(this, "AzanPlayerService: filePath null — stopping self")
@@ -74,16 +75,26 @@ class AzanPlayerService : Service() {
         startForeground(NOTIFICATION_ID, createNotification(prayerName))
         AzanAlarmReceiver.writeLog(this, "AzanPlayerService: startForeground called")
 
-        // Also launch full-screen AdhanLockScreenActivity so it shows over the lock screen (like Prayer Now)
-        try {
-            val lockIntent = Intent(this, AdhanLockScreenActivity::class.java).apply {
-                putExtra(AdhanLockScreenActivity.EXTRA_PRAYER_NAME, prayerName)
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+        // Launch full-screen AdhanLockScreenActivity with proper flags for lock screen display
+        // Skip if already launched by Activity (test mode) to avoid duplicate screens
+        if (!launchedByActivity) {
+            try {
+                val lockIntent = Intent(this, AdhanLockScreenActivity::class.java).apply {
+                    putExtra(AdhanLockScreenActivity.EXTRA_PRAYER_NAME, prayerName)
+                    addFlags(
+                        Intent.FLAG_ACTIVITY_NEW_TASK or
+                        Intent.FLAG_ACTIVITY_CLEAR_TOP or
+                        Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS or
+                        Intent.FLAG_ACTIVITY_NO_HISTORY
+                    )
+                }
+                startActivity(lockIntent)
+                AzanAlarmReceiver.writeLog(this, "AzanPlayerService: startActivity(AdhanLockScreenActivity) called OK")
+            } catch (e: Exception) {
+                AzanAlarmReceiver.writeLog(this, "AzanPlayerService: startActivity(AdhanLockScreenActivity) failed: $e")
             }
-            startActivity(lockIntent)
-            AzanAlarmReceiver.writeLog(this, "AzanPlayerService: startActivity(AdhanLockScreenActivity) called OK")
-        } catch (e: Exception) {
-            AzanAlarmReceiver.writeLog(this, "AzanPlayerService: startActivity(AdhanLockScreenActivity) failed: $e")
+        } else {
+            AzanAlarmReceiver.writeLog(this, "AzanPlayerService: skipping startActivity (already launched by Activity)")
         }
 
         // User decides when to close - no auto-close on unlock

@@ -20,7 +20,7 @@
     <style name="AdhanLockScreenTheme" parent="@android:style/Theme.DeviceDefault.NoActionBar.Fullscreen">
         <item name="android:windowBackground">@drawable/bg_adhan_lockscreen</item>
         <item name="android:windowShowWallpaper">false</item>
-        <item name="android:statusBarColor">#051810</item>
-        <item name="android:navigationBarColor">#071E14</item>
+        <item name="android:statusBarColor">#030C10</item>
+        <item name="android:navigationBarColor">#030C10</item>
     </style>
 </resources>
