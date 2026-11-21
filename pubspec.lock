@@ -1157,14 +1157,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.2.0"
-  qcf_quran_plus:
-    dependency: "direct main"
-    description:
-      name: qcf_quran_plus
-      sha256: "335ec9188d8a35114d4c7d0f3a578d4b3fed478aaa6dc34b6bedeae05228f124"
-      url: "https://pub.dev"
-    source: hosted
-    version: "0.1.1"
   qr:
     dependency: transitive
     description:
@@ -1213,14 +1205,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "3.0.0"
-  scrollable_positioned_list:
-    dependency: transitive
-    description:
-      name: scrollable_positioned_list
-      sha256: "1b54d5f1329a1e263269abc9e2543d90806131aa14fe7c6062a8054d57249287"
-      url: "https://pub.dev"
-    source: hosted
-    version: "0.3.8"
   share_plus:
     dependency: "direct main"
     description:
