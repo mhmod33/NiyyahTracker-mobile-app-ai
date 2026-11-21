@@ -14,7 +14,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'dart:async';
-import 'package:qcf_quran_plus/qcf_quran_plus.dart';
+// import 'package:qcf_quran_plus/qcf_quran_plus.dart'; // Removed - using custom QcfMushafService
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../core/app_colors.dart';
 import '../../core/directional_icon.dart';
@@ -909,7 +909,7 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
                             0,    0,    0,    1, 0,
                           ]),
                     child: (_useQcfFont && !kIsWeb)
-                      ? _buildQcfPageView(isDark)
+                      ? _buildTraditionalPageView(isDark) // Temporarily using traditional view until QcfMushafPage is fully integrated
                       : _buildTraditionalPageView(isDark),
                   ),
                 ),

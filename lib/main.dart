@@ -7,7 +7,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:provider/provider.dart';
-import 'package:qcf_quran_plus/qcf_quran_plus.dart';
+// import 'package:qcf_quran_plus/qcf_quran_plus.dart'; // Removed - using custom QcfMushafService
 import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest.dart' as tzData;
 import 'package:flutter_timezone/flutter_timezone.dart';
@@ -130,20 +130,20 @@ Future<void> _deferredStartupWork() async {
     // Silently fail
   }
 
-  // Initialize QCF fonts on Mobile only (Web not supported)
-  if (!kIsWeb) {
-    try {
-      await QcfFontLoader.setupFontsAtStartup(
-        mode: FontStorageMode.permanentDisk, // Mobile: save to disk
-        onProgress: (progress) {
-          debugPrint('QCF Font loading: ${(progress * 100).toStringAsFixed(1)}%');
-        },
-      );
-      debugPrint('QCF Fonts loaded successfully');
-    } catch (e) {
-      debugPrint('QCF Font loading failed: $e');
-    }
-  }
+  // QCF fonts are now downloaded on-demand by QcfMushafService, not pre-loaded
+  // if (!kIsWeb) {
+  //   try {
+  //     await QcfFontLoader.setupFontsAtStartup(
+  //       mode: FontStorageMode.permanentDisk,
+  //       onProgress: (progress) {
+  //         debugPrint('QCF Font loading: ${(progress * 100).toStringAsFixed(1)}%');
+  //       },
+  //     );
+  //     debugPrint('QCF Fonts loaded successfully');
+  //   } catch (e) {
+  //     debugPrint('QCF Font loading failed: $e');
+  //   }
+  // }
 
   try {
     await AzanService().preloadPrayerTimes();
