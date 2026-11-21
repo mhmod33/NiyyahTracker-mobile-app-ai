@@ -168,7 +168,7 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
                           ),
                           child: ClipRRect(
                             borderRadius: BorderRadius.circular(60),
-                            child: Image.asset('assets/logo.png', fit: BoxFit.cover),
+                            child: Image.asset('assets/new-logo.jpg', fit: BoxFit.cover),
                           ),
                         ),
                         const SizedBox(height: 28),

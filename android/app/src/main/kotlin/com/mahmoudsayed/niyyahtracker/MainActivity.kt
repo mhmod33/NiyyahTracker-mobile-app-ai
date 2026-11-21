@@ -65,6 +65,51 @@ class MainActivity : FlutterActivity() {
                         sp.edit().putBoolean("mute_on_volume_down", enabled).apply()
                         result.success(true)
                     }
+                    "showAdhanLockScreen" -> {
+                        val prayerName = call.argument<String>("prayerName") ?: "المغرب"
+                        val lockScreenIntent = Intent(this, AdhanLockScreenActivity::class.java).apply {
+                            putExtra(AdhanLockScreenActivity.EXTRA_PRAYER_NAME, prayerName)
+                            flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                        }
+                        startActivity(lockScreenIntent)
+                        result.success(true)
+                    }
+                    "testNativeAzan" -> {
+                        val filePath = call.argument<String>("filePath")!!
+                        val prayerName = call.argument<String>("prayerName") ?: "المغرب"
+
+                        // Start the native service with launched_by_activity=true so it
+                        // skips launching the lock screen (we do that here from the Activity)
+                        val serviceIntent = Intent(this, AzanPlayerService::class.java).apply {
+                            putExtra(AzanAlarmReceiver.EXTRA_FILE_PATH, filePath)
+                            putExtra(AzanAlarmReceiver.EXTRA_PRAYER_NAME, prayerName)
+                            putExtra("launched_by_activity", true)
+                        }
+
+                        try {
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                                startForegroundService(serviceIntent)
+                            } else {
+                                startService(serviceIntent)
+                            }
+                            // Launch lock screen activity directly from the Activity context.
+                            // Android 10+ blocks services from starting activities from the background
+                            // when the app is in the foreground, so we do it here and tell the
+                            // service to skip its own launch.
+                            val lockScreenIntent = Intent(this, AdhanLockScreenActivity::class.java).apply {
+                                putExtra(AdhanLockScreenActivity.EXTRA_PRAYER_NAME, prayerName)
+                                addFlags(
+                                    Intent.FLAG_ACTIVITY_NEW_TASK or
+                                    Intent.FLAG_ACTIVITY_CLEAR_TOP or
+                                    Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS
+                                )
+                            }
+                            startActivity(lockScreenIntent)
+                            result.success(true)
+                        } catch (e: Exception) {
+                            result.error("TEST_FAILED", "Failed to start test azan: ${e.message}", null)
+                        }
+                    }
                     else -> result.notImplemented()
                 }
             }

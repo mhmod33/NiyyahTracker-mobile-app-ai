@@ -280,7 +280,7 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                                     child: ClipRRect(
                                       borderRadius: BorderRadius.circular(50),
                                       child: Image.asset(
-                                        'assets/logo.png',
+                                        'assets/new-logo.jpg',
                                         fit: BoxFit.cover,
                                       ),
                                     ),

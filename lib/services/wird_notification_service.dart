@@ -2,12 +2,12 @@ import 'dart:developer' as developer;
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:hive/hive.dart';
-import 'azan_service.dart';
 import 'wird_service.dart';
 
-/// Handles all notifications related to the Daily Wird feature.
-/// Uses notification IDs in the range 5000–5099.
-/// Reminders are scheduled dynamically based on actual prayer times (+20 minutes after each prayer).
+/// Two daily wird notifications:
+///   5001 — 9:00 AM  morning encouragement
+///   5002 — 10:00 PM evening checklist (persistent, stays in panel)
+/// Notification IDs 5001–5099 are reserved for this service.
 class WirdNotificationService {
   static final WirdNotificationService _instance =
       WirdNotificationService._internal();
@@ -19,13 +19,10 @@ class WirdNotificationService {
 
   static const String _channelId = 'wird_reminders';
   static const String _channelName = 'الورد اليومي';
-  static const String _channelDesc = 'تذكيرات الورد اليومي من القرآن الكريم';
+  static const String _channelDesc = 'تذكيرات الورد اليومي من القرآن والعبادات';
 
-  // Notification IDs
-  static const int _fajrId = 5001;
-  static const int _dhuhrId = 5002;
-  static const int _asrId = 5003;
-  static const int _ishaId = 5004;
+  static const int _morningId = 5001;
+  static const int _eveningId = 5002;
 
   static const String _enabledKey = 'wird_notifications_enabled';
 
@@ -33,11 +30,9 @@ class WirdNotificationService {
 
   Future<void> init() async {
     try {
-      if (!Hive.isBoxOpen('wird_settings')) {
-        _settingsBox = await Hive.openBox('wird_settings');
-      } else {
-        _settingsBox = Hive.box('wird_settings');
-      }
+      _settingsBox = Hive.isBoxOpen('wird_settings')
+          ? Hive.box('wird_settings')
+          : await Hive.openBox('wird_settings');
 
       await _createChannel();
       developer.log('✅ WirdNotificationService initialized', name: 'WirdNotif');
@@ -73,91 +68,105 @@ class WirdNotificationService {
     }
   }
 
-  /// Schedule all wird reminders dynamically based on actual prayer times
-  /// (20 minutes after Fajr, Dhuhr, Asr, and Isha).
+  /// Schedule both daily wird notifications.
   Future<void> scheduleAll() async {
     if (!notificationsEnabled) return;
     await cancelAll();
-
-    // Get actual prayer times from AzanService
-    final pt = AzanService().prayerTimesSync;
-    const offset = Duration(minutes: 20);
-
-    final fajrWirdTime = pt.fajr.add(offset);
-    final dhuhrWirdTime = pt.dhuhr.add(offset);
-    final asrWirdTime = pt.asr.add(offset);
-    final ishaWirdTime = pt.isha.add(offset);
-
-    await _scheduleSessionReminder(
-      id: _fajrId,
-      session: WirdSession.fajr,
-      hour: fajrWirdTime.hour,
-      minute: fajrWirdTime.minute,
-      title: 'وقت ورد الصبح 📖',
-      body: 'ابدأ يومك بقراءة ${WirdService().getTodayRecord().pagesPerSession} صفحات من القرآن الكريم بعد صلاة الفجر',
-    );
-
-    await _scheduleSessionReminder(
-      id: _dhuhrId,
-      session: WirdSession.dhuhr,
-      hour: dhuhrWirdTime.hour,
-      minute: dhuhrWirdTime.minute,
-      title: 'وقت ورد الظهر 📖',
-      body: 'لا تنسَ قراءة وردك اليومي بعد صلاة الظهر',
-    );
-
-    await _scheduleSessionReminder(
-      id: _asrId,
-      session: WirdSession.asr,
-      hour: asrWirdTime.hour,
-      minute: asrWirdTime.minute,
-      title: 'وقت ورد العصر 📖',
-      body: 'حان وقت قراءة وردك بعد صلاة العصر',
-    );
-
-    await _scheduleSessionReminder(
-      id: _ishaId,
-      session: WirdSession.isha,
-      hour: ishaWirdTime.hour,
-      minute: ishaWirdTime.minute,
-      title: 'وقت ورد العشاء 📖',
-      body: 'أتمم وردك اليومي بعد صلاة العشاء',
-    );
-
-    developer.log(
-      '✅ All dynamic wird notifications scheduled based on prayer times: '
-      'Fajr=${fajrWirdTime.hour}:${fajrWirdTime.minute}, '
-      'Dhuhr=${dhuhrWirdTime.hour}:${dhuhrWirdTime.minute}, '
-      'Asr=${asrWirdTime.hour}:${asrWirdTime.minute}, '
-      'Isha=${ishaWirdTime.hour}:${ishaWirdTime.minute}',
-      name: 'WirdNotif',
-    );
+    await _scheduleMorning();
+    await _scheduleEvening();
+    developer.log('✅ Wird notifications scheduled: 9:00 AM + 10:00 PM', name: 'WirdNotif');
   }
 
-  Future<void> _scheduleSessionReminder({
-    required int id,
-    required String session,
-    required int hour,
-    required int minute,
-    required String title,
-    required String body,
-  }) async {
+  /// 9:00 AM — morning encouragement.
+  Future<void> _scheduleMorning() async {
     try {
-      final scheduledTime = _nextTime(hour, minute);
-
       await _scheduleZoned(
-        id: id,
-        title: title,
-        body: body,
-        scheduledTime: scheduledTime,
-        matchDateTimeComponents: DateTimeComponents.time,
+        id: _morningId,
+        title: 'صباح الخير 📖',
+        body: 'ابدأ يومك بذكر الله — لا تنسَ وردك اليومي من القرآن الكريم',
+        hour: 9,
+        minute: 0,
+      );
+    } catch (e) {
+      developer.log('❌ Error scheduling morning wird: $e', name: 'WirdNotif');
+    }
+  }
+
+  /// 10:00 PM — evening checklist (persistent so it stays in the notification panel).
+  Future<void> _scheduleEvening() async {
+    try {
+      final record = WirdService().getTodayRecord();
+      final pagesRead = record.pagesRead;
+      final target = record.targetPages;
+
+      final body = [
+        'الصلوات الخمس • قراءة القرآن ($pagesRead/$target صفحة)',
+        'الأذكار • الاستغفار • الدعاء',
+      ].join('\n');
+
+      final androidDetails = AndroidNotificationDetails(
+        _channelId,
+        _channelName,
+        channelDescription: _channelDesc,
+        importance: Importance.high,
+        priority: Priority.high,
+        icon: '@mipmap/ic_launcher',
+        enableVibration: true,
+        playSound: true,
+        ongoing: true,
+        autoCancel: false,
+        actions: <AndroidNotificationAction>[
+          const AndroidNotificationAction(
+            'open_app',
+            'فتح التطبيق',
+            showsUserInterface: true,
+          ),
+          const AndroidNotificationAction(
+            'mark_done',
+            'تم ✓',
+            showsUserInterface: false,
+          ),
+        ],
+        styleInformation: BigTextStyleInformation(
+          'هل أتممت عبادات اليوم؟\n\n'
+          '☐ الصلوات الخمس\n'
+          '☐ قراءة القرآن ($pagesRead/$target صفحة)\n'
+          '☐ أذكار الصباح والمساء\n'
+          '☐ الاستغفار\n'
+          '☐ الدعاء',
+          contentTitle: 'مراجعة عبادات اليوم 🌙',
+          summaryText: 'بصائر • الورد اليومي',
+        ),
       );
 
-      developer.log('📅 Scheduled dynamic wird reminder: $session at $hour:$minute',
-          name: 'WirdNotif');
+      const iosDetails = DarwinNotificationDetails(
+        presentAlert: true,
+        presentBadge: true,
+        presentSound: true,
+      );
+
+      final details = NotificationDetails(android: androidDetails, iOS: iosDetails);
+
+      final androidPlugin = _notifications
+          .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+      final canExact = await androidPlugin?.canScheduleExactNotifications() ?? true;
+      final mode = canExact
+          ? AndroidScheduleMode.exactAllowWhileIdle
+          : AndroidScheduleMode.inexactAllowWhileIdle;
+
+      await _notifications.zonedSchedule(
+        _eveningId,
+        'مراجعة عبادات اليوم 🌙',
+        body,
+        _nextTime(22, 0),
+        details,
+        androidScheduleMode: mode,
+        uiLocalNotificationDateInterpretation:
+            UILocalNotificationDateInterpretation.absoluteTime,
+        matchDateTimeComponents: DateTimeComponents.time,
+      );
     } catch (e) {
-      developer.log('❌ Error scheduling $session reminder: $e',
-          name: 'WirdNotif');
+      developer.log('❌ Error scheduling evening wird: $e', name: 'WirdNotif');
     }
   }
 
@@ -167,7 +176,7 @@ class WirdNotificationService {
     try {
       await _notifications.show(
         5010,
-        'أحسنت! أتممت ورد $label',
+        'أحسنت! أتممت ورد $label 🎉',
         'تقبل الله قراءتك، استمر في المواظبة',
         const NotificationDetails(
           android: AndroidNotificationDetails(
@@ -186,28 +195,24 @@ class WirdNotificationService {
         ),
       );
     } catch (e) {
-      developer.log('❌ Error showing session completed notification: $e',
-          name: 'WirdNotif');
+      developer.log('❌ Error showing session completed notification: $e', name: 'WirdNotif');
     }
   }
 
   /// Show a streak milestone notification.
   Future<void> showStreakMilestone(int streak) async {
-    String title;
-    String body;
+    if (streak != 7 && streak != 30 && streak % 10 != 0) return;
 
-    if (streak == 7) {
-      title = 'أسبوع كامل من المواظبة!';
-      body = 'ماشاء الله! حافظت على وردك 7 أيام متتالية';
-    } else if (streak == 30) {
-      title = 'شهر كامل من المواظبة!';
-      body = 'سبحان الله! 30 يوماً متتالياً على الورد اليومي';
-    } else if (streak % 10 == 0) {
-      title = '$streak يوماً متتالياً!';
-      body = 'تقبل الله منك، استمر في هذا الطريق المبارك';
-    } else {
-      return;
-    }
+    final title = streak == 7
+        ? 'أسبوع كامل من المواظبة!'
+        : streak == 30
+            ? 'شهر كامل من المواظبة!'
+            : '$streak يوماً متتالياً!';
+    final body = streak == 7
+        ? 'ماشاء الله! حافظت على وردك 7 أيام متتالية'
+        : streak == 30
+            ? 'سبحان الله! 30 يوماً متتالياً على الورد اليومي'
+            : 'تقبل الله منك، استمر في هذا الطريق المبارك';
 
     try {
       await _notifications.show(
@@ -235,6 +240,67 @@ class WirdNotificationService {
     }
   }
 
+  /// Test the evening notification immediately with action buttons.
+  Future<void> showTestEveningNotification() async {
+    try {
+      final record = WirdService().getTodayRecord();
+      final pagesRead = record.pagesRead;
+      final target = record.targetPages;
+
+      final androidDetails = AndroidNotificationDetails(
+        _channelId,
+        _channelName,
+        channelDescription: _channelDesc,
+        importance: Importance.high,
+        priority: Priority.high,
+        icon: '@mipmap/ic_launcher',
+        enableVibration: true,
+        playSound: true,
+        ongoing: true,
+        autoCancel: false,
+        actions: <AndroidNotificationAction>[
+          const AndroidNotificationAction(
+            'open_app',
+            'فتح التطبيق',
+            showsUserInterface: true,
+          ),
+          const AndroidNotificationAction(
+            'mark_done',
+            'تم ✓',
+            showsUserInterface: false,
+          ),
+        ],
+        styleInformation: BigTextStyleInformation(
+          'هل أتممت عبادات اليوم؟\n\n'
+          '☐ الصلوات الخمس\n'
+          '☐ قراءة القرآن ($pagesRead/$target صفحة)\n'
+          '☐ أذكار الصباح والمساء\n'
+          '☐ الاستغفار\n'
+          '☐ الدعاء',
+          contentTitle: 'مراجعة عبادات اليوم 🌙 (اختبار)',
+          summaryText: 'بصائر • الورد اليومي',
+        ),
+      );
+
+      const iosDetails = DarwinNotificationDetails(
+        presentAlert: true,
+        presentBadge: true,
+        presentSound: true,
+      );
+
+      await _notifications.show(
+        5099,
+        'مراجعة عبادات اليوم 🌙 (اختبار)',
+        'اختبار الإشعار مع الأزرار',
+        NotificationDetails(android: androidDetails, iOS: iosDetails),
+      );
+
+      developer.log('✅ Test evening notification shown', name: 'WirdNotif');
+    } catch (e) {
+      developer.log('❌ Error showing test evening notification: $e', name: 'WirdNotif');
+    }
+  }
+
   Future<void> cancelAll() async {
     for (int id = 5001; id <= 5015; id++) {
       await _notifications.cancel(id);
@@ -244,26 +310,17 @@ class WirdNotificationService {
 
   tz.TZDateTime _nextTime(int hour, int minute) {
     final now = tz.TZDateTime.now(tz.local);
-    var scheduled = tz.TZDateTime(
-      tz.local,
-      now.year,
-      now.month,
-      now.day,
-      hour,
-      minute,
-    );
-    if (scheduled.isBefore(now)) {
-      scheduled = scheduled.add(const Duration(days: 1));
-    }
+    var scheduled = tz.TZDateTime(tz.local, now.year, now.month, now.day, hour, minute);
+    if (scheduled.isBefore(now)) scheduled = scheduled.add(const Duration(days: 1));
     return scheduled;
   }
 
-  Future<bool> _scheduleZoned({
+  Future<void> _scheduleZoned({
     required int id,
     required String title,
     required String body,
-    required tz.TZDateTime scheduledTime,
-    DateTimeComponents? matchDateTimeComponents,
+    required int hour,
+    required int minute,
   }) async {
     const details = NotificationDetails(
       android: AndroidNotificationDetails(
@@ -284,30 +341,22 @@ class WirdNotificationService {
     );
 
     final androidPlugin = _notifications
-        .resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>();
-    final canExact =
-        await androidPlugin?.canScheduleExactNotifications() ?? true;
+        .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+    final canExact = await androidPlugin?.canScheduleExactNotifications() ?? true;
     final mode = canExact
         ? AndroidScheduleMode.exactAllowWhileIdle
         : AndroidScheduleMode.inexactAllowWhileIdle;
 
-    try {
-      await _notifications.zonedSchedule(
-        id,
-        title,
-        body,
-        scheduledTime,
-        details,
-        androidScheduleMode: mode,
-        uiLocalNotificationDateInterpretation:
-            UILocalNotificationDateInterpretation.absoluteTime,
-        matchDateTimeComponents: matchDateTimeComponents,
-      );
-      return true;
-    } catch (e) {
-      developer.log('❌ _scheduleZoned error id=$id: $e', name: 'WirdNotif');
-      return false;
-    }
+    await _notifications.zonedSchedule(
+      id,
+      title,
+      body,
+      _nextTime(hour, minute),
+      details,
+      androidScheduleMode: mode,
+      uiLocalNotificationDateInterpretation:
+          UILocalNotificationDateInterpretation.absoluteTime,
+      matchDateTimeComponents: DateTimeComponents.time,
+    );
   }
 }

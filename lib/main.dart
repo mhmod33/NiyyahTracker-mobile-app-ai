@@ -1,11 +1,16 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:provider/provider.dart';
+import 'package:qcf_quran_plus/qcf_quran_plus.dart';
+import 'package:timezone/timezone.dart' as tz;
+import 'package:timezone/data/latest.dart' as tzData;
+import 'package:flutter_timezone/flutter_timezone.dart';
 import 'core/app_colors.dart';
 import 'core/theme_provider.dart';
 import 'providers/auth_provider.dart';
@@ -23,7 +28,6 @@ import 'services/app_update_service.dart';
 import 'services/admin_notification_service.dart';
 import 'services/admin_background_checker.dart';
 import 'services/azkar_reminder_service.dart';
-import 'widgets/adhan_overlay_widget.dart';
 
 final GlobalKey<NavigatorState> appNavigatorKey = GlobalKey<NavigatorState>();
 
@@ -67,9 +71,44 @@ void main() async {
     // Silently fail
   }
 
-  // Fast, local init only — opens Hive boxes / sets up the audio player so the
-  // UI can read service state safely. No network calls and no notification
-  // scheduling happen here (those are deferred below to keep startup snappy).
+  // NOTE: Service init calls (NotificationService, AzanService, QuranAudioService,
+  // WirdService) are deferred until after runApp() so the splash paints instantly.
+  // Services lazily open their own Hive boxes and read defaults safely before init.
+
+  runApp(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => ThemeProvider()),
+        ChangeNotifierProvider(create: (_) => AppAuthProvider()),
+        ChangeNotifierProvider.value(value: QuranAudioService()),
+        ChangeNotifierProvider.value(value: ReciterDownloadService()),
+      ],
+      child: const BasairApp(),
+    ),
+  );
+
+  // Defer slow, non-critical work until after the first frame so the splash
+  // appears instantly instead of waiting on notification scheduling and
+  // network calls.
+  unawaited(_deferredStartupWork());
+}
+
+/// Heavy startup work that does not need to block the first frame:
+/// service initialization, notification scheduling, and similar background setup.
+Future<void> _deferredStartupWork() async {
+  // ── STEP 1: Initialize timezone FIRST so every service that calls
+  // tz.TZDateTime.from(..., tz.local) uses the correct local zone.
+  // Without this, tz.local defaults to UTC and all scheduled notifications
+  // fire hours early or late.
+  try {
+    tzData.initializeTimeZones();
+    final tzName = await FlutterTimezone.getLocalTimezone();
+    tz.setLocalLocation(tz.getLocation(tzName.identifier));
+  } catch (_) {}
+
+  // ── STEP 2: Initialize services (they open Hive boxes, extract audio,
+  // configure audio sessions, etc.). These used to block runApp(); now they
+  // run after the splash is visible.
   try {
     await NotificationService().init();
   } catch (e) {
@@ -91,27 +130,21 @@ void main() async {
     // Silently fail
   }
 
-  runApp(
-    MultiProvider(
-      providers: [
-        ChangeNotifierProvider(create: (_) => ThemeProvider()),
-        ChangeNotifierProvider(create: (_) => AppAuthProvider()),
-        ChangeNotifierProvider.value(value: QuranAudioService()),
-        ChangeNotifierProvider.value(value: ReciterDownloadService()),
-      ],
-      child: const BasairApp(),
-    ),
-  );
+  // Initialize QCF fonts on Mobile only (Web not supported)
+  if (!kIsWeb) {
+    try {
+      await QcfFontLoader.setupFontsAtStartup(
+        mode: FontStorageMode.permanentDisk, // Mobile: save to disk
+        onProgress: (progress) {
+          debugPrint('QCF Font loading: ${(progress * 100).toStringAsFixed(1)}%');
+        },
+      );
+      debugPrint('QCF Fonts loaded successfully');
+    } catch (e) {
+      debugPrint('QCF Font loading failed: $e');
+    }
+  }
 
-  // Defer slow, non-critical work until after the first frame so the splash
-  // appears instantly instead of waiting on notification scheduling and
-  // network calls.
-  unawaited(_deferredStartupWork());
-}
-
-/// Heavy startup work that does not need to block the first frame:
-/// notification scheduling (iterates many alarms) and similar background setup.
-Future<void> _deferredStartupWork() async {
   try {
     await AzanService().preloadPrayerTimes();
   } catch (_) {}
@@ -150,8 +183,6 @@ class BasairApp extends StatefulWidget {
 }
 
 class _BasairAppState extends State<BasairApp> with WidgetsBindingObserver {
-  StreamSubscription? _adhanSubscription;
-
   @override
   void initState() {
     super.initState();
@@ -161,18 +192,6 @@ class _BasairAppState extends State<BasairApp> with WidgetsBindingObserver {
       Future.delayed(const Duration(milliseconds: 2500), () {
         AzkarReminderService().checkAndShowReminder();
       });
-    });
-    _adhanSubscription = AzanService().onAdhanTrigger.listen((event) {
-      if (!AzanService().showAdhanBanner) return;
-      final nav = appNavigatorKey.currentState;
-      if (nav != null) {
-        nav.push(
-          AdhanSlideFromTopRoute(
-            prayerName: event['prayerName'] ?? '',
-            prayerTime: event['prayerTime'] ?? '',
-          ),
-        );
-      }
     });
   }
 
@@ -186,7 +205,6 @@ class _BasairAppState extends State<BasairApp> with WidgetsBindingObserver {
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    _adhanSubscription?.cancel();
     super.dispose();
   }
 

@@ -501,7 +501,7 @@ class NotificationService {
       // First, cancel any existing notification with this ID
       await _notifications.cancel(1001);
 
-      final scheduledTime = _nextTime(4, 45);
+      final scheduledTime = _nextTime(7, 0);
       developer.log(
         '🎯 Target time for morning azkar: $scheduledTime',
         name: 'NotificationService',
@@ -513,8 +513,8 @@ class NotificationService {
 
       await _scheduleZoned(
         id: 1001,
-        title: 'تذكير بأذكار الصباح',
-        body: 'بقي 15 دقيقة على وقت أذكار الصباح',
+        title: 'أذكار الصباح',
+        body: 'هل قرأت أذكار الصباح؟',
         scheduledTime: scheduledTime,
         details: const NotificationDetails(
           android: AndroidNotificationDetails(
@@ -590,17 +590,68 @@ class NotificationService {
     }
 
     try {
-      final scheduledTime = _nextTime(17, 45);
+      // Get Maghrib prayer time dynamically
+      Coordinates coords = Coordinates(30.0444, 31.2357); // Default to Cairo
+      try {
+        bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+        if (serviceEnabled) {
+          LocationPermission permission = await Geolocator.checkPermission();
+          if (permission == LocationPermission.denied) {
+            permission = await Geolocator.requestPermission();
+          }
+          if (permission != LocationPermission.denied &&
+              permission != LocationPermission.deniedForever) {
+            Position pos = await Geolocator.getCurrentPosition(
+              locationSettings: const LocationSettings(
+                accuracy: LocationAccuracy.low,
+              ),
+            );
+            coords = Coordinates(pos.latitude, pos.longitude);
+          }
+        }
+      } catch (locErr) {
+        developer.log(
+          'Location fetch error: $locErr',
+          name: 'NotificationService',
+        );
+      }
+
+      final params = CalculationMethod.egyptian.getParameters()
+        ..madhab = Madhab.shafi;
+      final pt = PrayerTimes(
+        coords,
+        DateComponents.from(DateTime.now()),
+        params,
+      );
+
+      // Calculate evening azkar time: 20 minutes before Maghrib
+      DateTime maghribTime = pt.maghrib;
+      DateTime eveningAzkarTime = maghribTime.subtract(const Duration(minutes: 20));
+
+      // If the time has passed today, schedule for tomorrow
+      if (eveningAzkarTime.isBefore(DateTime.now())) {
+        final tomorrow = DateTime.now().add(const Duration(days: 1));
+        final tomorrowPt = PrayerTimes(
+          coords,
+          DateComponents.from(tomorrow),
+          params,
+        );
+        maghribTime = tomorrowPt.maghrib;
+        eveningAzkarTime = maghribTime.subtract(const Duration(minutes: 20));
+      }
+
+      final tzScheduledTime = tz.TZDateTime.from(eveningAzkarTime, tz.local);
+
       developer.log(
-        'Scheduled time: $scheduledTime',
+        'Maghrib time: $maghribTime, Evening azkar scheduled for: $tzScheduledTime',
         name: 'NotificationService',
       );
 
       await _scheduleZoned(
         id: 1002,
-        title: 'تذكير بأذكار المساء',
-        body: 'بقي 15 دقيقة على وقت أذكار المساء',
-        scheduledTime: scheduledTime,
+        title: 'أذكار المساء',
+        body: 'حان وقت أذكار المساء (قبل المغرب بـ20 دقيقة)',
+        scheduledTime: tzScheduledTime,
         details: const NotificationDetails(
           android: AndroidNotificationDetails(
             _azkarChannelId,
@@ -616,7 +667,6 @@ class NotificationService {
             presentSound: true,
           ),
         ),
-        matchDateTimeComponents: DateTimeComponents.time,
       );
 
       // Verify notification was scheduled
@@ -1703,10 +1753,11 @@ class NotificationService {
       // Cancel general periodic dhikr reminders & sleep azkar to reduce notification clutter
       await cancelAzkarReminders();
       await cancelSleepAzkar();
+      await cancelPrayerTimes();
       if (morningAzkarEnabled) await scheduleMorningAzkar();
       if (eveningAzkarEnabled) await scheduleEveningAzkar();
       if (kahfReminderEnabled) await scheduleKahfFridayReminder();
-      if (prayerTimesEnabled) await schedulePrayerTimes();
+      // Prayer time notifications removed — azan handles prayer alerts
       developer.log('✅ Essential schedules initialized', name: 'NotificationService');
     } catch (e, stackTrace) {
       developer.log(

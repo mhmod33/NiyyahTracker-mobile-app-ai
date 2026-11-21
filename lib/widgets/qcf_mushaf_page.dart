@@ -184,9 +184,7 @@ class _QcfMushafPageState extends State<QcfMushafPage> {
               fontSize: fontSize,
               color: isHighlighted
                   ? Colors.black
-                  : (widget.isDark
-                      ? const Color(0xFFF5F0E8)
-                      : AppColors.textPrimary),
+                  : const Color(0xFF1A1A1A),
               backgroundColor: isHighlighted
                   ? Colors.yellow.withValues(alpha: 0.18)
                   : (isSelected

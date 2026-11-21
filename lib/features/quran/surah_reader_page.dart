@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'dart:convert';
 import 'dart:ui' as ui;
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:wakelock_plus/wakelock_plus.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
@@ -13,6 +14,8 @@ import 'package:share_plus/share_plus.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'dart:async';
+import 'package:qcf_quran_plus/qcf_quran_plus.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../core/app_colors.dart';
 import '../../core/directional_icon.dart';
 import '../../providers/auth_provider.dart';
@@ -22,6 +25,7 @@ import '../../services/wird_service.dart';
 import '../../widgets/qcf_mushaf_page.dart';
 import '../../services/wird_notification_service.dart';
 import 'reciter_library_page.dart';
+import 'reading_stats_page.dart';
 
 class SurahReaderPage extends StatefulWidget {
   final int surahNumber;
@@ -49,16 +53,39 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
   double _fontSize = 22.0;
   bool _boldFont = false;
   bool _verticalScroll = false; // false = horizontal (default)
+  bool _useQcfFont = true; // QCF Ottoman Script - enabled by default
 
-  // ── Feature 1: Multi-verse selection ──
+  // ── Reading time tracking (like Tarteel) ──
+  DateTime? _readingStartTime;
+  int _totalReadingSeconds = 0;
+
+  // ── Tap-to-toggle nav buttons only (no layout change) ──
+  bool _navVisible = true;
+
+  void _toggleNav() {
+    setState(() => _navVisible = !_navVisible);
+    // Hide/show only the Android system nav bar — never the status bar,
+    // so the layout height never changes.
+    SystemChrome.setEnabledSystemUIMode(
+      _navVisible ? SystemUiMode.edgeToEdge : SystemUiMode.manual,
+      overlays: _navVisible
+          ? [SystemUiOverlay.top, SystemUiOverlay.bottom]
+          : [SystemUiOverlay.top],
+    );
+  }
   final Set<int> _selectedVerses = {};
   int? _selectedSurah; // surah context for the current selection
 
   @override
   void initState() {
     super.initState();
+
+    // Start reading time tracking (like Tarteel)
+    _readingStartTime = DateTime.now();
+
     // Keep the screen on while reading.
     WakelockPlus.enable();
+
     final int startPage =
         (widget.initialPage != null &&
             widget.initialPage! >= 1 &&
@@ -104,6 +131,7 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
           _boldFont = box.get('boldFont', defaultValue: false) as bool;
           _verticalScroll =
               box.get('verticalScroll', defaultValue: false) as bool;
+          _useQcfFont = box.get('useQcfFont', defaultValue: true) as bool;
         });
       }
     } catch (_) {}
@@ -117,7 +145,220 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
       await box.put('fontSize', _fontSize);
       await box.put('boldFont', _boldFont);
       await box.put('verticalScroll', _verticalScroll);
+      await box.put('useQcfFont', _useQcfFont);
     } catch (_) {}
+  }
+
+  // ── Reading Time Tracking (like Tarteel) ──
+  Future<void> _saveReadingSession() async {
+    if (_readingStartTime == null) return;
+
+    try {
+      final endTime = DateTime.now();
+      final duration = endTime.difference(_readingStartTime!);
+
+      // Only save if read for more than 10 seconds
+      if (duration.inSeconds < 10) return;
+
+      final box = await Hive.openBox('reading_stats');
+      final today = endTime.toIso8601String().substring(0, 10); // YYYY-MM-DD
+
+      // Get today's sessions
+      final sessionsRaw = box.get(today, defaultValue: []);
+      final sessions = List<Map<dynamic, dynamic>>.from(
+        sessionsRaw is List ? sessionsRaw : []
+      );
+
+      // Add this session
+      sessions.add({
+        'start': _readingStartTime!.millisecondsSinceEpoch,
+        'end': endTime.millisecondsSinceEpoch,
+        'duration': duration.inSeconds,
+        'startPage': widget.initialPage ?? 1,
+        'endPage': _currentPage + 1,
+      });
+
+      await box.put(today, sessions);
+
+      // Calculate total duration for today
+      final totalSeconds = sessions.fold<int>(
+        0,
+        (sum, session) => sum + (session['duration'] as int? ?? 0),
+      );
+
+      // Sync to Firebase
+      await _syncReadingStatsToFirebase(today, sessions, totalSeconds);
+
+      debugPrint('✓ Reading session saved: ${duration.inMinutes} min ${duration.inSeconds % 60} sec');
+    } catch (e) {
+      debugPrint('Error saving reading session: $e');
+    }
+  }
+
+  Future<void> _syncReadingStatsToFirebase(
+    String date,
+    List<Map<dynamic, dynamic>> sessions,
+    int totalSeconds,
+  ) async {
+    try {
+      final user = context.read<AppAuthProvider>().user;
+      if (user == null) return;
+
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .collection('reading_stats')
+          .doc(date)
+          .set({
+        'date': date,
+        'totalSeconds': totalSeconds,
+        'totalMinutes': (totalSeconds / 60).round(),
+        'sessionsCount': sessions.length,
+        'sessions': sessions.map((s) => {
+          'start': s['start'],
+          'end': s['end'],
+          'duration': s['duration'],
+          'startPage': s['startPage'],
+          'endPage': s['endPage'],
+        }).toList(),
+        'lastUpdated': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+
+      debugPrint('✓ Reading stats synced to Firebase: $date ($totalSeconds seconds)');
+    } catch (e) {
+      debugPrint('Error syncing reading stats: $e');
+    }
+  }
+
+  // ── QCF Rendering ──
+  Widget _buildQcfPageView(bool isDark) {
+    return QuranPageView(
+      pageController: _pageController,
+      highlights: _buildQcfHighlights(),
+      onPageChanged: (page) {
+        setState(() => _currentPage = page - 1);
+        _saveReadingProgress(_currentPage);
+        _maybeTrackKahf(_currentPage);
+      },
+      // onWordTap handles both toggle-nav (no selection) and multi-select.
+      onWordTap: (surahNumber, verseNumber, wordIndex, word) {
+        if (_selectedVerses.isNotEmpty) {
+          // Selection mode: add or remove this ayah.
+          setState(() {
+            if (_selectedSurah == surahNumber && _selectedVerses.contains(verseNumber)) {
+              _selectedVerses.remove(verseNumber);
+              if (_selectedVerses.isEmpty) _selectedSurah = null;
+            } else {
+              _selectedSurah = surahNumber;
+              _selectedVerses.add(verseNumber);
+            }
+          });
+        } else {
+          // No selection: toggle app header/footer and system nav bar.
+          _toggleNav();
+        }
+      },
+      onLongPress: (surahNumber, verseNumber, details) {
+        _showVerseActions(context, surahNumber, verseNumber);
+      },
+      isDarkMode: isDark,
+      isTajweed: false,
+    );
+  }
+
+  void _goToPage(int page) {
+    // Works for both QCF (drives _pageController which QuranPageView is wired to)
+    // and traditional PageView.
+    _pageController.animateToPage(
+      page,
+      duration: const Duration(milliseconds: 250),
+      curve: Curves.easeInOut,
+    );
+  }
+
+  List<HighlightVerse> _buildQcfHighlights() {
+    final highlights = <HighlightVerse>[];
+
+    // Highlight for current playing/highlighted verse
+    if (_highlightSurah != null && _highlightVerse != null) {
+      final page = quran.getPageNumber(_highlightSurah!, _highlightVerse!);
+      highlights.add(HighlightVerse(
+        surah: _highlightSurah!,
+        verseNumber: _highlightVerse!,
+        page: page,
+        color: AppColors.darkGreen.withValues(alpha: 0.3),
+      ));
+    }
+
+    // Highlights for selected verses
+    if (_selectedSurah != null) {
+      for (final verse in _selectedVerses) {
+        final page = quran.getPageNumber(_selectedSurah!, verse);
+        highlights.add(HighlightVerse(
+          surah: _selectedSurah!,
+          verseNumber: verse,
+          page: page,
+          color: AppColors.gold.withValues(alpha: 0.25),
+        ));
+      }
+    }
+
+    return highlights;
+  }
+
+  Widget _buildTraditionalPageView(bool isDark) {
+    return PageView.builder(
+      controller: _pageController,
+      scrollDirection: _verticalScroll ? Axis.vertical : Axis.horizontal,
+      itemCount: 604,
+      physics: const _SinglePagePhysics(),
+      onPageChanged: (i) {
+        setState(() => _currentPage = i);
+        _saveReadingProgress(i);
+        _maybeTrackKahf(i);
+      },
+      itemBuilder: (ctx, index) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: Container(
+          // Full screen page - no borders, no margins - like Tarteel
+          color: isDark
+              ? const Color(0xFF1A1A1A)  // Dark mode
+              : const Color(0xFFFAF8F3),  // Light cream like Tarteel
+          child: _MushafPageWidget(
+            pageNumber: index + 1,
+            highlightSurah: _highlightSurah,
+            highlightVerse: _highlightVerse,
+            isDark: isDark,
+            selectedVerses: _selectedSurah == null ? const {} : _selectedVerses,
+            selectedSurah: _selectedSurah,
+            readerFontSize: _fontSize,
+            boldFont: _boldFont,
+            verticalScroll: _verticalScroll,
+            onVerseTap: (surah, verse) {
+              if (_selectedVerses.isNotEmpty) {
+                setState(() {
+                  if (_selectedSurah != surah) {
+                    _selectedVerses.clear();
+                    _selectedSurah = surah;
+                  }
+                  if (_selectedVerses.contains(verse)) {
+                    _selectedVerses.remove(verse);
+                    if (_selectedVerses.isEmpty) _selectedSurah = null;
+                  } else {
+                    _selectedVerses.add(verse);
+                  }
+                });
+              } else {
+                _showVerseActions(context, surah, verse);
+              }
+            },
+            onVerseLongPress: (surah, verse) {
+              _showVerseActions(context, surah, verse);
+            },
+          ),
+        ),
+      ),
+    );
   }
 
   Future<void> _saveReadingProgress(int pageIndex) async {
@@ -504,7 +745,16 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
 
   @override
   void dispose() {
+    // Save reading session before leaving (like Tarteel)
+    _saveReadingSession();
+
     WakelockPlus.disable();
+
+    // Restore system nav bar when leaving the mushaf
+    SystemChrome.setEnabledSystemUIMode(
+      SystemUiMode.edgeToEdge,
+      overlays: SystemUiOverlay.values,
+    );
     _pageController.dispose();
     _highlightTimer?.cancel();
     // End wird session and check for session completion
@@ -601,7 +851,10 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bgColor = isDark ? const Color(0xFF0B120D) : AppColors.background;
+    // Same background color as Mushaf pages - no contrast
+    final bgColor = isDark
+        ? const Color(0xFF1A1A1A)
+        : const Color(0xFFFAF8F3);  // Light cream like Ayah app
     final headerFooterColor = isDark
         ? const Color(0xFF0B120D)
         : AppColors.cardBg;
@@ -615,73 +868,67 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
         backgroundColor: bgColor,
         body: Column(
           children: [
-            SizedBox(height: MediaQuery.of(context).padding.top),
-            _buildHeader(
-              _currentPage + 1,
-              isDark,
-              headerFooterColor,
-              textColor,
-              subtextColor,
-            ),
-            Expanded(
-              // LTR paging so the next page sits to the right and pages
-              // advance rightward; each page keeps its own RTL content.
-              child: Directionality(
-                textDirection: TextDirection.ltr,
-                child: PageView.builder(
-                controller: _pageController,
-                scrollDirection: _verticalScroll
-                    ? Axis.vertical
-                    : Axis.horizontal,
-                itemCount: 604,
-                physics: const _SinglePagePhysics(),
-                onPageChanged: (i) {
-                  setState(() => _currentPage = i);
-                  _saveReadingProgress(i);
-                  _maybeTrackKahf(i);
-                },
-                itemBuilder: (ctx, index) => Directionality(
-                  textDirection: TextDirection.rtl,
-                  child: _MushafPageWidget(
-                  pageNumber: index + 1,
-                  highlightSurah: _highlightSurah,
-                  highlightVerse: _highlightVerse,
-                  isDark: isDark,
-                  selectedVerses: _selectedSurah == null
-                      ? const {}
-                      : _selectedVerses,
-                  selectedSurah: _selectedSurah,
-                  readerFontSize: _fontSize,
-                  boldFont: _boldFont,
-                  verticalScroll: _verticalScroll,
-                  onVerseTap: (surah, verse) {
-                    if (_selectedVerses.isNotEmpty) {
-                      setState(() {
-                        if (_selectedSurah != surah) {
-                          _selectedVerses.clear();
-                          _selectedSurah = surah;
-                        }
-                        if (_selectedVerses.contains(verse)) {
-                          _selectedVerses.remove(verse);
-                          if (_selectedVerses.isEmpty) _selectedSurah = null;
-                        } else {
-                          _selectedVerses.add(verse);
-                        }
-                      });
-                    } else {
-                      _showVerseActions(context, surah, verse);
-                    }
-                  },
-                  onVerseLongPress: (surah, verse) {
-                    _showVerseActions(context, surah, verse);
-                  },
-                  ),
-                ),
+            // Header: always occupies its space — Opacity hides it without
+            // collapsing the row, so the page height never changes.
+            Opacity(
+              opacity: _navVisible ? 1.0 : 0.0,
+              child: IgnorePointer(
+                ignoring: !_navVisible,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    SizedBox(height: MediaQuery.of(context).padding.top),
+                    _buildHeader(
+                      _currentPage + 1,
+                      isDark,
+                      headerFooterColor,
+                      textColor,
+                      subtextColor,
+                    ),
+                  ],
                 ),
               ),
             ),
-            if (_selectedVerses.isNotEmpty) _buildSelectionBar(isDark),
-            _buildFooter(isDark, headerFooterColor, subtextColor),
+            Expanded(
+              child: Directionality(
+                textDirection: TextDirection.ltr,
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  child: ColorFiltered(
+                    colorFilter: isDark
+                        ? const ColorFilter.matrix(<double>[
+                            -1,  0,  0, 0, 255,
+                             0, -1,  0, 0, 255,
+                             0,  0, -1, 0, 255,
+                             0,  0,  0, 1,   0,
+                          ])
+                        : const ColorFilter.matrix(<double>[
+                            0.33, 0.33, 0.33, 0, 0,
+                            0.33, 0.33, 0.33, 0, 0,
+                            0.33, 0.33, 0.33, 0, 0,
+                            0,    0,    0,    1, 0,
+                          ]),
+                    child: (_useQcfFont && !kIsWeb)
+                      ? _buildQcfPageView(isDark)
+                      : _buildTraditionalPageView(isDark),
+                  ),
+                ),
+              ),
+            ),
+            // Footer: same approach — always takes space, hidden via Opacity.
+            Opacity(
+              opacity: _navVisible ? 1.0 : 0.0,
+              child: IgnorePointer(
+                ignoring: !_navVisible,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (_selectedVerses.isNotEmpty) _buildSelectionBar(isDark),
+                    _buildFooter(isDark, headerFooterColor, subtextColor),
+                  ],
+                ),
+              ),
+            ),
           ],
         ),
       ),
@@ -905,6 +1152,34 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
               ),
             ),
           ),
+          // Reading Stats button
+          GestureDetector(
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const ReadingStatsPage(),
+                ),
+              );
+            },
+            child: Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: isDark
+                    ? AppColors.gold.withValues(alpha: 0.15)
+                    : AppColors.gold.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: AppColors.gold.withValues(alpha: 0.3),
+                ),
+              ),
+              child: Icon(
+                Icons.bar_chart_rounded,
+                color: AppColors.gold,
+                size: 18,
+              ),
+            ),
+          ),
           if (_wirdService.hasUser) ...[
             const SizedBox(width: 4),
             GestureDetector(
@@ -1055,6 +1330,46 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
                   ],
                 ),
                 const SizedBox(height: 20),
+                // QCF Ottoman Script Toggle (using qcf_quran_plus package)
+                SwitchListTile(
+                  value: _useQcfFont,
+                  activeColor: AppColors.darkGreen,
+                  contentPadding: EdgeInsets.zero,
+                  secondary: Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: AppColors.gold.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(
+                      Icons.auto_stories_rounded,
+                      color: AppColors.gold,
+                      size: 20,
+                    ),
+                  ),
+                  title: Text(
+                    'الخط العثماني لمصحف المدينة (QCF)',
+                    style: GoogleFonts.ibmPlexSansArabic(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      color: isDark ? Colors.white : AppColors.textPrimary,
+                    ),
+                  ),
+                  subtitle: Text(
+                    'خط مجمع الملك فهد - 604 صفحة تطابق المصحف المطبوع',
+                    style: GoogleFonts.ibmPlexSansArabic(
+                      fontSize: 11,
+                      color: isDark ? Colors.white54 : AppColors.textSecondary,
+                    ),
+                  ),
+                  onChanged: (v) {
+                    setSheet(() => _useQcfFont = v);
+                    setState(() => _useQcfFont = v);
+                    _saveSettings();
+                  },
+                ),
+                Divider(color: isDark ? Colors.white12 : AppColors.grayLight),
+                const SizedBox(height: 4),
                 // Scroll direction toggle
                 SwitchListTile(
                   value: _verticalScroll,
@@ -1265,11 +1580,7 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
         children: [
           // Right side in RTL: step back toward the start of the mushaf.
           _navBtn(Icons.arrow_forward_rounded, canPrev, isDark, () {
-            _pageController.animateToPage(
-              _currentPage - 1,
-              duration: const Duration(milliseconds: 250),
-              curve: Curves.easeInOut,
-            );
+            _goToPage(_currentPage - 1);
           }),
           // Feature 9: Tap page number to reveal quick navigation slider
           GestureDetector(
@@ -1314,11 +1625,7 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
           ),
           // Left side in RTL: advance toward the later pages.
           _navBtn(Icons.arrow_back_rounded, canNext, isDark, () {
-            _pageController.animateToPage(
-              _currentPage + 1,
-              duration: const Duration(milliseconds: 250),
-              curve: Curves.easeInOut,
-            );
+            _goToPage(_currentPage + 1);
           }),
         ],
       ),
@@ -2587,6 +2894,17 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
   }
 }
 
+// ─── QCF Feature Temporarily Disabled ───
+// TODO: Implement QCF using qcf_quran or qcf_quran_plus package
+// The mushaf package had issues with slow extraction (67 MB on first run)
+// Investigating better alternatives for instant QCF rendering like Tarteel AI
+/*
+// ─── QCF (King Fahd Complex 604 Page Fonts) Ottoman Page Container ───
+class _QcfPageContainer extends StatefulWidget {
+  ... (entire widget commented out - references removed mushaf package)
+}
+*/
+
 // ─── Mushaf Page Widget ───
 class _MushafPageWidget extends StatefulWidget {
   final int pageNumber;
@@ -2598,6 +2916,7 @@ class _MushafPageWidget extends StatefulWidget {
   final double readerFontSize;
   final bool boldFont;
   final bool verticalScroll;
+  // final bool useQcfFont; // Temporarily removed - QCF under development
   final void Function(int surah, int verse) onVerseTap;
   final void Function(int surah, int verse) onVerseLongPress;
 
@@ -2611,6 +2930,7 @@ class _MushafPageWidget extends StatefulWidget {
     this.readerFontSize = 22.0,
     this.boldFont = false,
     this.verticalScroll = false,
+    // this.useQcfFont = true, // Temporarily removed
     required this.onVerseTap,
     required this.onVerseLongPress,
   });
@@ -2711,12 +3031,9 @@ class _MushafPageWidgetState extends State<_MushafPageWidget>
 
     final pageData = quran.getPageData(pageNumber);
 
-    return Padding(
-      padding: const EdgeInsets.all(8),
-      child: _DecoratedMushafFrame(
-        isDark: isDark,
-        child: LayoutBuilder(
-          builder: (context, constraints) {
+    // Full screen - no padding, no decorations
+    return LayoutBuilder(
+      builder: (context, constraints) {
             final availableW = constraints.maxWidth;
             final availableH = constraints.maxHeight;
             final effectiveFontSize = widget.verticalScroll
@@ -2750,13 +3067,8 @@ class _MushafPageWidgetState extends State<_MushafPageWidget>
                 ],
               );
 
-              // In horizontal Mushaf mode, expand the last block to fill page frame.
-              // In vertical scroll mode, let it flow naturally with scroll view.
-              if (widget.verticalScroll) {
-                blocks.add(block);
-              } else {
-                blocks.add(isLast ? Expanded(child: block) : block);
-              }
+              // Remove Expanded to let spaceEvenly distribute spacing uniformly
+              blocks.add(block);
             }
 
             if (widget.verticalScroll) {
@@ -2782,16 +3094,14 @@ class _MushafPageWidgetState extends State<_MushafPageWidget>
                   vertical: _vPad,
                 ),
                 child: Column(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly, // Distribute evenly
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: blocks,
                 ),
               ),
             );
           },
-        ),
-      ),
-    );
+        );
   }
 
   // ── Accurate page-height measurement ──
@@ -2918,19 +3228,10 @@ class _MushafPageWidgetState extends State<_MushafPageWidget>
         vertical: fontSize * 0.4,
       ),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            AppColors.darkGreen.withValues(alpha: 0.25),
-            AppColors.darkGreen.withValues(alpha: 0.10),
-          ],
-          begin: Alignment.centerRight,
-          end: Alignment.centerLeft,
-        ),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(
-          color: AppColors.darkGreen.withValues(alpha: 0.4),
-          width: 1.5,
-        ),
+        color: isDark
+            ? Colors.white.withOpacity(0.03)
+            : Colors.black.withOpacity(0.02),
+        borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -2965,23 +3266,9 @@ class _MushafPageWidgetState extends State<_MushafPageWidget>
         vertical: fontSize * 0.2,
       ),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            Colors.transparent,
-            AppColors.darkGreen.withValues(alpha: 0.15),
-            Colors.transparent,
-          ],
-        ),
-        border: Border(
-          bottom: BorderSide(
-            color: AppColors.darkGreen.withValues(alpha: 0.3),
-            width: 1,
-          ),
-          top: BorderSide(
-            color: AppColors.darkGreen.withValues(alpha: 0.3),
-            width: 1,
-          ),
-        ),
+        color: isDark
+            ? Colors.white.withOpacity(0.03)
+            : Colors.black.withOpacity(0.02),
       ),
       child: FittedBox(
         fit: BoxFit.scaleDown,
@@ -2991,7 +3278,7 @@ class _MushafPageWidgetState extends State<_MushafPageWidget>
           children: [
             Icon(
               Icons.auto_awesome_outlined,
-              color: AppColors.darkGreen.withValues(alpha: 0.8),
+              color: isDark ? Colors.white38 : Colors.black38,
               size: fontSize * 0.9,
             ),
             SizedBox(width: fontSize * 0.4),
@@ -3016,7 +3303,7 @@ class _MushafPageWidgetState extends State<_MushafPageWidget>
             SizedBox(width: fontSize * 0.4),
             Icon(
               Icons.auto_awesome_outlined,
-              color: AppColors.darkGreen.withValues(alpha: 0.8),
+              color: isDark ? Colors.white38 : Colors.black38,
               size: fontSize * 0.9,
             ),
           ],

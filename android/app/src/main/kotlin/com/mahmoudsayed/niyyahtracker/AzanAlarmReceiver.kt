@@ -62,5 +62,8 @@ class AzanAlarmReceiver : BroadcastReceiver() {
             Log.e("AzanAlarmReceiver", "Failed to start service: $e")
             writeLog(context, "AzanAlarmReceiver: startForegroundService FAILED: $e")
         }
+
+        // DO NOT launch activity here - let the service handle it to avoid duplicate launches
+        // The AzanPlayerService will launch the AdhanLockScreenActivity after it starts
     }
 }

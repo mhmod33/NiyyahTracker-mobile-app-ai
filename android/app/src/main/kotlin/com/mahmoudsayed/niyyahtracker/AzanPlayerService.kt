@@ -27,6 +27,7 @@ class AzanPlayerService : Service() {
         const val NOTIFICATION_ID = 4006
         const val NOTIFICATION_ID_FLUTTER = 4000
         const val ACTION_STOP = "com.mahmoudsayed.niyyahtracker.STOP_AZAN"
+        const val ACTION_ADHAN_STOPPED = "com.mahmoudsayed.niyyahtracker.ADHAN_STOPPED"
     }
 
     private var mediaPlayer: MediaPlayer? = null
@@ -34,6 +35,7 @@ class AzanPlayerService : Service() {
     private var volumeHandler: Handler? = null
     private var volumeCheckRunnable: Runnable? = null
     private var volumeReceiver: BroadcastReceiver? = null
+    private var userPresentReceiver: BroadcastReceiver? = null
     private var initialAlarmVolume: Int = -1
     private var initialMusicVolume: Int = -1
     private var isStopping = false
@@ -56,8 +58,9 @@ class AzanPlayerService : Service() {
 
         val filePath = intent?.getStringExtra(AzanAlarmReceiver.EXTRA_FILE_PATH)
         val prayerName = intent?.getStringExtra(AzanAlarmReceiver.EXTRA_PRAYER_NAME) ?: "الصلاة"
+        val launchedByActivity = intent?.getBooleanExtra("launched_by_activity", false) ?: false
 
-        AzanAlarmReceiver.writeLog(this, "AzanPlayerService.onStartCommand prayer=$prayerName filePath=$filePath")
+        AzanAlarmReceiver.writeLog(this, "AzanPlayerService.onStartCommand prayer=$prayerName filePath=$filePath launchedByActivity=$launchedByActivity")
 
         if (filePath == null) {
             AzanAlarmReceiver.writeLog(this, "AzanPlayerService: filePath null — stopping self")
@@ -71,6 +74,32 @@ class AzanPlayerService : Service() {
         // Start foreground immediately to avoid ANR
         startForeground(NOTIFICATION_ID, createNotification(prayerName))
         AzanAlarmReceiver.writeLog(this, "AzanPlayerService: startForeground called")
+
+        // Launch full-screen AdhanLockScreenActivity with proper flags for lock screen display
+        // Skip if already launched by Activity (test mode) to avoid duplicate screens
+        if (!launchedByActivity) {
+            try {
+                val lockIntent = Intent(this, AdhanLockScreenActivity::class.java).apply {
+                    putExtra(AdhanLockScreenActivity.EXTRA_PRAYER_NAME, prayerName)
+                    addFlags(
+                        Intent.FLAG_ACTIVITY_NEW_TASK or
+                        Intent.FLAG_ACTIVITY_CLEAR_TOP or
+                        Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS or
+                        Intent.FLAG_ACTIVITY_NO_HISTORY
+                    )
+                }
+                startActivity(lockIntent)
+                AzanAlarmReceiver.writeLog(this, "AzanPlayerService: startActivity(AdhanLockScreenActivity) called OK")
+            } catch (e: Exception) {
+                AzanAlarmReceiver.writeLog(this, "AzanPlayerService: startActivity(AdhanLockScreenActivity) failed: $e")
+            }
+        } else {
+            AzanAlarmReceiver.writeLog(this, "AzanPlayerService: skipping startActivity (already launched by Activity)")
+        }
+
+        // User decides when to close - no auto-close on unlock
+        // Volume down button (once) will stop Adhan (handled in startVolumeMonitoring)
+        // registerUserPresentReceiver() // REMOVED: User wants manual control
 
         // Play audio
         playAzan(filePath)
@@ -125,6 +154,13 @@ class AzanPlayerService : Service() {
         isStopping = true
         AzanAlarmReceiver.writeLog(this, "AzanPlayerService.stopPlayback called")
         stopVolumeMonitoring()
+        // unregisterUserPresentReceiver() // REMOVED: Not needed anymore
+
+        // Notify AdhanLockScreenActivity to close
+        try {
+            sendBroadcast(Intent(ACTION_ADHAN_STOPPED).setPackage(packageName))
+        } catch (_: Exception) {}
+
         try {
             mediaPlayer?.apply {
                 if (isPlaying) stop()
@@ -146,6 +182,34 @@ class AzanPlayerService : Service() {
             stopForeground(true)
         }
         stopSelf()
+    }
+
+    private fun registerUserPresentReceiver() {
+        if (userPresentReceiver != null) return
+        try {
+            val filter = IntentFilter(Intent.ACTION_USER_PRESENT)
+            userPresentReceiver = object : BroadcastReceiver() {
+                override fun onReceive(context: Context?, intent: Intent?) {
+                    if (intent?.action == Intent.ACTION_USER_PRESENT) {
+                        AzanAlarmReceiver.writeLog(
+                            this@AzanPlayerService,
+                            "AzanPlayerService: Device unlocked (ACTION_USER_PRESENT) -> stopping Adhan"
+                        )
+                        stopPlayback()
+                    }
+                }
+            }
+            registerReceiver(userPresentReceiver, filter)
+        } catch (e: Exception) {
+            AzanAlarmReceiver.writeLog(this, "AzanPlayerService: registerUserPresentReceiver failed: $e")
+        }
+    }
+
+    private fun unregisterUserPresentReceiver() {
+        try {
+            userPresentReceiver?.let { unregisterReceiver(it) }
+        } catch (_: Exception) {}
+        userPresentReceiver = null
     }
 
     private fun isMuteOnVolumeDownEnabled(): Boolean {
@@ -275,12 +339,13 @@ class AzanPlayerService : Service() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        // Intent to open the app when notification is tapped
-        val openAppIntent = Intent(this, MainActivity::class.java).apply {
+        // Intent to open the full-screen Adhan lockscreen activity
+        val lockScreenIntent = Intent(this, AdhanLockScreenActivity::class.java).apply {
+            putExtra(AdhanLockScreenActivity.EXTRA_PRAYER_NAME, prayerName)
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
         }
-        val openAppPendingIntent = PendingIntent.getActivity(
-            this, 1, openAppIntent,
+        val lockScreenPendingIntent = PendingIntent.getActivity(
+            this, 1, lockScreenIntent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
@@ -293,7 +358,8 @@ class AzanPlayerService : Service() {
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .setOngoing(false)
             .setAutoCancel(true)
-            .setContentIntent(openAppPendingIntent)
+            .setContentIntent(lockScreenPendingIntent)
+            .setFullScreenIntent(lockScreenPendingIntent, true)
             .setDeleteIntent(stopPendingIntent)
             .addAction(0, "إيقاف الأذان ⏹", stopPendingIntent)
             .build()

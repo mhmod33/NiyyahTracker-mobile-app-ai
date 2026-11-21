@@ -15,4 +15,12 @@
     <style name="NormalTheme" parent="@android:style/Theme.Light.NoTitleBar">
         <item name="android:windowBackground">?android:colorBackground</item>
     </style>
+
+    <!-- Theme for full-screen Adhan lockscreen activity (like Prayer Now) -->
+    <style name="AdhanLockScreenTheme" parent="@android:style/Theme.DeviceDefault.NoActionBar.Fullscreen">
+        <item name="android:windowBackground">@drawable/bg_adhan_lockscreen</item>
+        <item name="android:windowShowWallpaper">false</item>
+        <item name="android:statusBarColor">#030C10</item>
+        <item name="android:navigationBarColor">#030C10</item>
+    </style>
 </resources>
