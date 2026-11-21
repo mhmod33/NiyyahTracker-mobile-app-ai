@@ -230,80 +230,15 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
     }
   }
 
-  // ── QCF Rendering ──
-  Widget _buildQcfPageView(bool isDark) {
-    return QuranPageView(
-      pageController: _pageController,
-      highlights: _buildQcfHighlights(),
-      onPageChanged: (page) {
-        setState(() => _currentPage = page - 1);
-        _saveReadingProgress(_currentPage);
-        _maybeTrackKahf(_currentPage);
-      },
-      // onWordTap handles both toggle-nav (no selection) and multi-select.
-      onWordTap: (surahNumber, verseNumber, wordIndex, word) {
-        if (_selectedVerses.isNotEmpty) {
-          // Selection mode: add or remove this ayah.
-          setState(() {
-            if (_selectedSurah == surahNumber && _selectedVerses.contains(verseNumber)) {
-              _selectedVerses.remove(verseNumber);
-              if (_selectedVerses.isEmpty) _selectedSurah = null;
-            } else {
-              _selectedSurah = surahNumber;
-              _selectedVerses.add(verseNumber);
-            }
-          });
-        } else {
-          // No selection: toggle app header/footer and system nav bar.
-          _toggleNav();
-        }
-      },
-      onLongPress: (surahNumber, verseNumber, details) {
-        _showVerseActions(context, surahNumber, verseNumber);
-      },
-      isDarkMode: isDark,
-      isTajweed: false,
-    );
-  }
+  // Old QCF rendering removed - used qcf_quran_plus package (70MB, removed to reduce app size)
+  // Custom QcfMushafPage widget exists at line ~3017 for future integration
 
   void _goToPage(int page) {
-    // Works for both QCF (drives _pageController which QuranPageView is wired to)
-    // and traditional PageView.
     _pageController.animateToPage(
       page,
       duration: const Duration(milliseconds: 250),
       curve: Curves.easeInOut,
     );
-  }
-
-  List<HighlightVerse> _buildQcfHighlights() {
-    final highlights = <HighlightVerse>[];
-
-    // Highlight for current playing/highlighted verse
-    if (_highlightSurah != null && _highlightVerse != null) {
-      final page = quran.getPageNumber(_highlightSurah!, _highlightVerse!);
-      highlights.add(HighlightVerse(
-        surah: _highlightSurah!,
-        verseNumber: _highlightVerse!,
-        page: page,
-        color: AppColors.darkGreen.withValues(alpha: 0.3),
-      ));
-    }
-
-    // Highlights for selected verses
-    if (_selectedSurah != null) {
-      for (final verse in _selectedVerses) {
-        final page = quran.getPageNumber(_selectedSurah!, verse);
-        highlights.add(HighlightVerse(
-          surah: _selectedSurah!,
-          verseNumber: verse,
-          page: page,
-          color: AppColors.gold.withValues(alpha: 0.25),
-        ));
-      }
-    }
-
-    return highlights;
   }
 
   Widget _buildTraditionalPageView(bool isDark) {
