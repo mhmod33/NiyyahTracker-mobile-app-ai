@@ -4,6 +4,23 @@ import 'package:timezone/timezone.dart' as tz;
 import 'package:hive/hive.dart';
 import 'wird_service.dart';
 
+/// Top-level background handler for wird notification actions
+@pragma('vm:entry-point')
+void wirdNotificationBackgroundHandler(NotificationResponse response) {
+  developer.log(
+    'Background notification action: ${response.actionId}',
+    name: 'WirdNotif',
+  );
+  // Handle button actions in background
+  switch (response.actionId) {
+    case 'mark_prayers':
+    case 'mark_quran':
+    case 'mark_azkar':
+      developer.log('Task marked in background: ${response.actionId}', name: 'WirdNotif');
+      break;
+  }
+}
+
 /// Two daily wird notifications:
 ///   5001 — 9:00 AM  morning encouragement
 ///   5002 — 10:00 PM evening checklist (persistent, stays in panel)
@@ -34,10 +51,45 @@ class WirdNotificationService {
           ? Hive.box('wird_settings')
           : await Hive.openBox('wird_settings');
 
+      // Initialize notification plugin with action handler
+      const initializationSettings = InitializationSettings(
+        android: AndroidInitializationSettings('@mipmap/ic_launcher'),
+        iOS: DarwinInitializationSettings(),
+      );
+
+      await _notifications.initialize(
+        initializationSettings,
+        onDidReceiveNotificationResponse: _handleNotificationAction,
+        onDidReceiveBackgroundNotificationResponse: wirdNotificationBackgroundHandler,
+      );
+
       await _createChannel();
       developer.log('✅ WirdNotificationService initialized', name: 'WirdNotif');
     } catch (e) {
       developer.log('❌ WirdNotificationService init error: $e', name: 'WirdNotif');
+    }
+  }
+
+  void _handleNotificationAction(NotificationResponse response) {
+    developer.log(
+      'Notification action: ${response.actionId}, payload: ${response.payload}',
+      name: 'WirdNotif',
+    );
+
+    // Handle button actions
+    switch (response.actionId) {
+      case 'mark_prayers':
+        developer.log('✓ Prayers marked', name: 'WirdNotif');
+        // TODO: Update prayers status in database
+        break;
+      case 'mark_quran':
+        developer.log('✓ Quran marked', name: 'WirdNotif');
+        // TODO: Update Quran reading status in database
+        break;
+      case 'mark_azkar':
+        developer.log('✓ Azkar marked', name: 'WirdNotif');
+        // TODO: Update Azkar status in database
+        break;
     }
   }
 
