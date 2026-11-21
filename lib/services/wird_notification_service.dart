@@ -172,6 +172,7 @@ class WirdNotificationService {
         uiLocalNotificationDateInterpretation:
             UILocalNotificationDateInterpretation.absoluteTime,
         matchDateTimeComponents: DateTimeComponents.time,
+        payload: 'wird_evening_checklist',
       );
     } catch (e) {
       developer.log('❌ Error scheduling evening wird: $e', name: 'WirdNotif');
@@ -309,6 +310,7 @@ class WirdNotificationService {
         'مراجعة عبادات اليوم 🌙 (اختبار)',
         'اختبار الإشعار مع الأزرار',
         NotificationDetails(android: androidDetails, iOS: iosDetails),
+        payload: 'wird_evening_test',
       );
 
       developer.log('✅ Test evening notification shown', name: 'WirdNotif');
