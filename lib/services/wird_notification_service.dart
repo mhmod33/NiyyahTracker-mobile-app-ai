@@ -117,13 +117,18 @@ class WirdNotificationService {
         autoCancel: false,
         actions: <AndroidNotificationAction>[
           const AndroidNotificationAction(
-            'open_app',
-            'فتح التطبيق',
-            showsUserInterface: true,
+            'mark_prayers',
+            '✓ الصلوات',
+            showsUserInterface: false,
           ),
           const AndroidNotificationAction(
-            'mark_done',
-            'تم ✓',
+            'mark_quran',
+            '✓ القرآن',
+            showsUserInterface: false,
+          ),
+          const AndroidNotificationAction(
+            'mark_azkar',
+            '✓ الأذكار',
             showsUserInterface: false,
           ),
         ],
@@ -260,13 +265,18 @@ class WirdNotificationService {
         autoCancel: false,
         actions: <AndroidNotificationAction>[
           const AndroidNotificationAction(
-            'open_app',
-            'فتح التطبيق',
-            showsUserInterface: true,
+            'mark_prayers',
+            '✓ الصلوات',
+            showsUserInterface: false,
           ),
           const AndroidNotificationAction(
-            'mark_done',
-            'تم ✓',
+            'mark_quran',
+            '✓ القرآن',
+            showsUserInterface: false,
+          ),
+          const AndroidNotificationAction(
+            'mark_azkar',
+            '✓ الأذكار',
             showsUserInterface: false,
           ),
         ],
