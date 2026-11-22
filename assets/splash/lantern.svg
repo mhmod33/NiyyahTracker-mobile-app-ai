@@ -1,0 +1,72 @@
+<svg width="400" height="600" viewBox="0 0 400 600" xmlns="http://www.w3.org/2000/svg">
+  <!-- Islamic Lantern with Warm Golden Illumination -->
+  <defs>
+    <linearGradient id="goldGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#FFD700;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#D6A84B;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#B8860B;stop-opacity:1" />
+    </linearGradient>
+    <radialGradient id="glowGradient" cx="50%" cy="50%">
+      <stop offset="0%" style="stop-color:#FFD700;stop-opacity:0.8" />
+      <stop offset="50%" style="stop-color:#D6A84B;stop-opacity:0.4" />
+      <stop offset="100%" style="stop-color:#D6A84B;stop-opacity:0" />
+    </radialGradient>
+    <filter id="shadow">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="4"/>
+      <feOffset dx="2" dy="6" result="offsetblur"/>
+      <feComponentTransfer>
+        <feFuncA type="linear" slope="0.5"/>
+      </feComponentTransfer>
+      <feMerge>
+        <feMergeNode/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Warm Glow -->
+  <ellipse cx="200" cy="300" rx="180" ry="180" fill="url(#glowGradient)" opacity="0.6"/>
+
+  <!-- Top Hook -->
+  <path d="M 200 50 L 200 100" stroke="url(#goldGradient)" stroke-width="6" stroke-linecap="round" filter="url(#shadow)"/>
+  <circle cx="200" cy="50" r="12" fill="url(#goldGradient)" filter="url(#shadow)"/>
+
+  <!-- Top Crown -->
+  <path d="M 150 100 Q 200 80 250 100" fill="none" stroke="url(#goldGradient)" stroke-width="4" filter="url(#shadow)"/>
+  <path d="M 160 100 L 170 120 L 180 100 L 190 120 L 200 100 L 210 120 L 220 100 L 230 120 L 240 100"
+        fill="none" stroke="url(#goldGradient)" stroke-width="3"/>
+
+  <!-- Main Body -->
+  <path d="M 150 130 L 120 220 L 120 380 L 150 450 L 250 450 L 280 380 L 280 220 L 250 130 Z"
+        fill="url(#goldGradient)" opacity="0.9" filter="url(#shadow)"/>
+
+  <!-- Decorative Panels -->
+  <rect x="130" y="200" width="140" height="180" rx="10" fill="#2C1810" opacity="0.7"/>
+
+  <!-- Glass Panels with Islamic Pattern -->
+  <g opacity="0.3">
+    <path d="M 140 220 L 200 240 L 260 220 L 260 360 L 200 340 L 140 360 Z" fill="#FFD700"/>
+  </g>
+
+  <!-- Ornate Details -->
+  <circle cx="200" cy="180" r="20" fill="none" stroke="#FFD700" stroke-width="2"/>
+  <circle cx="200" cy="180" r="15" fill="none" stroke="#D6A84B" stroke-width="1.5"/>
+
+  <!-- Middle Bands -->
+  <rect x="115" y="250" width="170" height="8" rx="4" fill="#B8860B" opacity="0.8"/>
+  <rect x="115" y="320" width="170" height="8" rx="4" fill="#B8860B" opacity="0.8"/>
+
+  <!-- Bottom Ornament -->
+  <path d="M 150 450 Q 200 480 250 450" fill="url(#goldGradient)" filter="url(#shadow)"/>
+  <circle cx="200" cy="470" r="15" fill="url(#goldGradient)"/>
+
+  <!-- Inner Light Glow -->
+  <ellipse cx="200" cy="290" rx="60" ry="80" fill="#FFD700" opacity="0.4"/>
+  <ellipse cx="200" cy="290" rx="40" ry="60" fill="#FFF8DC" opacity="0.6"/>
+
+  <!-- Geometric Islamic Details -->
+  <g opacity="0.6">
+    <path d="M 200 240 L 210 250 L 200 260 L 190 250 Z" fill="#FFD700"/>
+    <path d="M 200 320 L 210 330 L 200 340 L 190 330 Z" fill="#FFD700"/>
+  </g>
+</svg>

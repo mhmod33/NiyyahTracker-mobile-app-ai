@@ -38,6 +38,7 @@ class NotificationService {
 
   static const String _morningAzkarKey = 'morning_azkar_enabled';
   static const String _eveningAzkarKey = 'evening_azkar_enabled';
+  static const String _eveningReminder10PMKey = 'evening_reminder_10pm_enabled';
   static const String _sleepAzkarKey = 'sleep_azkar_enabled';
   static const String _prayerTimesKey = 'prayer_times_enabled';
   static const String _azkarReminderKey = 'azkar_reminder_enabled';
@@ -324,6 +325,22 @@ class NotificationService {
     }
   }
 
+  bool get eveningReminder10PMEnabled {
+    try {
+      final value = _settingsBox.get(_eveningReminder10PMKey, defaultValue: true);
+      developer.log('eveningReminder10PMEnabled: $value', name: 'NotificationService');
+      return value;
+    } catch (e, stackTrace) {
+      developer.log(
+        '❌ Error getting eveningReminder10PMEnabled',
+        name: 'NotificationService',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      return true;
+    }
+  }
+
   bool get prayerTimesEnabled {
     try {
       final value = _settingsBox.get(_prayerTimesKey, defaultValue: true);
@@ -430,6 +447,29 @@ class NotificationService {
     } catch (e, stackTrace) {
       developer.log(
         '❌ Error setting sleepAzkarEnabled',
+        name: 'NotificationService',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      rethrow;
+    }
+  }
+
+  Future<void> setEveningReminder10PMEnabled(bool enabled) async {
+    developer.log(
+      'Setting eveningReminder10PMEnabled to: $enabled',
+      name: 'NotificationService',
+    );
+    try {
+      await _settingsBox.put(_eveningReminder10PMKey, enabled);
+      if (enabled) {
+        await scheduleEveningReminder10PM();
+      } else {
+        await _notifications.cancel(1010);
+      }
+    } catch (e, stackTrace) {
+      developer.log(
+        '❌ Error setting eveningReminder10PMEnabled',
         name: 'NotificationService',
         error: e,
         stackTrace: stackTrace,
@@ -639,6 +679,121 @@ class NotificationService {
     } catch (e, stackTrace) {
       developer.log(
         '❌ Error scheduling evening azkar',
+        name: 'NotificationService',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      return false;
+    }
+  }
+
+  /// Test the 10 PM notification immediately
+  Future<void> showTest10PMNotification() async {
+    developer.log(
+      'Showing test 10 PM notification now...',
+      name: 'NotificationService',
+    );
+
+    try {
+      const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
+        _azkarChannelId,
+        'أذكار وتذكيرات',
+        channelDescription: 'تذكيرات الأذكار اليومية',
+        importance: Importance.high,
+        priority: Priority.high,
+        icon: '@mipmap/ic_launcher',
+        enableVibration: true,
+      );
+
+      const NotificationDetails notificationDetails = NotificationDetails(
+        android: androidDetails,
+        iOS: DarwinNotificationDetails(
+          presentAlert: true,
+          presentBadge: true,
+          presentSound: true,
+        ),
+      );
+
+      await _notifications.show(
+        1010,
+        'تذكير بمهام اليوم',
+        '1- قراءة الورد2- الصلوات الخمس 3- أذكار الصباح والمساء 4- ذكر الله - 5-الصدقة لا تنسَ متابعة ذلك من خلال التطبيق لتحقيق أهدافك',
+        notificationDetails,
+      );
+
+      developer.log(
+        '✅ Test 10 PM notification sent',
+        name: 'NotificationService',
+      );
+    } catch (e, stackTrace) {
+      developer.log(
+        '❌ Error showing test notification',
+        name: 'NotificationService',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      rethrow;
+    }
+  }
+
+  /// Schedules a simple evening reminder at 10 PM (no buttons, just notification)
+  Future<bool> scheduleEveningReminder10PM() async {
+    developer.log(
+      'Scheduling 10 PM evening reminder...',
+      name: 'NotificationService',
+    );
+
+    try {
+      final scheduledTime = _nextTime(22, 0); // 10:00 PM
+      developer.log(
+        'Scheduled time: $scheduledTime',
+        name: 'NotificationService',
+      );
+
+      await _scheduleZoned(
+        id: 1010,
+        title: 'تذكير بمهام اليوم',
+        body: '1- قراءة الورد2- الصلوات الخمس 3- أذكار الصباح والمساء 4- ذكر الله - 5-الصدقة لا تنسَ متابعة ذلك من خلال التطبيق لتحقيق أهدافك',
+        scheduledTime: scheduledTime,
+        details: const NotificationDetails(
+          android: AndroidNotificationDetails(
+            _azkarChannelId,
+            'أذكار وتذكيرات',
+            channelDescription: 'تذكيرات الأذكار اليومية',
+            importance: Importance.high,
+            priority: Priority.high,
+            icon: '@mipmap/ic_launcher',
+            enableVibration: true,
+          ),
+          iOS: DarwinNotificationDetails(
+            presentAlert: true,
+            presentBadge: true,
+            presentSound: true,
+          ),
+        ),
+        matchDateTimeComponents: DateTimeComponents.time,
+      );
+
+      // Verify notification was scheduled
+      await Future.delayed(const Duration(milliseconds: 300));
+      final pending = await getPendingNotifications();
+      final isScheduled = pending.any((n) => n.id == 1010);
+
+      if (isScheduled) {
+        developer.log(
+          '✅ 10 PM evening reminder scheduled',
+          name: 'NotificationService',
+        );
+      } else {
+        developer.log(
+          '⚠️ 10 PM reminder not found in pending list',
+          name: 'NotificationService',
+        );
+      }
+      return isScheduled;
+    } catch (e, stackTrace) {
+      developer.log(
+        '❌ Error scheduling 10 PM reminder',
         name: 'NotificationService',
         error: e,
         stackTrace: stackTrace,
@@ -1706,6 +1861,7 @@ class NotificationService {
       await cancelPrayerTimes();
       if (morningAzkarEnabled) await scheduleMorningAzkar();
       if (eveningAzkarEnabled) await scheduleEveningAzkar();
+      if (eveningReminder10PMEnabled) await scheduleEveningReminder10PM();
       if (kahfReminderEnabled) await scheduleKahfFridayReminder();
       // Prayer time notifications removed — azan handles prayer alerts
       developer.log('✅ Essential schedules initialized', name: 'NotificationService');

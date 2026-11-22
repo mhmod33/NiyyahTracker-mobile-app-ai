@@ -3055,334 +3055,155 @@ class _QuoteCarouselState extends State<_QuoteCarousel> {
   }
 
   Future<void> _shareQuoteAsImage() async {
-    final q = _currentQuote;
-    final repaintKey = GlobalKey();
+    final quote = _currentQuote;
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final key = GlobalKey();
     HapticFeedback.mediumImpact();
 
-    // Theme-aware card colors
-    final cardBg = isDark ? const Color(0xFF080E12) : const Color(0xFFFAF8F2);
-    final quoteTextColor = isDark ? Colors.white : const Color(0xFF1E293B);
-    final subtleTextColor = isDark
-        ? Colors.white.withValues(alpha: 0.5)
-        : const Color(0xFF1E293B).withValues(alpha: 0.45);
-    final accentColor = isDark ? AppColors.lightGreen : AppColors.darkGreen;
-    final glowColor = accentColor.withValues(alpha: isDark ? 0.22 : 0.10);
-    final panelColor = isDark
-        ? Colors.white.withValues(alpha: 0.06)
-        : AppColors.darkGreen.withValues(alpha: 0.05);
-    final panelBorderColor = isDark
-        ? Colors.white.withValues(alpha: 0.10)
-        : AppColors.darkGreen.withValues(alpha: 0.18);
-    final dividerColor = accentColor.withValues(alpha: 0.35);
-    final cardBorderColor = accentColor.withValues(alpha: isDark ? 0.4 : 0.3);
-    final backdropTint = isDark
-        ? Colors.white.withValues(alpha: 0.04)
-        : Colors.black.withValues(alpha: 0.01);
-    final buttonStripBg = isDark
-        ? Colors.white.withValues(alpha: 0.08)
-        : Colors.black.withValues(alpha: 0.04);
-    final closeBorderColor = isDark ? Colors.white54 : accentColor;
-    final closeTextColor = isDark ? Colors.white : accentColor;
-    final shareButtonBg = isDark
-        ? [AppColors.midGreen, AppColors.darkGreen]
-        : [AppColors.darkGreen, AppColors.midGreen];
-    final shareButtonTextColor = Colors.white;
-    final shareButtonShadowColor = accentColor.withValues(alpha: 0.3);
-
-    await showDialog(
+    await showDialog<void>(
       context: context,
-      builder: (ctx) => Directionality(
+      builder: (dialogContext) => Directionality(
         textDirection: TextDirection.rtl,
         child: Dialog(
           backgroundColor: Colors.transparent,
-          insetPadding: const EdgeInsets.symmetric(horizontal: 20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              RepaintBoundary(
-                key: repaintKey,
-                child: Container(
-                  width: double.infinity,
-                  decoration: BoxDecoration(
-                    color: cardBg,
-                    borderRadius: BorderRadius.circular(32),
-                    border: Border.all(
-                      color: cardBorderColor,
-                      width: 1,
-                    ),
-                  ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(32),
-                    child: Stack(
-                      children: [
-                        // Radial gold glow top-right
-                        Positioned.fill(
-                          child: Container(
-                            decoration: BoxDecoration(
-                              gradient: RadialGradient(
-                                center: const Alignment(0.8, -0.8),
-                                radius: 1.2,
-                                colors: [glowColor, Colors.transparent],
-                                stops: const [0.0, 0.6],
-                              ),
-                            ),
-                          ),
-                        ),
-                        // Frosted glass layer
-                        Positioned.fill(
-                          child: BackdropFilter(
-                            filter: ui.ImageFilter.blur(
-                              sigmaX: 14,
-                              sigmaY: 14,
-                            ),
-                            child: Container(
-                              color: backdropTint,
-                            ),
-                          ),
-                        ),
-                        // Inner content
-                        Padding(
-                          padding: const EdgeInsets.all(28),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              // Ornamental divider
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: Divider(
-                                      color: accentColor.withValues(alpha: 0.4),
-                                      thickness: 0.8,
-                                    ),
-                                  ),
-                                  Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 10,
-                                    ),
-                                    child: Text(
-                                      '◆',
-                                      style: TextStyle(
-                                        color: accentColor,
-                                        fontSize: 10,
-                                      ),
-                                    ),
-                                  ),
-                                  Expanded(
-                                    child: Divider(
-                                      color: accentColor.withValues(alpha: 0.4),
-                                      thickness: 0.8,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 20),
-                              // Inner glass panel with quote
-                              Container(
-                                padding: const EdgeInsets.all(24),
-                                decoration: BoxDecoration(
-                                  color: panelColor,
-                                  borderRadius: BorderRadius.circular(24),
-                                  border: Border.all(color: panelBorderColor),
-                                ),
-                                child: Column(
-                                  children: [
-                                    Text(
-                                      '❝',
-                                      style: TextStyle(
-                                        color: accentColor,
-                                        fontSize: 28,
-                                        height: 1,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 8),
-                                    Text(
-                                      q['text']!,
-                                      textAlign: TextAlign.center,
-                                      textDirection: TextDirection.rtl,
-                                      style: GoogleFonts.amiri(
-                                        color: quoteTextColor,
-                                        fontSize: 23,
-                                        height: 1.85,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 8),
-                                    Text(
-                                      '❞',
-                                      style: TextStyle(
-                                        color: accentColor,
-                                        fontSize: 28,
-                                        height: 1,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(height: 16),
-                              // Source badge
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 16,
-                                  vertical: 7,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: panelColor,
-                                  borderRadius: BorderRadius.circular(20),
-                                  border: Border.all(
-                                    color: accentColor.withValues(alpha: 0.4),
-                                  ),
-                                ),
-                                child: Text(
-                                  q['source']!,
-                                  style: GoogleFonts.amiri(
-                                    color: accentColor,
-                                    fontSize: 13,
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(height: 20),
-                              // Bottom divider and branding
-                              Divider(color: dividerColor),
-                              const SizedBox(height: 10),
-                              Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text(
-                                    'بصائر',
-                                    style: TextStyle(
-                                      color: subtleTextColor,
-                                      fontSize: 11,
-                                    ),
-                                  ),
-                                  Text(
-                                    widget.date,
-                                    style: TextStyle(
-                                      color: subtleTextColor,
-                                      fontSize: 11,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+          insetPadding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                RepaintBoundary(
+                  key: key,
+                  child: _buildQuoteShareCard(quote, isDark),
                 ),
-              ),
-              const SizedBox(height: 16),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 10,
-                ),
-                decoration: BoxDecoration(
-                  color: buttonStripBg,
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  mainAxisSize: MainAxisSize.min,
+                const SizedBox(height: 8),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
                   children: [
-                    Container(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(colors: shareButtonBg),
-                        borderRadius: BorderRadius.circular(20),
-                        boxShadow: [
-                          BoxShadow(
-                            color: shareButtonShadowColor,
-                            blurRadius: 12,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
-                      ),
-                      child: ElevatedButton.icon(
-                        onPressed: () async {
-                          try {
-                            final boundary =
-                                repaintKey.currentContext?.findRenderObject()
-                                    as RenderRepaintBoundary?;
-                            if (boundary == null) return;
-                            final ui.Image image = await boundary.toImage(
-                              pixelRatio: 3.0,
-                            );
-                            final ByteData? byteData = await image.toByteData(
-                              format: ui.ImageByteFormat.png,
-                            );
-                            if (byteData == null) return;
-                            final Uint8List pngBytes = byteData.buffer
-                                .asUint8List();
-                            final tempDir = await getTemporaryDirectory();
-                            final file = File(
-                              '${tempDir.path}/nur_wa_basirah_${DateTime.now().millisecondsSinceEpoch}.png',
-                            );
-                            await file.writeAsBytes(pngBytes);
-                            if (ctx.mounted) Navigator.pop(ctx);
-                            await Share.shareXFiles([
-                              XFile(file.path),
-                            ], text: _formattedText(q));
-                          } catch (_) {
-                            if (ctx.mounted) Navigator.pop(ctx);
-                            await Share.share(_formattedText(q));
-                          }
-                        },
-                        icon: const Icon(Icons.image_rounded, size: 18),
-                        label: Text(
-                          'مشاركة البطاقة كصورة',
-                          style: _f(
-                            sz: 13,
-                            fw: FontWeight.w800,
-                            c: shareButtonTextColor,
-                          ),
-                        ),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.transparent,
-                          foregroundColor: shareButtonTextColor,
-                          elevation: 0,
-                          shadowColor: Colors.transparent,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 28,
-                            vertical: 14,
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                        ),
-                      ),
+                    TextButton(
+                      onPressed: () => Navigator.pop(dialogContext),
+                      child: const Text('\u0625\u063a\u0644\u0627\u0642'),
                     ),
-                    const SizedBox(width: 10),
-                    OutlinedButton(
-                      onPressed: () => Navigator.pop(ctx),
-                      style: OutlinedButton.styleFrom(
-                        side: BorderSide(color: closeBorderColor),
-                        foregroundColor: closeTextColor,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 20,
-                          vertical: 14,
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                      ),
-                      child: Text(
-                        'إغلاق',
-                        style: _f(
-                          sz: 13,
-                          fw: FontWeight.w700,
-                          c: closeTextColor,
-                        ),
-                      ),
+                    FilledButton.icon(
+                      onPressed: () =>
+                          _captureAndShareQuote(dialogContext, key, quote),
+                      icon: const Icon(Icons.share_rounded),
+                      label: const Text('\u0645\u0634\u0627\u0631\u0643\u0629'),
                     ),
                   ],
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
     );
+  }
+
+  Widget _buildQuoteShareCard(Map<String, String> quote, bool isDark) {
+    final scheme = Theme.of(context).colorScheme;
+    final accent = scheme.primary;
+    final title = scheme.onSurface;
+    final muted = scheme.onSurface.withValues(alpha: isDark ? 0.64 : 0.58);
+    final gradient = LinearGradient(
+      begin: Alignment.topCenter,
+      end: Alignment.bottomCenter,
+      colors: isDark
+          ? [AppColors.dashboardGreenTop, AppColors.dashboardGreenBottom]
+          : [AppColors.dashboardMintTop, AppColors.dashboardMintBottom],
+    );
+
+    return Container(
+      width: (MediaQuery.sizeOf(context).width - 72)
+          .clamp(220.0, 380.0)
+          .toDouble(),
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
+      decoration: BoxDecoration(
+        gradient: gradient,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: scheme.outline.withValues(alpha: isDark ? 0.24 : 0.14),
+        ),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.auto_awesome_rounded, color: accent, size: 16),
+              const SizedBox(width: 6),
+              Text(
+                '\u0646\u0648\u0631\u064c \u0648\u0628\u0635\u064a\u0631\u0629',
+                style: _f(sz: 12.5, fw: FontWeight.w700, c: accent),
+              ),
+            ],
+          ),
+          const SizedBox(height: 18),
+          Text(
+            quote['text']!,
+            textAlign: TextAlign.right,
+            textDirection: TextDirection.rtl,
+            style: _f(sz: 17, fw: FontWeight.w700, c: title, h: 1.6),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            quote['source']!,
+            style: _f(sz: 12, fw: FontWeight.w600, c: muted),
+          ),
+          const SizedBox(height: 16),
+          Divider(color: accent.withValues(alpha: 0.3)),
+          const SizedBox(height: 8),
+          Center(
+            child: Text(
+              '\u062a\u0637\u0628\u064a\u0642 \u0628\u0635\u0627\u0626\u0631 - \u0642\u0631\u0622\u0646 \u0648\u0639\u0628\u0627\u062f\u0627\u062a',
+              style: _f(sz: 11, fw: FontWeight.w700, c: accent),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _captureAndShareQuote(
+    BuildContext dialogContext,
+    GlobalKey key,
+    Map<String, String> quote,
+  ) async {
+    try {
+      await WidgetsBinding.instance.endOfFrame;
+      final renderObject = key.currentContext?.findRenderObject();
+      if (renderObject is! RenderRepaintBoundary) {
+        throw StateError('The quote card is not ready to capture');
+      }
+      final image = await renderObject.toImage(pixelRatio: 3);
+      try {
+        final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+        if (byteData == null) throw StateError('Unable to encode quote card');
+        final directory = await getTemporaryDirectory();
+        final file = File(
+          '${directory.path}/nur_wa_basirah_${DateTime.now().millisecondsSinceEpoch}.png',
+        );
+        await file.writeAsBytes(byteData.buffer.asUint8List(), flush: true);
+        if (!dialogContext.mounted) return;
+        Navigator.pop(dialogContext);
+        await Share.shareXFiles([
+          XFile(file.path),
+        ], text: _formattedText(quote));
+      } finally {
+        image.dispose();
+      }
+    } catch (error) {
+      debugPrint('Error sharing quote card: $error');
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            '\u062a\u0639\u0630\u0631 \u0625\u0646\u0634\u0627\u0621 \u0635\u0648\u0631\u0629 \u0648\u0645\u0634\u0627\u0631\u0643\u0629 \u0627\u0644\u0628\u0637\u0627\u0642\u0629',
+          ),
+        ),
+      );
+    }
   }
 
   @override
