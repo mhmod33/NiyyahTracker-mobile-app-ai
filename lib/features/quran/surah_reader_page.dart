@@ -296,6 +296,58 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
     );
   }
 
+  Widget _buildQcfPageView(bool isDark) {
+    return PageView.builder(
+      controller: _pageController,
+      scrollDirection: _verticalScroll ? Axis.vertical : Axis.horizontal,
+      itemCount: 604,
+      physics: const _SinglePagePhysics(),
+      onPageChanged: (i) {
+        setState(() => _currentPage = i);
+        _saveReadingProgress(i);
+        _maybeTrackKahf(i);
+      },
+      itemBuilder: (ctx, index) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: Container(
+          color: isDark
+              ? const Color(0xFF1A1A1A)
+              : const Color(0xFFFAF8F3),
+          child: QcfMushafPage(
+            pageNumber: index + 1,
+            highlightSurah: _highlightSurah,
+            highlightVerse: _highlightVerse,
+            isDark: isDark,
+            selectedVerses: _selectedSurah == null ? const {} : _selectedVerses,
+            selectedSurah: _selectedSurah,
+            verticalScroll: _verticalScroll,
+            onVerseTap: (surah, verse) {
+              if (_selectedVerses.isNotEmpty) {
+                setState(() {
+                  if (_selectedSurah != surah) {
+                    _selectedVerses.clear();
+                    _selectedSurah = surah;
+                  }
+                  if (_selectedVerses.contains(verse)) {
+                    _selectedVerses.remove(verse);
+                    if (_selectedVerses.isEmpty) _selectedSurah = null;
+                  } else {
+                    _selectedVerses.add(verse);
+                  }
+                });
+              } else {
+                _toggleNav();
+              }
+            },
+            onVerseLongPress: (surah, verse) {
+              _showVerseActions(context, surah, verse);
+            },
+          ),
+        ),
+      ),
+    );
+  }
+
   Future<void> _saveReadingProgress(int pageIndex) async {
     try {
       final pageNum = (pageIndex + 1).clamp(1, 604);
@@ -844,7 +896,7 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
                             0,    0,    0,    1, 0,
                           ]),
                     child: (_useQcfFont && !kIsWeb)
-                      ? _buildTraditionalPageView(isDark) // Temporarily using traditional view until QcfMushafPage is fully integrated
+                      ? _buildQcfPageView(isDark)
                       : _buildTraditionalPageView(isDark),
                   ),
                 ),
