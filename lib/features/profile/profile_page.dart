@@ -277,7 +277,7 @@ class ProfilePage extends StatelessWidget {
                       child: Column(
                         children: [
                           Text(
-                            'فمن أبصر فلنفسه',
+                            'فمن أبصر ففلنفسه',
                             style: _f(
                               sz: 14,
                               c: isDark ? Colors.white38 : AppColors.gray,

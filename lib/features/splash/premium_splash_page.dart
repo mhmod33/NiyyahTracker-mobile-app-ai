@@ -1,14 +1,20 @@
 import 'dart:async';
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+
 import '../../providers/auth_provider.dart';
 import '../dashboard/dashboard_page.dart';
 import '../onboarding/onboarding_page.dart';
 
 class PremiumSplashPage extends StatefulWidget {
-  const PremiumSplashPage({super.key});
+  const PremiumSplashPage({super.key, this.skipNavigation = false});
+
+  /// When true, the splash stays on screen (used for visual tests).
+  final bool skipNavigation;
 
   @override
   State<PremiumSplashPage> createState() => _PremiumSplashPageState();
@@ -17,11 +23,13 @@ class PremiumSplashPage extends StatefulWidget {
 class _PremiumSplashPageState extends State<PremiumSplashPage>
     with TickerProviderStateMixin {
   late final AnimationController _fadeController;
-  late final AnimationController _progressController;
+  late final AnimationController _scaleController;
   late final AnimationController _glowController;
+  late final AnimationController _progressController;
   late final Animation<double> _fadeAnimation;
-  late final Animation<double> _progressAnimation;
+  late final Animation<double> _scaleAnimation;
   late final Animation<double> _glowAnimation;
+  late final Animation<double> _progressAnimation;
 
   @override
   void initState() {
@@ -32,14 +40,19 @@ class _PremiumSplashPageState extends State<PremiumSplashPage>
       duration: const Duration(milliseconds: 1500),
     );
 
-    _progressController = AnimationController(
+    _scaleController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 2800),
+      duration: const Duration(milliseconds: 2000),
     );
 
     _glowController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 2500),
+      duration: const Duration(milliseconds: 3000),
+    );
+
+    _progressController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2800),
     );
 
     _fadeAnimation = CurvedAnimation(
@@ -47,23 +60,27 @@ class _PremiumSplashPageState extends State<PremiumSplashPage>
       curve: Curves.easeInOut,
     );
 
+    _scaleAnimation = Tween<double>(begin: 1.03, end: 1.0).animate(
+      CurvedAnimation(parent: _scaleController, curve: Curves.easeOut),
+    );
+
+    _glowAnimation = Tween<double>(begin: 0.6, end: 1.0).animate(
+      CurvedAnimation(parent: _glowController, curve: Curves.easeInOut),
+    );
+
     _progressAnimation = CurvedAnimation(
       parent: _progressController,
       curve: Curves.easeInOut,
     );
 
-    _glowAnimation = Tween<double>(begin: 0.4, end: 1.0).animate(
-      CurvedAnimation(
-        parent: _glowController,
-        curve: Curves.easeInOut,
-      ),
-    );
-
     _fadeController.forward();
-    _progressController.forward();
+    _scaleController.forward();
     _glowController.repeat(reverse: true);
+    _progressController.forward();
 
-    Timer(const Duration(milliseconds: 3000), _navigateBasedOnAuth);
+    if (!widget.skipNavigation) {
+      Timer(const Duration(milliseconds: 3000), _navigateBasedOnAuth);
+    }
   }
 
   void _navigateBasedOnAuth() {
@@ -91,268 +108,227 @@ class _PremiumSplashPageState extends State<PremiumSplashPage>
   @override
   void dispose() {
     _fadeController.dispose();
-    _progressController.dispose();
+    _scaleController.dispose();
     _glowController.dispose();
+    _progressController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
+    final h = size.height;
+    final w = size.width;
 
-    return Scaffold(
-      body: Container(
-        width: size.width,
-        height: size.height,
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              Color(0xFF002B1F), // Deep emerald
-              Color(0xFF003D2F), // Forest green
-              Color(0xFF00513D), // Dark emerald
-              Color(0xFF003D2F),
-            ],
-            stops: [0.0, 0.3, 0.7, 1.0],
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.light.copyWith(
+        statusBarColor: Colors.transparent,
+        systemNavigationBarColor: const Color(0xFF00180F),
+      ),
+      child: Scaffold(
+        backgroundColor: const Color(0xFF003F32),
+        body: Container(
+          width: w,
+          height: h,
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                Color(0xFF001A14),
+                Color(0xFF003F32),
+                Color(0xFF003A2E),
+                Color(0xFF002820),
+                Color(0xFF00180F),
+              ],
+              stops: [0.0, 0.25, 0.50, 0.75, 1.0],
+            ),
           ),
-        ),
-        child: FadeTransition(
-          opacity: _fadeAnimation,
           child: Stack(
+            clipBehavior: Clip.none,
             children: [
-              // Background architectural patterns
+              // ── Subtle gold decorative curves (background) ──
               Positioned.fill(
-                child: CustomPaint(
-                  painter: LuxuryBackgroundPainter(),
-                ),
+                child: CustomPaint(painter: _SubtleBackgroundPainter()),
               ),
 
-              // Animated atmospheric glow
+              // ── Subtle warm ambient glow behind the scene ──
               AnimatedBuilder(
                 animation: _glowAnimation,
                 builder: (context, child) {
-                  return Positioned(
-                    top: size.height * 0.22,
-                    left: size.width * 0.5 - 200,
-                    child: Container(
-                      width: 400,
-                      height: 400,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        gradient: RadialGradient(
-                          colors: [
-                            Color(0xFFD6A84B).withOpacity(0.3 * _glowAnimation.value),
-                            Color(0xFFD6A84B).withOpacity(0.15 * _glowAnimation.value),
-                            Colors.transparent,
-                          ],
-                          stops: const [0.0, 0.5, 1.0],
+                  final g = _glowAnimation.value;
+                  return Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      // Warm glow at bottom-center where the scene sits
+                      Positioned(
+                        left: w * 0.10,
+                        bottom: h * 0.06,
+                        child: IgnorePointer(
+                          child: Container(
+                            width: w * 0.80,
+                            height: h * 0.30,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(w * 0.4),
+                              gradient: RadialGradient(
+                                colors: [
+                                  Color(0xFFD6A84B)
+                                      .withValues(alpha: 0.12 * g),
+                                  Color(0xFFD6A84B)
+                                      .withValues(alpha: 0.04 * g),
+                                  Colors.transparent,
+                                ],
+                              ),
+                            ),
+                          ),
                         ),
                       ),
-                    ),
+                      // Soft glow behind logo area
+                      Positioned(
+                        top: h * 0.04,
+                        left: w * 0.20,
+                        right: w * 0.20,
+                        child: IgnorePointer(
+                          child: Container(
+                            height: w * 0.40,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              gradient: RadialGradient(
+                                colors: [
+                                  Color(0xFFD6A84B)
+                                      .withValues(alpha: 0.06 * g),
+                                  Colors.transparent,
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   );
                 },
               ),
 
-              // Logo section
-              Positioned(
-                top: size.height * 0.25,
-                left: 0,
-                right: 0,
-                child: Column(
-                  children: [
-                    // Logo with proper handling
-                    Container(
-                      width: size.width * 0.5,
-                      height: size.width * 0.5,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: const Color(0xFFD6A84B).withOpacity(0.4),
-                            blurRadius: 50,
-                            spreadRadius: 15,
-                          ),
-                        ],
-                      ),
-                      child: ClipOval(
-                        child: ColorFiltered(
-                          colorFilter: const ColorFilter.mode(
-                            Colors.transparent,
-                            BlendMode.multiply,
-                          ),
-                          child: Image.asset(
-                            'assets/new-logo.jpg',
-                            fit: BoxFit.cover,
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 48),
-
-                    // Gold ornamental divider
-                    CustomPaint(
-                      size: const Size(160, 30),
-                      painter: LuxuryDividerPainter(),
-                    ),
-
-                    const SizedBox(height: 24),
-
-                    // Arabic tagline
-                    Directionality(
-                      textDirection: TextDirection.rtl,
-                      child: Text(
-                        'فمن أبصر لنفسه',
-                        style: GoogleFonts.notoNaskhArabic(
-                          fontSize: 28,
-                          fontWeight: FontWeight.w600,
-                          color: const Color(0xFFF5E8C8),
-                          letterSpacing: 2.0,
-                          height: 1.8,
-                          shadows: [
-                            Shadow(
-                              color: const Color(0xFFD6A84B).withOpacity(0.6),
-                              offset: const Offset(0, 0),
-                              blurRadius: 25,
-                            ),
-                            Shadow(
-                              color: Colors.black.withOpacity(0.7),
-                              offset: const Offset(0, 4),
-                              blurRadius: 12,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              // Bottom scene with professional illustrations
-              Positioned(
-                bottom: 80,
-                left: 0,
-                right: 0,
-                height: size.height * 0.25,
-                child: Stack(
-                  children: [
-                    // Lantern on the left
-                    Positioned(
-                      left: size.width * 0.08,
-                      bottom: 20,
-                      child: SvgPicture.asset(
-                        'assets/splash/lantern.svg',
-                        width: size.width * 0.22,
-                        height: size.height * 0.18,
-                      ),
-                    ),
-
-                    // Quran on Rehal in center (focal point)
-                    Positioned(
-                      left: size.width * 0.5 - (size.width * 0.35 / 2),
-                      bottom: 0,
-                      child: Container(
-                        decoration: BoxDecoration(
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.4),
-                              blurRadius: 25,
-                              spreadRadius: 5,
-                              offset: const Offset(0, 15),
-                            ),
-                          ],
-                        ),
-                        child: SvgPicture.asset(
-                          'assets/splash/quran_rehal.svg',
-                          width: size.width * 0.45,
-                          height: size.height * 0.2,
-                        ),
-                      ),
-                    ),
-
-                    // Mosque arch on the right (background element)
-                    Positioned(
-                      right: size.width * 0.05,
-                      bottom: 10,
-                      child: Opacity(
-                        opacity: 0.7,
-                        child: SvgPicture.asset(
-                          'assets/splash/mosque_arch.svg',
-                          width: size.width * 0.28,
-                          height: size.height * 0.22,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              // Premium loading indicator
-              Positioned(
-                bottom: 30,
-                left: size.width * 0.15,
-                right: size.width * 0.15,
-                child: AnimatedBuilder(
-                  animation: _progressAnimation,
-                  builder: (context, child) {
-                    return Column(
-                      mainAxisSize: MainAxisSize.min,
+              // ── Main content ──
+              SafeArea(
+                child: FadeTransition(
+                  opacity: _fadeAnimation,
+                  child: ScaleTransition(
+                    scale: _scaleAnimation,
+                    child: Column(
                       children: [
-                        // Loading text
+                        // ── Top spacing ──
+                        SizedBox(height: h * 0.035),
+
+                        // ── Logo (sharp, centered, no container) ──
+                        Image.asset(
+                          'assets/splash/basair_logo.png',
+                          width: w * 0.36,
+                          fit: BoxFit.contain,
+                          filterQuality: FilterQuality.high,
+                        ),
+
+                        SizedBox(height: h * 0.012),
+
+                        // ── Gold ornamental divider ──
+                        CustomPaint(
+                          size: const Size(200, 28),
+                          painter: _GoldDividerPainter(),
+                        ),
+
+                        SizedBox(height: h * 0.004),
+
+                        // ── Arabic tagline ──
                         Text(
-                          'جاري التحميل',
+                          'فمن أبصر فلنفسه',
+                          textDirection: TextDirection.rtl,
                           style: GoogleFonts.ibmPlexSansArabic(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w500,
-                            color: const Color(0xFFF5E8C8).withOpacity(0.7),
-                            letterSpacing: 1.5,
+                            fontSize: 24,
+                            fontWeight: FontWeight.w600,
+                            color: const Color(0xFFF5E8C8),
+                            letterSpacing: 1.4,
+                            height: 1.5,
+                            shadows: const [
+                              Shadow(
+                                color: Color(0x80D6A84B),
+                                offset: Offset(0, 0),
+                                blurRadius: 10,
+                              ),
+                              Shadow(
+                                color: Colors.black45,
+                                offset: Offset(0, 2),
+                                blurRadius: 5,
+                              ),
+                            ],
                           ),
                         ),
-                        const SizedBox(height: 14),
 
-                        // Progress bar
-                        Container(
-                          height: 5,
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF001810).withOpacity(0.5),
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(
-                              color: const Color(0xFFD6A84B).withOpacity(0.15),
-                              width: 1,
+                        // ── Reduced spacing — push scene closer to tagline ──
+                        SizedBox(height: h * 0.015),
+
+                        // ── Bottom 3D Islamic scene (combined asset) ──
+                        Expanded(
+                          child: Padding(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: w * 0.03,
+                            ),
+                            child: Image.asset(
+                              'assets/splash/Illuminated Ramadan Lantern and Quran Scene.png',
+                              width: w * 0.94,
+                              fit: BoxFit.contain,
+                              filterQuality: FilterQuality.high,
                             ),
                           ),
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(10),
-                            child: Stack(
-                              children: [
-                                FractionallySizedBox(
+                        ),
+
+                        // ── Animated gold progress bar ──
+                        AnimatedBuilder(
+                          animation: _progressAnimation,
+                          builder: (context, child) {
+                            return Padding(
+                              padding: EdgeInsets.only(
+                                bottom: math.max(h * 0.028, 16),
+                                top: h * 0.008,
+                                left: w * 0.32,
+                                right: w * 0.32,
+                              ),
+                              child: Container(
+                                height: 3,
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(99),
+                                  color: const Color(0xFF002820),
+                                ),
+                                child: FractionallySizedBox(
+                                  alignment: Alignment.centerLeft,
                                   widthFactor: _progressAnimation.value,
                                   child: Container(
                                     decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(99),
                                       gradient: const LinearGradient(
                                         colors: [
+                                          Color(0xFFE6C57A),
                                           Color(0xFFD6A84B),
-                                          Color(0xFFFFD700),
-                                          Color(0xFFD6A84B),
+                                          Color(0xFFE6C57A),
                                         ],
                                       ),
                                       boxShadow: [
                                         BoxShadow(
-                                          color: const Color(0xFFD6A84B).withOpacity(0.7),
-                                          blurRadius: 15,
-                                          spreadRadius: 3,
+                                          color: const Color(0xFFD6A84B)
+                                              .withValues(alpha: 0.45),
+                                          blurRadius: 6,
+                                          spreadRadius: 0.5,
                                         ),
                                       ],
                                     ),
                                   ),
                                 ),
-                              ],
-                            ),
-                          ),
+                              ),
+                            );
+                          },
                         ),
                       ],
-                    );
-                  },
+                    ),
+                  ),
                 ),
               ),
             ],
@@ -363,154 +339,139 @@ class _PremiumSplashPageState extends State<PremiumSplashPage>
   }
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
-// Luxury Background Painter - Sophisticated architectural patterns
-// ═══════════════════════════════════════════════════════════════════════════
-class LuxuryBackgroundPainter extends CustomPainter {
+// ─────────────────────────────────────────────────────────────
+// Subtle gold decorative curves painted on the background
+// ─────────────────────────────────────────────────────────────
+class _SubtleBackgroundPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
-    // Large elegant arches with subtle gradients
-    final archPaint = Paint()
+    final gold = Paint()
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.5
-      ..color = const Color(0xFF00513D).withOpacity(0.15);
+      ..strokeWidth = 1.4
+      ..strokeCap = StrokeCap.round
+      ..color = const Color(0xFFD6A84B).withValues(alpha: 0.18);
 
-    // Multiple layered arches for depth
-    for (int i = 0; i < 3; i++) {
-      final offset = i * 25.0;
-      final opacity = 0.2 - (i * 0.05);
-
-      archPaint.color = Color(0xFF00513D).withOpacity(opacity);
-
-      final leftArch = Path();
-      leftArch.moveTo(size.width * 0.1 + offset, size.height * 0.4);
-      leftArch.quadraticBezierTo(
-        size.width * 0.25,
-        size.height * 0.2 - offset,
-        size.width * 0.4 + offset,
-        size.height * 0.4,
+    // Top-left decorative curve (outer)
+    final topLeft = Path()
+      ..moveTo(0, size.height * 0.14)
+      ..cubicTo(
+        size.width * 0.08,
+        size.height * 0.04,
+        size.width * 0.18,
+        size.height * 0.02,
+        size.width * 0.34,
+        0,
       );
-      canvas.drawPath(leftArch, archPaint);
+    canvas.drawPath(topLeft, gold);
 
-      final rightArch = Path();
-      rightArch.moveTo(size.width * 0.6 - offset, size.height * 0.4);
-      rightArch.quadraticBezierTo(
-        size.width * 0.75,
-        size.height * 0.2 - offset,
-        size.width * 0.9 - offset,
-        size.height * 0.4,
+    // Top-left decorative curve (inner, lighter)
+    final topLeftInner = Path()
+      ..moveTo(0, size.height * 0.09)
+      ..cubicTo(
+        size.width * 0.10,
+        size.height * 0.03,
+        size.width * 0.16,
+        size.height * 0.015,
+        size.width * 0.24,
+        0,
       );
-      canvas.drawPath(rightArch, archPaint);
-    }
-
-    // Subtle Islamic geometric patterns
-    final patternPaint = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 0.8
-      ..color = const Color(0xFFD6A84B).withOpacity(0.05);
-
-    for (int row = 0; row < 5; row++) {
-      for (int col = 0; col < 6; col++) {
-        final x = size.width * (0.1 + col * 0.15);
-        final y = size.height * (0.5 + row * 0.1);
-
-        // Small decorative circles
-        canvas.drawCircle(Offset(x, y), 12, patternPaint);
-      }
-    }
-
-    // Gold accent curves in corners
-    final goldCurvePaint = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2.0
-      ..color = const Color(0xFFD6A84B).withOpacity(0.25);
-
-    // Top-left curve
-    final topCurve = Path();
-    topCurve.moveTo(0, size.height * 0.15);
-    topCurve.cubicTo(
-      size.width * 0.1,
-      size.height * 0.12,
-      size.width * 0.15,
-      size.height * 0.18,
-      size.width * 0.25,
-      size.height * 0.14,
+    canvas.drawPath(
+      topLeftInner,
+      gold..color = const Color(0xFFD6A84B).withValues(alpha: 0.11),
     );
-    canvas.drawPath(topCurve, goldCurvePaint);
 
-    // Bottom-right curve
-    final bottomCurve = Path();
-    bottomCurve.moveTo(size.width, size.height * 0.85);
-    bottomCurve.cubicTo(
-      size.width * 0.9,
-      size.height * 0.88,
-      size.width * 0.85,
-      size.height * 0.82,
-      size.width * 0.75,
-      size.height * 0.86,
+    // Bottom-right decorative curve
+    final bottomRight = Path()
+      ..moveTo(size.width, size.height * 0.86)
+      ..cubicTo(
+        size.width * 0.90,
+        size.height * 0.96,
+        size.width * 0.78,
+        size.height * 0.98,
+        size.width * 0.62,
+        size.height,
+      );
+    canvas.drawPath(
+      bottomRight,
+      gold..color = const Color(0xFFD6A84B).withValues(alpha: 0.18),
     );
-    canvas.drawPath(bottomCurve, goldCurvePaint);
+
+    // Subtle radial veil for depth
+    final veil = Paint()
+      ..shader = RadialGradient(
+        colors: [
+          const Color(0xFF00513D).withValues(alpha: 0.10),
+          Colors.transparent,
+        ],
+      ).createShader(
+        Rect.fromCircle(
+          center: Offset(size.width * 0.5, size.height * 0.40),
+          radius: size.width * 0.7,
+        ),
+      );
+    canvas.drawRect(Offset.zero & size, veil);
   }
 
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
-// Luxury Divider Painter - Elegant ornamental divider
-// ═══════════════════════════════════════════════════════════════════════════
-class LuxuryDividerPainter extends CustomPainter {
+// ─────────────────────────────────────────────────────────────
+// Gold ornamental divider with 8-point star
+// ─────────────────────────────────────────────────────────────
+class _GoldDividerPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 2.0
+      ..strokeWidth = 1.2
+      ..strokeCap = StrokeCap.round
       ..color = const Color(0xFFD6A84B);
 
-    final centerX = size.width / 2;
-    final centerY = size.height / 2;
+    final cx = size.width / 2;
+    final cy = size.height / 2;
 
-    // Center diamond ornament
-    final diamond = Path();
-    diamond.moveTo(centerX, centerY - 8);
-    diamond.lineTo(centerX + 5, centerY);
-    diamond.lineTo(centerX, centerY + 8);
-    diamond.lineTo(centerX - 5, centerY);
-    diamond.close();
-    canvas.drawPath(diamond, paint..style = PaintingStyle.fill);
+    // Left curve
+    final left = Path()
+      ..moveTo(cx - 14, cy)
+      ..cubicTo(cx - 36, cy - 5, cx - 64, cy + 4, cx - 90, cy);
+    canvas.drawPath(left, paint);
 
-    paint.style = PaintingStyle.stroke;
+    // Right curve
+    final right = Path()
+      ..moveTo(cx + 14, cy)
+      ..cubicTo(cx + 36, cy - 5, cx + 64, cy + 4, cx + 90, cy);
+    canvas.drawPath(right, paint);
 
-    // Left flowing curve
-    final leftCurve = Path();
-    leftCurve.moveTo(centerX - 12, centerY);
-    leftCurve.cubicTo(
-      centerX - 30,
-      centerY - 5,
-      centerX - 50,
-      centerY + 3,
-      centerX - 70,
-      centerY,
-    );
-    canvas.drawPath(leftCurve, paint);
-
-    // Right flowing curve
-    final rightCurve = Path();
-    rightCurve.moveTo(centerX + 12, centerY);
-    rightCurve.cubicTo(
-      centerX + 30,
-      centerY - 5,
-      centerX + 50,
-      centerY + 3,
-      centerX + 70,
-      centerY,
-    );
-    canvas.drawPath(rightCurve, paint);
-
-    // Accent dots
+    // End dots
     paint.style = PaintingStyle.fill;
-    canvas.drawCircle(Offset(centerX - 60, centerY), 2, paint);
-    canvas.drawCircle(Offset(centerX + 60, centerY), 2, paint);
+    canvas.drawCircle(Offset(cx - 90, cy), 1.6, paint);
+    canvas.drawCircle(Offset(cx + 90, cy), 1.6, paint);
+
+    // Center 8-point star ornament
+    final star = Path();
+    const rOuter = 6.0;
+    const rInner = 2.8;
+    for (int i = 0; i < 8; i++) {
+      final outerA = -math.pi / 2 + i * math.pi / 4;
+      final innerA = outerA + math.pi / 8;
+      final op = Offset(
+        cx + math.cos(outerA) * rOuter,
+        cy + math.sin(outerA) * rOuter,
+      );
+      final ip = Offset(
+        cx + math.cos(innerA) * rInner,
+        cy + math.sin(innerA) * rInner,
+      );
+      if (i == 0) {
+        star.moveTo(op.dx, op.dy);
+      } else {
+        star.lineTo(op.dx, op.dy);
+      }
+      star.lineTo(ip.dx, ip.dy);
+    }
+    star.close();
+    canvas.drawPath(star, paint);
   }
 
   @override

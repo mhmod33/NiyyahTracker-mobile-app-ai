@@ -46,7 +46,7 @@ A luxurious, premium Islamic splash screen has been created using native Flutter
 
 5. **Logo & Tagline**
    - Original logo from `assets/new-logo.jpg`
-   - Arabic tagline: "فمن أبصر لنفسه"
+   - Arabic tagline: "فمن أبصر فلنفسه"
    - Radial glow behind logo
 
 6. **Loading Indicator**
