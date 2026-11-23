@@ -14,7 +14,7 @@ import 'package:flutter_timezone/flutter_timezone.dart';
 import 'core/app_colors.dart';
 import 'core/theme_provider.dart';
 import 'providers/auth_provider.dart';
-import 'features/splash/splash_page.dart';
+import 'features/splash/premium_splash_page.dart';
 import 'firebase_options.dart';
 import 'services/daily_summary_service.dart';
 import 'services/notification_service.dart';
@@ -293,7 +293,7 @@ class _BasairAppState extends State<BasairApp> with WidgetsBindingObserver {
         ),
       ),
 
-      home: const SplashPage(),
+      home: const PremiumSplashPage(),
     );
   }
 }

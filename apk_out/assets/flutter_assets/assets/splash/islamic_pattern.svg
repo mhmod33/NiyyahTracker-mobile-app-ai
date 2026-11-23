@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400">
+  <defs>
+    <radialGradient id="gG" cx="50%" cy="40%" r="60%">
+      <stop offset="0%" stop-color="#3D8B63"/>
+      <stop offset="100%" stop-color="#0F3D2E"/>
+    </radialGradient>
+    <radialGradient id="gA" cx="50%" cy="35%" r="55%">
+      <stop offset="0%" stop-color="#F0E2C4"/>
+      <stop offset="100%" stop-color="#A8864E"/>
+    </radialGradient>
+    <radialGradient id="gC" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#FFF9EE"/>
+      <stop offset="50%" stop-color="#D4AF37"/>
+      <stop offset="100%" stop-color="#8B6914"/>
+    </radialGradient>
+  </defs>
+  <g transform="translate(200 200)">
+    <!-- 16 outer green petals -->
+    <path fill="url(#gG)" transform="rotate(0)" d="M0,-168 L18,-162 L32,-148 L42,-128 L48,-102 L46,-76 L36,-52 L18,-34 L0,-28 L-18,-34 L-36,-52 L-46,-76 L-48,-102 L-42,-128 L-32,-148 L-18,-162 Z"/>
+    <path fill="url(#gG)" transform="rotate(22.5)" d="M0,-168 L18,-162 L32,-148 L42,-128 L48,-102 L46,-76 L36,-52 L18,-34 L0,-28 L-18,-34 L-36,-52 L-46,-76 L-48,-102 L-42,-128 L-32,-148 L-18,-162 Z"/>
+    <path fill="url(#gG)" transform="rotate(45)" d="M0,-168 L18,-162 L32,-148 L42,-128 L48,-102 L46,-76 L36,-52 L18,-34 L0,-28 L-18,-34 L-36,-52 L-46,-76 L-48,-102 L-42,-128 L-32,-148 L-18,-162 Z"/>
+    <path fill="url(#gG)" transform="rotate(67.5)" d="M0,-168 L18,-162 L32,-148 L42,-128 L48,-102 L46,-76 L36,-52 L18,-34 L0,-28 L-18,-34 L-36,-52 L-46,-76 L-48,-102 L-42,-128 L-32,-148 L-18,-162 Z"/>
+    <path fill="url(#gG)" transform="rotate(90)" d="M0,-168 L18,-162 L32,-148 L42,-128 L48,-102 L46,-76 L36,-52 L18,-34 L0,-28 L-18,-34 L-36,-52 L-46,-76 L-48,-102 L-42,-128 L-32,-148 L-18,-162 Z"/>
+    <path fill="url(#gG)" transform="rotate(112.5)" d="M0,-168 L18,-162 L32,-148 L42,-128 L48,-102 L46,-76 L36,-52 L18,-34 L0,-28 L-18,-34 L-36,-52 L-46,-76 L-48,-102 L-42,-128 L-32,-148 L-18,-162 Z"/>
+    <path fill="url(#gG)" transform="rotate(135)" d="M0,-168 L18,-162 L32,-148 L42,-128 L48,-102 L46,-76 L36,-52 L18,-34 L0,-28 L-18,-34 L-36,-52 L-46,-76 L-48,-102 L-42,-128 L-32,-148 L-18,-162 Z"/>
+    <path fill="url(#gG)" transform="rotate(157.5)" d="M0,-168 L18,-162 L32,-148 L42,-128 L48,-102 L46,-76 L36,-52 L18,-34 L0,-28 L-18,-34 L-36,-52 L-46,-76 L-48,-102 L-42,-128 L-32,-148 L-18,-162 Z"/>
+    <path fill="url(#gG)" transform="rotate(180)" d="M0,-168 L18,-162 L32,-148 L42,-128 L48,-102 L46,-76 L36,-52 L18,-34 L0,-28 L-18,-34 L-36,-52 L-46,-76 L-48,-102 L-42,-128 L-32,-148 L-18,-162 Z"/>
+    <path fill="url(#gG)" transform="rotate(202.5)" d="M0,-168 L18,-162 L32,-148 L42,-128 L48,-102 L46,-76 L36,-52 L18,-34 L0,-28 L-18,-34 L-36,-52 L-46,-76 L-48,-102 L-42,-128 L-32,-148 L-18,-162 Z"/>
+    <path fill="url(#gG)" transform="rotate(225)" d="M0,-168 L18,-162 L32,-148 L42,-128 L48,-102 L46,-76 L36,-52 L18,-34 L0,-28 L-18,-34 L-36,-52 L-46,-76 L-48,-102 L-42,-128 L-32,-148 L-18,-162 Z"/>
+    <path fill="url(#gG)" transform="rotate(247.5)" d="M0,-168 L18,-162 L32,-148 L42,-128 L48,-102 L46,-76 L36,-52 L18,-34 L0,-28 L-18,-34 L-36,-52 L-46,-76 L-48,-102 L-42,-128 L-32,-148 L-18,-162 Z"/>
+    <path fill="url(#gG)" transform="rotate(270)" d="M0,-168 L18,-162 L32,-148 L42,-128 L48,-102 L46,-76 L36,-52 L18,-34 L0,-28 L-18,-34 L-36,-52 L-46,-76 L-48,-102 L-42,-128 L-32,-148 L-18,-162 Z"/>
+    <path fill="url(#gG)" transform="rotate(292.5)" d="M0,-168 L18,-162 L32,-148 L42,-128 L48,-102 L46,-76 L36,-52 L18,-34 L0,-28 L-18,-34 L-36,-52 L-46,-76 L-48,-102 L-42,-128 L-32,-148 L-18,-162 Z"/>
+    <path fill="url(#gG)" transform="rotate(315)" d="M0,-168 L18,-162 L32,-148 L42,-128 L48,-102 L46,-76 L36,-52 L18,-34 L0,-28 L-18,-34 L-36,-52 L-46,-76 L-48,-102 L-42,-128 L-32,-148 L-18,-162 Z"/>
+    <path fill="url(#gG)" transform="rotate(337.5)" d="M0,-168 L18,-162 L32,-148 L42,-128 L48,-102 L46,-76 L36,-52 L18,-34 L0,-28 L-18,-34 L-36,-52 L-46,-76 L-48,-102 L-42,-128 L-32,-148 L-18,-162 Z"/>
+    <!-- 12 gold mid petals -->
+    <path fill="url(#gA)" transform="rotate(15)" d="M0,-125 L14,-120 L24,-108 L30,-90 L32,-68 L28,-48 L18,-32 L0,-24 L-18,-32 L-28,-48 L-32,-68 L-30,-90 L-24,-108 L-14,-120 Z"/>
+    <path fill="url(#gA)" transform="rotate(45)" d="M0,-125 L14,-120 L24,-108 L30,-90 L32,-68 L28,-48 L18,-32 L0,-24 L-18,-32 L-28,-48 L-32,-68 L-30,-90 L-24,-108 L-14,-120 Z"/>
+    <path fill="url(#gA)" transform="rotate(75)" d="M0,-125 L14,-120 L24,-108 L30,-90 L32,-68 L28,-48 L18,-32 L0,-24 L-18,-32 L-28,-48 L-32,-68 L-30,-90 L-24,-108 L-14,-120 Z"/>
+    <path fill="url(#gA)" transform="rotate(105)" d="M0,-125 L14,-120 L24,-108 L30,-90 L32,-68 L28,-48 L18,-32 L0,-24 L-18,-32 L-28,-48 L-32,-68 L-30,-90 L-24,-108 L-14,-120 Z"/>
+    <path fill="url(#gA)" transform="rotate(135)" d="M0,-125 L14,-120 L24,-108 L30,-90 L32,-68 L28,-48 L18,-32 L0,-24 L-18,-32 L-28,-48 L-32,-68 L-30,-90 L-24,-108 L-14,-120 Z"/>
+    <path fill="url(#gA)" transform="rotate(165)" d="M0,-125 L14,-120 L24,-108 L30,-90 L32,-68 L28,-48 L18,-32 L0,-24 L-18,-32 L-28,-48 L-32,-68 L-30,-90 L-24,-108 L-14,-120 Z"/>
+    <path fill="url(#gA)" transform="rotate(195)" d="M0,-125 L14,-120 L24,-108 L30,-90 L32,-68 L28,-48 L18,-32 L0,-24 L-18,-32 L-28,-48 L-32,-68 L-30,-90 L-24,-108 L-14,-120 Z"/>
+    <path fill="url(#gA)" transform="rotate(225)" d="M0,-125 L14,-120 L24,-108 L30,-90 L32,-68 L28,-48 L18,-32 L0,-24 L-18,-32 L-28,-48 L-32,-68 L-30,-90 L-24,-108 L-14,-120 Z"/>
+    <path fill="url(#gA)" transform="rotate(255)" d="M0,-125 L14,-120 L24,-108 L30,-90 L32,-68 L28,-48 L18,-32 L0,-24 L-18,-32 L-28,-48 L-32,-68 L-30,-90 L-24,-108 L-14,-120 Z"/>
+    <path fill="url(#gA)" transform="rotate(285)" d="M0,-125 L14,-120 L24,-108 L30,-90 L32,-68 L28,-48 L18,-32 L0,-24 L-18,-32 L-28,-48 L-32,-68 L-30,-90 L-24,-108 L-14,-120 Z"/>
+    <path fill="url(#gA)" transform="rotate(315)" d="M0,-125 L14,-120 L24,-108 L30,-90 L32,-68 L28,-48 L18,-32 L0,-24 L-18,-32 L-28,-48 L-32,-68 L-30,-90 L-24,-108 L-14,-120 Z"/>
+    <path fill="url(#gA)" transform="rotate(345)" d="M0,-125 L14,-120 L24,-108 L30,-90 L32,-68 L28,-48 L18,-32 L0,-24 L-18,-32 L-28,-48 L-32,-68 L-30,-90 L-24,-108 L-14,-120 Z"/>
+    <!-- Inner ring -->
+    <path fill="url(#gG)" transform="rotate(0)" d="M0,-78 L10,-75 L18,-65 L22,-50 L22,-35 L18,-22 L10,-14 L0,-12 L-10,-14 L-18,-22 L-22,-35 L-22,-50 L-18,-65 L-10,-75 Z"/>
+    <path fill="url(#gG)" transform="rotate(60)" d="M0,-78 L10,-75 L18,-65 L22,-50 L22,-35 L18,-22 L10,-14 L0,-12 L-10,-14 L-18,-22 L-22,-35 L-22,-50 L-18,-65 L-10,-75 Z"/>
+    <path fill="url(#gG)" transform="rotate(120)" d="M0,-78 L10,-75 L18,-65 L22,-50 L22,-35 L18,-22 L10,-14 L0,-12 L-10,-14 L-18,-22 L-22,-35 L-22,-50 L-18,-65 L-10,-75 Z"/>
+    <path fill="url(#gA)" transform="rotate(30)" d="M0,-48 L7,-46 L12,-40 L14,-32 L12,-24 L7,-18 L0,-16 L-7,-18 L-12,-24 L-14,-32 L-12,-40 L-7,-46 Z"/>
+    <path fill="url(#gA)" transform="rotate(90)" d="M0,-48 L7,-46 L12,-40 L14,-32 L12,-24 L7,-18 L0,-16 L-7,-18 L-12,-24 L-14,-32 L-12,-40 L-7,-46 Z"/>
+    <path fill="url(#gA)" transform="rotate(150)" d="M0,-48 L7,-46 L12,-40 L14,-32 L12,-24 L7,-18 L0,-16 L-7,-18 L-12,-24 L-14,-32 L-12,-40 L-7,-46 Z"/>
+    <circle r="20" fill="url(#gC)"/>
+    <circle r="8" fill="#FFFDF8"/>
+  </g>
+</svg>

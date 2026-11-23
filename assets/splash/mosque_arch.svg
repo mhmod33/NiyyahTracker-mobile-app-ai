@@ -1,0 +1,103 @@
+<svg width="400" height="600" viewBox="0 0 400 600" xmlns="http://www.w3.org/2000/svg">
+  <!-- Elegant Mosque Arch with Atmospheric Lighting -->
+  <defs>
+    <linearGradient id="archGold" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#FFD700;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#D6A84B;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#B8860B;stop-opacity:1" />
+    </linearGradient>
+    <radialGradient id="archGlow" cx="50%" cy="50%">
+      <stop offset="0%" style="stop-color:#F5E8C8;stop-opacity:0.6" />
+      <stop offset="50%" style="stop-color:#D6A84B;stop-opacity:0.3" />
+      <stop offset="100%" style="stop-color:transparent;stop-opacity:0" />
+    </radialGradient>
+    <linearGradient id="mosqueGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#003D2F;stop-opacity:0.8" />
+      <stop offset="50%" style="stop-color:#002B1F;stop-opacity:0.9" />
+      <stop offset="100%" style="stop-color:#001810;stop-opacity:1" />
+    </linearGradient>
+    <filter id="archShadow">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="5"/>
+      <feOffset dx="0" dy="4" result="offsetblur"/>
+      <feComponentTransfer>
+        <feFuncA type="linear" slope="0.5"/>
+      </feComponentTransfer>
+      <feMerge>
+        <feMergeNode/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Atmospheric Glow -->
+  <ellipse cx="200" cy="300" rx="180" ry="250" fill="url(#archGlow)"/>
+
+  <!-- Main Islamic Pointed Arch -->
+  <g filter="url(#archShadow)">
+    <!-- Outer Arch Frame -->
+    <path d="M 60 500 L 60 280 Q 60 160 120 100 Q 160 60 200 50 Q 240 60 280 100 Q 340 160 340 280 L 340 500"
+          fill="none" stroke="url(#archGold)" stroke-width="8" stroke-linecap="round"/>
+
+    <!-- Inner Arch Frame -->
+    <path d="M 80 500 L 80 290 Q 80 180 130 130 Q 160 100 200 90 Q 240 100 270 130 Q 320 180 320 290 L 320 500"
+          fill="none" stroke="url(#archGold)" stroke-width="4" opacity="0.6"/>
+
+    <!-- Decorative Band -->
+    <rect x="60" y="480" width="280" height="20" fill="url(#archGold)" opacity="0.4"/>
+  </g>
+
+  <!-- Islamic Geometric Pattern on Arch -->
+  <g opacity="0.3">
+    <circle cx="200" cy="150" r="30" fill="none" stroke="#FFD700" stroke-width="1.5"/>
+    <circle cx="200" cy="150" r="20" fill="none" stroke="#D6A84B" stroke-width="1"/>
+    <path d="M 200 130 L 210 150 L 200 170 L 190 150 Z" fill="#FFD700"/>
+  </g>
+
+  <!-- Mosque Silhouette Inside Arch -->
+  <g opacity="0.7">
+    <!-- Main Dome -->
+    <ellipse cx="200" cy="350" rx="50" ry="40" fill="url(#mosqueGradient)"/>
+    <path d="M 150 350 Q 150 320 200 310 Q 250 320 250 350" fill="url(#mosqueGradient)"/>
+
+    <!-- Crescent -->
+    <path d="M 198 310 Q 195 300 200 295 Q 205 300 202 310" fill="#D6A84B" opacity="0.8"/>
+
+    <!-- Main Building -->
+    <rect x="160" y="350" width="80" height="80" fill="url(#mosqueGradient)"/>
+
+    <!-- Central Arch Entrance -->
+    <path d="M 180 380 Q 180 370 200 365 Q 220 370 220 380 L 220 430 L 180 430 Z" fill="#001810"/>
+
+    <!-- Left Minaret -->
+    <rect x="140" y="360" width="15" height="70" fill="url(#mosqueGradient)"/>
+    <path d="M 140 360 Q 147.5 350 155 360" fill="url(#mosqueGradient)"/>
+    <ellipse cx="147.5" cy="355" rx="8" ry="6" fill="#D6A84B" opacity="0.6"/>
+
+    <!-- Right Minaret -->
+    <rect x="245" y="360" width="15" height="70" fill="url(#mosqueGradient)"/>
+    <path d="M 245 360 Q 252.5 350 260 360" fill="url(#mosqueGradient)"/>
+    <ellipse cx="252.5" cy="355" rx="8" ry="6" fill="#D6A84B" opacity="0.6"/>
+
+    <!-- Windows -->
+    <rect x="170" y="390" width="8" height="12" rx="4" fill="#D6A84B" opacity="0.3"/>
+    <rect x="222" y="390" width="8" height="12" rx="4" fill="#D6A84B" opacity="0.3"/>
+  </g>
+
+  <!-- Ornamental Details on Arch -->
+  <g opacity="0.5">
+    <!-- Top Ornament -->
+    <circle cx="200" cy="50" r="12" fill="url(#archGold)"/>
+    <path d="M 200 38 L 205 45 L 200 50 L 195 45 Z" fill="#FFD700"/>
+
+    <!-- Side Ornaments -->
+    <circle cx="120" cy="100" r="6" fill="url(#archGold)"/>
+    <circle cx="280" cy="100" r="6" fill="url(#archGold)"/>
+  </g>
+
+  <!-- Light Rays -->
+  <g opacity="0.1">
+    <path d="M 200 50 L 190 300" stroke="#F5E8C8" stroke-width="1"/>
+    <path d="M 200 50 L 200 300" stroke="#F5E8C8" stroke-width="1.5"/>
+    <path d="M 200 50 L 210 300" stroke="#F5E8C8" stroke-width="1"/>
+  </g>
+</svg>

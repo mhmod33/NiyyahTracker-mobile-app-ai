@@ -10,8 +10,6 @@ import 'package:share_plus/share_plus.dart';
 import '../core/app_colors.dart';
 
 /// Countdown card for Ramadan 1, 1448 AH (Feb 8, 2027).
-/// Deep teal → midnight purple gradient with an animated crescent moon
-/// and star that pulses with a golden glow.
 class RamadanCountdownCard extends StatefulWidget {
   const RamadanCountdownCard({super.key});
 
@@ -77,10 +75,10 @@ class _RamadanCountdownCardState extends State<RamadanCountdownCard>
           begin: Alignment.topRight,
           end: Alignment.bottomLeft,
           colors: [
-            Color(0xFF0E4F5C), // deep teal
-            Color(0xFF123B6E),
-            Color(0xFF1B1440), // midnight purple
-            Color(0xFF0B1030),
+            Color(0xFF11132F),
+            Color(0xFF21163F),
+            Color(0xFF3B2048),
+            Color(0xFF11132F),
           ],
         ),
         borderRadius: BorderRadius.circular(26),
@@ -90,7 +88,7 @@ class _RamadanCountdownCardState extends State<RamadanCountdownCard>
         ),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF0E4F5C).withValues(alpha: 0.4),
+            color: const Color(0xFF21163F).withValues(alpha: 0.42),
             blurRadius: 22,
             offset: const Offset(0, 8),
           ),
@@ -144,7 +142,7 @@ class _RamadanCountdownCardState extends State<RamadanCountdownCard>
                       // Animated crescent moon + star with golden glow pulse
                       AnimatedBuilder(
                         animation: _glowCtrl,
-                        builder: (_, __) => Transform.scale(
+                        builder: (_, _) => Transform.scale(
                           scale: 1.0 + _glowCtrl.value * 0.08,
                           child: CustomPaint(
                             size: const Size(64, 64),
@@ -352,30 +350,25 @@ class _CrescentStarPainter extends CustomPainter {
 
     // Crescent moon
     final moonR = size.width * 0.30;
-    final moonPaint = Paint()..color = const Color(0xFFF6D98A);
-    canvas.drawCircle(
-      center + Offset(-size.width * 0.03, -size.height * 0.02),
-      moonR,
-      moonPaint,
+    final moonCenter = center + Offset(-size.width * 0.03, -size.height * 0.02);
+    final shadowCenter =
+        center + Offset(size.width * 0.08, -size.height * 0.07);
+    final moonPath = Path()
+      ..addOval(Rect.fromCircle(center: moonCenter, radius: moonR));
+    final shadowPath = Path()
+      ..addOval(Rect.fromCircle(center: shadowCenter, radius: moonR * 0.92));
+    final crescentPath = Path.combine(
+      PathOperation.difference,
+      moonPath,
+      shadowPath,
     );
-
-    // Cut-out circle creates the crescent shape (matches card teal)
-    final cutPaint = Paint()..color = const Color(0xFF0E4F5C);
-    canvas.drawCircle(
-      center + Offset(size.width * 0.08, -size.height * 0.07),
-      moonR * 0.92,
-      cutPaint,
-    );
-
-    // Soft gold edge on the lit limb
-    final shadePaint = Paint()
-      ..color = AppColors.gold.withValues(alpha: 0.5)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.4;
-    canvas.drawCircle(
-      center + Offset(-size.width * 0.03, -size.height * 0.02),
-      moonR,
-      shadePaint,
+    canvas.drawPath(crescentPath, Paint()..color = const Color(0xFFF6D98A));
+    canvas.drawPath(
+      crescentPath,
+      Paint()
+        ..color = AppColors.gold.withValues(alpha: 0.5)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.4,
     );
 
     // Four-point star
@@ -455,123 +448,130 @@ class _RamadanShareSheetState extends State<_RamadanShareSheet> {
       ),
       child: Container(
         margin: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const SizedBox(height: 12),
-            Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: Colors.black26,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            const SizedBox(height: 16),
-            RepaintBoundary(
-              key: _shareKey,
-              child: Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 24,
-                  vertical: 36,
-                ),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(height: 12),
+              Container(
+                width: 40,
+                height: 4,
                 decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    begin: Alignment.topRight,
-                    end: Alignment.bottomLeft,
-                    colors: [
-                      Color(0xFF0E4F5C),
-                      Color(0xFF123B6E),
-                      Color(0xFF1B1440),
-                      Color(0xFF0B1030),
+                  color: Colors.black26,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 16),
+              RepaintBoundary(
+                key: _shareKey,
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 36,
+                  ),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      begin: Alignment.topRight,
+                      end: Alignment.bottomLeft,
+                      colors: [
+                        Color(0xFF11132F),
+                        Color(0xFF21163F),
+                        Color(0xFF3B2048),
+                        Color(0xFF11132F),
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(
+                      color: AppColors.gold.withValues(alpha: 0.45),
+                      width: 1.4,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.25),
+                        blurRadius: 24,
+                        offset: const Offset(0, 10),
+                      ),
                     ],
                   ),
-                  borderRadius: BorderRadius.circular(24),
-                  border: Border.all(
-                    color: AppColors.gold.withValues(alpha: 0.45),
-                    width: 1.4,
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.25),
-                      blurRadius: 24,
-                      offset: const Offset(0, 10),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      'اللهم بلغنا رمضان في عفو وعافية\nغير فاقدين ولا مفقودين',
-                      textAlign: TextAlign.center,
-                      style: GoogleFonts.cairo(
-                        fontSize: 24,
-                        height: 1.9,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.white,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      CustomPaint(
+                        size: const Size(72, 72),
+                        painter: _CrescentStarPainter(glow: 0.7),
                       ),
-                    ),
-                    const SizedBox(height: 22),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppColors.gold.withValues(alpha: 0.16),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(
-                          color: AppColors.gold.withValues(alpha: 0.5),
-                        ),
-                      ),
-                      child: Text(
-                        'تطبيق بصائر',
-                        style: GoogleFonts.ibmPlexSansArabic(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w800,
-                          color: AppColors.goldLight,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 18),
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton.icon(
-                onPressed: _isSharing ? null : _share,
-                style: FilledButton.styleFrom(
-                  backgroundColor: AppColors.darkGreen,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                ),
-                icon: _isSharing
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
+                      const SizedBox(height: 12),
+                      Text(
+                        'اللهم بلغنا رمضان في عفو وعافية\nغير فاقدين ولا مفقودين',
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.cairo(
+                          fontSize: 24,
+                          height: 1.9,
+                          fontWeight: FontWeight.w700,
                           color: Colors.white,
                         ),
-                      )
-                    : const Icon(Icons.share_rounded, size: 20),
-                label: Text(
-                  'مشاركة الصورة',
-                  style: GoogleFonts.ibmPlexSansArabic(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w800,
-                    color: Colors.white,
+                      ),
+                      const SizedBox(height: 22),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.gold.withValues(alpha: 0.16),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: AppColors.gold.withValues(alpha: 0.5),
+                          ),
+                        ),
+                        child: Text(
+                          'تطبيق بصائر',
+                          style: GoogleFonts.ibmPlexSansArabic(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.goldLight,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
-            ),
-          ],
+              const SizedBox(height: 18),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton.icon(
+                  onPressed: _isSharing ? null : _share,
+                  style: FilledButton.styleFrom(
+                    backgroundColor: AppColors.darkGreen,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                  ),
+                  icon: _isSharing
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Icon(Icons.share_rounded, size: 20),
+                  label: Text(
+                    'مشاركة الصورة',
+                    style: GoogleFonts.ibmPlexSansArabic(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

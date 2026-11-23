@@ -14,7 +14,7 @@ class AzkarReminderService {
   bool _isShowing = false;
 
   /// Checks if a reminder should be shown right now.
-  /// Morning: 4am - 12pm (4 <= hour < 12)
+  /// Morning: 7am - 12pm (7 <= hour < 12)
   /// Evening: 3pm - 7pm (15 <= hour < 19)
   Future<void> checkAndShowReminder() async {
     if (_isShowing) return;
@@ -23,7 +23,7 @@ class AzkarReminderService {
     final todayKey = '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
     final hour = now.hour;
 
-    final isMorningTime = hour >= 4 && hour < 12;
+    final isMorningTime = hour >= 7 && hour < 12;
     final isEveningTime = hour >= 15 && hour < 19;
 
     if (!isMorningTime && !isEveningTime) return;

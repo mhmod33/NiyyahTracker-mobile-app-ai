@@ -22,6 +22,7 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
   
   bool _morningAzkarEnabled = true;
   bool _eveningAzkarEnabled = true;
+  bool _eveningReminder10PMEnabled = true;
   bool _kahfReminderEnabled = true;
   bool _wirdNotificationsEnabled = true;
   bool _prayerTimesEnabled = true;
@@ -37,6 +38,7 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
     setState(() {
       _morningAzkarEnabled = _notificationService.morningAzkarEnabled;
       _eveningAzkarEnabled = _notificationService.eveningAzkarEnabled;
+      _eveningReminder10PMEnabled = _notificationService.eveningReminder10PMEnabled;
       _kahfReminderEnabled = _notificationService.kahfReminderEnabled;
       _wirdNotificationsEnabled = _wirdNotificationService.notificationsEnabled;
       _prayerTimesEnabled = _notificationService.prayerTimesEnabled;
@@ -55,6 +57,10 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
         case 'evening_azkar':
           await _notificationService.setEveningAzkarEnabled(value);
           setState(() => _eveningAzkarEnabled = value);
+          break;
+        case 'evening_reminder_10pm':
+          await _notificationService.setEveningReminder10PMEnabled(value);
+          setState(() => _eveningReminder10PMEnabled = value);
           break;
         case 'kahf_reminder':
           await _notificationService.setKahfReminderEnabled(value);
@@ -80,6 +86,33 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
       }
     } finally {
       setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _testEvening10PMNotification() async {
+    try {
+      await _notificationService.showTest10PMNotification();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'تم إرسال إشعار الساعة 10 مساءً للاختبار',
+              style: GoogleFonts.ibmPlexSansArabic(),
+            ),
+            backgroundColor: AppColors.darkGreen,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('خطأ: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
@@ -286,6 +319,32 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
                               icon: Icons.nights_stay_rounded,
                               value: _eveningAzkarEnabled,
                               onChanged: (value) => _updateSetting('evening_azkar', value),
+                              isDark: isDark,
+                            ),
+                            _SettingsTile(
+                              title: 'تذكير مسائي الساعة 10 مساءً',
+                              subtitle: 'إشعار تذكيري بسيط في تمام الساعة العاشرة مساءً',
+                              icon: Icons.bedtime_rounded,
+                              value: _eveningReminder10PMEnabled,
+                              onChanged: (value) => _updateSetting('evening_reminder_10pm', value),
+                              isDark: isDark,
+                            ),
+                          ],
+                        ),
+
+                        const SizedBox(height: 24),
+
+                        // Test Notifications Section
+                        _SettingsSection(
+                          title: 'اختبار الإشعارات',
+                          icon: Icons.notification_add_rounded,
+                          isDark: isDark,
+                          children: [
+                            _TestTile(
+                              title: 'اختبار إشعار الساعة 10 مساءً',
+                              subtitle: 'إرسال الإشعار الآن للاختبار',
+                              icon: Icons.bedtime_rounded,
+                              onTap: () => _testEvening10PMNotification(),
                               isDark: isDark,
                             ),
                           ],
