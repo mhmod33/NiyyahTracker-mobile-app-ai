@@ -182,7 +182,7 @@ class _PremiumSplashPageState extends State<PremiumSplashPage>
                             BlendMode.multiply,
                           ),
                           child: Image.asset(
-                            'assets/logo.png',
+                            'assets/new-logo.jpg',
                             fit: BoxFit.cover,
                           ),
                         ),
