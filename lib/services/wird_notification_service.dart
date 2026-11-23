@@ -113,8 +113,20 @@ class WirdNotificationService {
         icon: '@mipmap/ic_launcher',
         enableVibration: true,
         playSound: true,
-        ongoing: true,       // stays in panel until dismissed programmatically
+        ongoing: true,
         autoCancel: false,
+        actions: <AndroidNotificationAction>[
+          const AndroidNotificationAction(
+            'open_app',
+            'فتح التطبيق',
+            showsUserInterface: true,
+          ),
+          const AndroidNotificationAction(
+            'mark_done',
+            'تم ✓',
+            showsUserInterface: false,
+          ),
+        ],
         styleInformation: BigTextStyleInformation(
           'هل أتممت عبادات اليوم؟\n\n'
           '☐ الصلوات الخمس\n'
@@ -225,6 +237,67 @@ class WirdNotificationService {
       );
     } catch (e) {
       developer.log('❌ Error showing streak milestone: $e', name: 'WirdNotif');
+    }
+  }
+
+  /// Test the evening notification immediately with action buttons.
+  Future<void> showTestEveningNotification() async {
+    try {
+      final record = WirdService().getTodayRecord();
+      final pagesRead = record.pagesRead;
+      final target = record.targetPages;
+
+      final androidDetails = AndroidNotificationDetails(
+        _channelId,
+        _channelName,
+        channelDescription: _channelDesc,
+        importance: Importance.high,
+        priority: Priority.high,
+        icon: '@mipmap/ic_launcher',
+        enableVibration: true,
+        playSound: true,
+        ongoing: true,
+        autoCancel: false,
+        actions: <AndroidNotificationAction>[
+          const AndroidNotificationAction(
+            'open_app',
+            'فتح التطبيق',
+            showsUserInterface: true,
+          ),
+          const AndroidNotificationAction(
+            'mark_done',
+            'تم ✓',
+            showsUserInterface: false,
+          ),
+        ],
+        styleInformation: BigTextStyleInformation(
+          'هل أتممت عبادات اليوم؟\n\n'
+          '☐ الصلوات الخمس\n'
+          '☐ قراءة القرآن ($pagesRead/$target صفحة)\n'
+          '☐ أذكار الصباح والمساء\n'
+          '☐ الاستغفار\n'
+          '☐ الدعاء',
+          contentTitle: 'مراجعة عبادات اليوم 🌙 (اختبار)',
+          summaryText: 'بصائر • الورد اليومي',
+        ),
+      );
+
+      const iosDetails = DarwinNotificationDetails(
+        presentAlert: true,
+        presentBadge: true,
+        presentSound: true,
+      );
+
+      await _notifications.show(
+        5099,
+        'مراجعة عبادات اليوم 🌙 (اختبار)',
+        'اختبار الإشعار مع الأزرار',
+        NotificationDetails(android: androidDetails, iOS: iosDetails),
+      );
+
+      developer.log('✅ Test evening notification shown', name: 'WirdNotif');
+    } catch (e) {
+      developer.log('❌ Error showing test evening notification: $e', name: 'WirdNotif');
     }
   }
 

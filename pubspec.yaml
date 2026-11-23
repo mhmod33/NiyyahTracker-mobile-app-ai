@@ -119,7 +119,6 @@ flutter:
   uses-material-design: true
 
   assets:
-    - assets/logo.png
     - assets/icon.png
     - assets/new-logo.jpg
     - assets/splash/
@@ -127,6 +126,7 @@ flutter:
     - assets/splash/quran_rehal.svg
     - assets/splash/mosque_arch.svg
     - assets/fonts/
+    - assets/data/
     - assets/lottie/
     - assets/audio/azan/tobar/
     - assets/audio/azan/makkah/
