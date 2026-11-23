@@ -117,14 +117,22 @@ class WirdNotificationService {
         autoCancel: false,
         actions: <AndroidNotificationAction>[
           const AndroidNotificationAction(
-            'open_app',
-            'فتح التطبيق',
-            showsUserInterface: true,
+            'mark_prayers',
+            '✓ الصلوات',
+            showsUserInterface: false,
+            cancelNotification: false,
           ),
           const AndroidNotificationAction(
-            'mark_done',
-            'تم ✓',
+            'mark_quran',
+            '✓ القرآن',
             showsUserInterface: false,
+            cancelNotification: false,
+          ),
+          const AndroidNotificationAction(
+            'mark_azkar',
+            '✓ الأذكار',
+            showsUserInterface: false,
+            cancelNotification: false,
           ),
         ],
         styleInformation: BigTextStyleInformation(
@@ -164,6 +172,7 @@ class WirdNotificationService {
         uiLocalNotificationDateInterpretation:
             UILocalNotificationDateInterpretation.absoluteTime,
         matchDateTimeComponents: DateTimeComponents.time,
+        payload: 'wird_evening_checklist',
       );
     } catch (e) {
       developer.log('❌ Error scheduling evening wird: $e', name: 'WirdNotif');
@@ -260,14 +269,22 @@ class WirdNotificationService {
         autoCancel: false,
         actions: <AndroidNotificationAction>[
           const AndroidNotificationAction(
-            'open_app',
-            'فتح التطبيق',
-            showsUserInterface: true,
+            'mark_prayers',
+            '✓ الصلوات',
+            showsUserInterface: false,
+            cancelNotification: false,
           ),
           const AndroidNotificationAction(
-            'mark_done',
-            'تم ✓',
+            'mark_quran',
+            '✓ القرآن',
             showsUserInterface: false,
+            cancelNotification: false,
+          ),
+          const AndroidNotificationAction(
+            'mark_azkar',
+            '✓ الأذكار',
+            showsUserInterface: false,
+            cancelNotification: false,
           ),
         ],
         styleInformation: BigTextStyleInformation(
@@ -293,6 +310,7 @@ class WirdNotificationService {
         'مراجعة عبادات اليوم 🌙 (اختبار)',
         'اختبار الإشعار مع الأزرار',
         NotificationDetails(android: androidDetails, iOS: iosDetails),
+        payload: 'wird_evening_test',
       );
 
       developer.log('✅ Test evening notification shown', name: 'WirdNotif');

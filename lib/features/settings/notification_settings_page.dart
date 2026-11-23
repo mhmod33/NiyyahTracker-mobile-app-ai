@@ -394,6 +394,52 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
                           ],
                         ),
 
+                        const SizedBox(height: 24),
+
+                        // Test Notifications Section
+                        _SettingsSection(
+                          title: 'اختبار الإشعارات',
+                          icon: Icons.bug_report_rounded,
+                          isDark: isDark,
+                          children: [
+                            _TestTile(
+                              title: 'اختبار إشعار العشاء (10 مساءً)',
+                              subtitle: 'معاينة الإشعار مع الأزرار التفاعلية',
+                              icon: Icons.notification_add_rounded,
+                              onTap: () async {
+                                try {
+                                  await _wirdNotificationService.showTestEveningNotification();
+                                  if (mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text(
+                                          'تم إرسال الإشعار الاختباري 🌙',
+                                          style: _f(c: Colors.white),
+                                        ),
+                                        backgroundColor: AppColors.darkGreen,
+                                        behavior: SnackBarBehavior.floating,
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(12),
+                                        ),
+                                      ),
+                                    );
+                                  }
+                                } catch (e) {
+                                  if (mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text('خطأ: $e'),
+                                        backgroundColor: Colors.red,
+                                      ),
+                                    );
+                                  }
+                                }
+                              },
+                              isDark: isDark,
+                            ),
+                          ],
+                        ),
+
                         const SizedBox(height: 32),
                       ]),
                     ),

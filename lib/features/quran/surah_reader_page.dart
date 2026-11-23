@@ -14,16 +14,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'dart:async';
-import 'package:qcf_quran_plus/qcf_quran_plus.dart';
-// QCF does not expose selected-line rendering or its loaded page repository.
-// ignore: implementation_imports
-import 'package:qcf_quran_plus/src/widgets/quran_line.dart';
-// ignore: implementation_imports
-import 'package:qcf_quran_plus/src/widgets/quran_page/parsed_quran_data.dart'
-    show parseLine;
-// ignore: implementation_imports
-import 'package:qcf_quran_plus/src/widgets/quran_page/quran_repository.dart'
-    show QuranRepository;
+// import 'package:qcf_quran_plus/qcf_quran_plus.dart'; // Removed - using custom QcfMushafService
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../core/app_colors.dart';
 import '../../core/directional_icon.dart';
@@ -239,80 +230,15 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
     }
   }
 
-  // ── QCF Rendering ──
-  Widget _buildQcfPageView(bool isDark) {
-    return QuranPageView(
-      pageController: _pageController,
-      highlights: _buildQcfHighlights(),
-      onPageChanged: (page) {
-        setState(() => _currentPage = page - 1);
-        _saveReadingProgress(_currentPage);
-        _maybeTrackKahf(_currentPage);
-      },
-      // onWordTap handles both toggle-nav (no selection) and multi-select.
-      onWordTap: (surahNumber, verseNumber, wordIndex, word) {
-        if (_selectedVerses.isNotEmpty) {
-          // Selection mode: add or remove this ayah.
-          setState(() {
-            if (_selectedSurah == surahNumber && _selectedVerses.contains(verseNumber)) {
-              _selectedVerses.remove(verseNumber);
-              if (_selectedVerses.isEmpty) _selectedSurah = null;
-            } else {
-              _selectedSurah = surahNumber;
-              _selectedVerses.add(verseNumber);
-            }
-          });
-        } else {
-          // No selection: toggle app header/footer and system nav bar.
-          _toggleNav();
-        }
-      },
-      onLongPress: (surahNumber, verseNumber, details) {
-        _showVerseActions(context, surahNumber, verseNumber);
-      },
-      isDarkMode: isDark,
-      isTajweed: false,
-    );
-  }
+  // Old QCF rendering removed - used qcf_quran_plus package (70MB, removed to reduce app size)
+  // Custom QcfMushafPage widget exists at line ~3017 for future integration
 
   void _goToPage(int page) {
-    // Works for both QCF (drives _pageController which QuranPageView is wired to)
-    // and traditional PageView.
     _pageController.animateToPage(
       page,
       duration: const Duration(milliseconds: 250),
       curve: Curves.easeInOut,
     );
-  }
-
-  List<HighlightVerse> _buildQcfHighlights() {
-    final highlights = <HighlightVerse>[];
-
-    // Highlight for current playing/highlighted verse
-    if (_highlightSurah != null && _highlightVerse != null) {
-      final page = quran.getPageNumber(_highlightSurah!, _highlightVerse!);
-      highlights.add(HighlightVerse(
-        surah: _highlightSurah!,
-        verseNumber: _highlightVerse!,
-        page: page,
-        color: AppColors.darkGreen.withValues(alpha: 0.3),
-      ));
-    }
-
-    // Highlights for selected verses
-    if (_selectedSurah != null) {
-      for (final verse in _selectedVerses) {
-        final page = quran.getPageNumber(_selectedSurah!, verse);
-        highlights.add(HighlightVerse(
-          surah: _selectedSurah!,
-          verseNumber: verse,
-          page: page,
-          color: AppColors.gold.withValues(alpha: 0.25),
-        ));
-      }
-    }
-
-    return highlights;
   }
 
   Widget _buildTraditionalPageView(bool isDark) {
@@ -361,6 +287,58 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
                 });
               } else {
                 _showVerseActions(context, surah, verse);
+              }
+            },
+            onVerseLongPress: (surah, verse) {
+              _showVerseActions(context, surah, verse);
+            },
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildQcfPageView(bool isDark) {
+    return PageView.builder(
+      controller: _pageController,
+      scrollDirection: _verticalScroll ? Axis.vertical : Axis.horizontal,
+      itemCount: 604,
+      physics: const _SinglePagePhysics(),
+      onPageChanged: (i) {
+        setState(() => _currentPage = i);
+        _saveReadingProgress(i);
+        _maybeTrackKahf(i);
+      },
+      itemBuilder: (ctx, index) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: Container(
+          color: isDark
+              ? const Color(0xFF1A1A1A)
+              : const Color(0xFFFAF8F3),
+          child: QcfMushafPage(
+            pageNumber: index + 1,
+            highlightSurah: _highlightSurah,
+            highlightVerse: _highlightVerse,
+            isDark: isDark,
+            selectedVerses: _selectedSurah == null ? const {} : _selectedVerses,
+            selectedSurah: _selectedSurah,
+            verticalScroll: _verticalScroll,
+            onVerseTap: (surah, verse) {
+              if (_selectedVerses.isNotEmpty) {
+                setState(() {
+                  if (_selectedSurah != surah) {
+                    _selectedVerses.clear();
+                    _selectedSurah = surah;
+                  }
+                  if (_selectedVerses.contains(verse)) {
+                    _selectedVerses.remove(verse);
+                    if (_selectedVerses.isEmpty) _selectedSurah = null;
+                  } else {
+                    _selectedVerses.add(verse);
+                  }
+                });
+              } else {
+                _toggleNav();
               }
             },
             onVerseLongPress: (surah, verse) {
@@ -2400,10 +2378,39 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
   }
 
   Future<void> _shareSelectedAyat(int surah, List<int> verses) async {
+    final service = QcfMushafService.instance;
+    final pageNumbers = verses
+        .map((verse) => quran.getPageNumber(surah, verse))
+        .toSet()
+        .toList()
+      ..sort();
+    final selectedAyahsByPage = <int, List<QcfAyah>>{};
+
     try {
-      await QuranRepository.instance.ensureLoaded(604);
+      await service.init();
+      for (final pageNumber in pageNumbers) {
+        if (!await service.ensureFont(pageNumber, prefetch: false)) {
+          throw StateError('Unable to load Mushaf font for page $pageNumber');
+        }
+
+        final pageAyahs = service.ayahsForPage(pageNumber);
+        if (pageAyahs == null) {
+          throw StateError('Mushaf data is unavailable for page $pageNumber');
+        }
+        selectedAyahsByPage[pageNumber] = pageAyahs
+            .where(
+              (ayah) => ayah.surah == surah && verses.contains(ayah.verse),
+            )
+            .toList();
+      }
+
+      final selectedCount = selectedAyahsByPage.values
+          .fold<int>(0, (total, ayahs) => total + ayahs.length);
+      if (selectedCount != verses.toSet().length) {
+        throw StateError('Mushaf data is missing one or more selected ayat');
+      }
     } catch (error) {
-      debugPrint('Error loading Mushaf data for sharing: $error');
+      debugPrint('Error loading Mushaf fonts and data for sharing: $error');
       if (mounted) {
         _snack(
           context,
@@ -2435,7 +2442,7 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
                 children: [
                   RepaintBoundary(
                     key: key,
-                    child: _buildSelectedAyahImage(surah, verses),
+                    child: _buildSelectedAyahImage(surah, selectedAyahsByPage),
                   ),
                   const SizedBox(height: 8),
                   Row(
@@ -2469,58 +2476,18 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
     );
   }
 
-  Widget _buildSelectedAyahImage(int surah, List<int> verses) {
+  Widget _buildSelectedAyahImage(
+    int surah,
+    Map<int, List<QcfAyah>> selectedAyahsByPage,
+  ) {
     final width = (MediaQuery.sizeOf(context).width - 64)
         .clamp(220.0, 400.0)
         .toDouble();
-    final selectedVerses = verses.toSet();
-    final pageNumbers = verses
-        .map((verse) => quran.getPageNumber(surah, verse))
-        .toSet()
-        .toList()
-      ..sort();
-    final mushafPages = QuranRepository.instance.pages;
-    final selectedLines = <Widget>[];
-
-    for (final pageNumber in pageNumbers) {
-      final page = mushafPages[pageNumber - 1];
-      for (final line in page.lines) {
-        final lineAyahs = line.ayahs
-            .where(
-              (ayah) =>
-                  ayah.surahNumber == surah &&
-                  selectedVerses.contains(ayah.ayahNumber),
-            )
-            .toList();
-        if (lineAyahs.isEmpty) continue;
-
-        final parsedAyahs = parseLine(
-          Line(lineAyahs, centered: line.centered),
-          null,
-        );
-        if (parsedAyahs.isEmpty) continue;
-
-        selectedLines.add(
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 3),
-            child: Center(
-              child: QuranLine(
-                parsedAyahs: parsedAyahs,
-                pageNumber: pageNumber,
-                boxFit: lineAyahs.last.centered
-                    ? BoxFit.scaleDown
-                    : BoxFit.fitWidth,
-                isTajweed: false,
-              ),
-            ),
-          ),
-        );
-      }
-    }
-
-    if (selectedLines.isEmpty) {
-      throw StateError('No Mushaf lines found for the selected ayat');
-    }
+    final textWidth = width - 24;
+    final fontSize =
+        textWidth *
+        QcfMushafService.kUnitsPerEm /
+        QcfMushafService.kColumnWidthUnits;
 
     return Container(
       width: width,
@@ -2529,8 +2496,40 @@ class _SurahReaderPageState extends State<SurahReaderPage> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          SurahHeaderWidget(suraNumber: surah),
-          ...selectedLines,
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Text(
+              'سورة ${quran.getSurahNameArabic(surah)}',
+              style: GoogleFonts.ibmPlexSansArabic(
+                color: AppColors.darkGreen,
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+          for (final entry in selectedAyahsByPage.entries)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 3),
+              child: Text.rich(
+                TextSpan(
+                  children: [
+                    for (final ayah in entry.value)
+                      TextSpan(
+                        text:
+                            '${ayah.text.split(' ').where((token) => token.isNotEmpty).join('\u200B')}\u200B',
+                        style: TextStyle(
+                          fontFamily: QcfMushafService.familyFor(entry.key),
+                          fontSize: fontSize,
+                          color: const Color(0xFF1A1A1A),
+                        ),
+                      ),
+                  ],
+                ),
+                textAlign: TextAlign.justify,
+                textDirection: TextDirection.rtl,
+                locale: const Locale('ar'),
+              ),
+            ),
           const SizedBox(height: 8),
           Text(
             '\u062a\u0637\u0628\u064a\u0642 \u0628\u0635\u0627\u0626\u0631',

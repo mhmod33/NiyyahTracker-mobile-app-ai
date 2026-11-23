@@ -22,6 +22,14 @@ void notificationBackgroundHandler(NotificationResponse response) {
       AzanService().stopAzan();
     } catch (_) {}
   }
+
+  // Handle wird notification task actions in background
+  if (response.actionId == 'mark_prayers' ||
+      response.actionId == 'mark_quran' ||
+      response.actionId == 'mark_azkar') {
+    // TODO: Update task status in database
+    // For now just log it (logs won't appear in background isolate)
+  }
 }
 
 class NotificationService {
@@ -260,6 +268,19 @@ class NotificationService {
         name: 'NotificationService',
       );
       AzanService().handleNotificationAction(response);
+      return;
+    }
+
+    // Handle wird notification task actions
+    if (response.actionId == 'mark_prayers' ||
+        response.actionId == 'mark_quran' ||
+        response.actionId == 'mark_azkar') {
+      developer.log(
+        '✅ Task marked: ${response.actionId}',
+        name: 'NotificationService',
+      );
+      // TODO: Update task status in database
+      // For now just log it
       return;
     }
 

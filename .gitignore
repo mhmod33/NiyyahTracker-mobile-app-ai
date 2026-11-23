@@ -50,3 +50,6 @@ firebase_options.dart
 key.properties
 .env
 .env.*
+qcf_pkg/
+qcf_test/
+*.woff

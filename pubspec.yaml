@@ -81,7 +81,7 @@ dependencies:
   # flutter_background_service: ^5.0.10  # Alternative - need to update code
   lottie: ^3.3.1
   wakelock_plus: ^1.3.3
-  qcf_quran_plus: ^0.1.1
+  # qcf_quran_plus: ^0.1.1  # Downloads fonts on-demand, not needed
   # mushaf: ^0.2.1  # Disabled - extraction too slow
   # qcf_quran_plus: ^0.1.1  # Alternative QCF package (investigating)
 
